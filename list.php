@@ -51,6 +51,10 @@ body {
 }
 td {
 	border: solid 1px #afafaf;
+	text-align: center;
+}
+td.desc {
+	text-align: left;
 }
 .ppt_info{
 	border: solid 1px #afafaf;
@@ -86,6 +90,11 @@ a:visited {
 }
 #details {
     font-size : 10pt;
+}
+.jrsem {
+    font-size: 7pt;
+    margin: 0px;
+    padding: 0px;
 }
 </style>
 
@@ -135,7 +144,7 @@ a:visited {
 	echo "<h2>Voiles  (".count($vols->voiles).") : </h2><p>".implode(", ", array_map(function($x) { return "<span class=\"ppt_info\"><a href=\"".url_with_parameter("voile", $x->nom)."\">".$x->nom." (".$x->nombrevols." vols, ".Utils::timeFromSeconds($x->tempsvol, TRUE).")</a></span>"; }, $vols->voiles))."</p>";
 	if (!is_array($vols->sites))
 	    $vols->sites = [$vols->sites];
-	echo "<h2>Sites (".count($vols->sites).") : </h2><p>".implode(", ", array_map(function($x) { return "<span class=\"ppt_info\"><a href=\"".url_with_parameter("site", $x->nom)."\">".$x->nom." (".$x->nombrevols." vols, ".Utils::timeFromSeconds($x->tempsvol, TRUE).")</a></span>"; }, $vols->sites/*$lgfr->getInfoSite()*/))."</p>";
+	echo "<h2>Sites (".count($vols->sites).") : </h2><p>".implode(", ", array_map(function($x) { return "<span class=\"ppt_info\"><a href=\"".url_with_parameter("site", $x->nom)."\">".str_replace(" ", "&nbsp;", $x->nom)." (".$x->nombrevols." vols, ".Utils::timeFromSeconds($x->tempsvol, TRUE).")</a></span>"; }, $vols->sites/*$lgfr->getInfoSite()*/))."</p>";
 	echo "<h2>Détails : </h2>";
 	echo "<TABLE id=\"details\">";
 	echo "<TR><TH>ID</TH><TH>Date</TH><TH>Heure</TH><TH>Duree</TH><TH>Site</TH><TH>Commentaire</TH><TH>Voile</TH></TR>";
@@ -153,12 +162,14 @@ a:visited {
 		    $nom_parametredate = "datemax";
 		    $texte_parametredate = "jusqu'à";
 		}
-		echo "<TD><a href=\"".url_with_parameter($nom_parametredate, $vol->date->format('Y-m-d'))."\" title=\"filtrer les vols ".$texte_parametredate." cette date\">". $vol->date->format('d/m/Y')."</a></TD>";
+		$nomsjours = ['dim', 'lun', 'mar', 'mer', 'jeu', 'ven', 'sam'];
+		$jour = $nomsjours[$vol->date->format('w')];
+		echo "<TD><a href=\"".url_with_parameter($nom_parametredate, $vol->date->format('Y-m-d'))."\" title=\"filtrer les vols ".$texte_parametredate." cette date\"><p class=\"jrsem\">".$jour."</p>". $vol->date->format('d/m/Y')."</a></TD>";
 		echo "<TD>". $vol->date->format('H:i:s')."</TD>";
 		echo "<TD>". Utils::timeFromSeconds($vol->duree)."</TD>";
 		//echo "<TD>". $vol->sduree."</TD>";
 		echo "<TD><a href=\"".url_with_parameter("site", $vol->site)."\" title=\"filtrer les vols pour ce site\">".$vol->site."</a>&nbsp;<a href=\"https://maps.google.com/?q=".$vol->latdeco.",".$vol->londeco."\" target=\"_Blank\" class=\"lien_gmaps\" title=\"google maps\">&#9936;</a></TD>";
-		echo "<TD>". $vol->commentaire."</TD>";
+		echo "<TD class=\"desc\">". preg_replace("/(\w+:\/\/[^\s]+)/","<a href=\"$1\">$1</a>",$vol->commentaire)."</TD>";
 		echo "<TD><a href=\"".url_with_parameter("voile", $vol->voile)."\" title=\"filtrer les vols pour cette voile\">".$vol->voile."</a></TD>";
 		echo "</TR>";
 	}

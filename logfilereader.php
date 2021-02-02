@@ -279,7 +279,7 @@ require("logfileutils.php");
 			$vols->sites = $this->getInfoSite(null, $tritemps, $datemin, $datemax, $voilenom);
 			return $vols;
 		}
-		
+
 		function downloadCSV()
 		{
 			$vols = $this->getRecords(null, TRUE);
