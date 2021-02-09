@@ -68,9 +68,9 @@ td.desc {
 .editsitetexte {	
     position: absolute;
     font-size: 12pt;
-    left: 5px;
+    left: 12px;
     /* right: 0px; */
-    top: 5px;
+    bottom: 0px;
     /* background: rgb(155,155,155); */
     color: red;
     text-shadow: #FC0 1px 0 10px;
