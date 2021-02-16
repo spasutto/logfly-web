@@ -60,6 +60,20 @@
 
 ?>
 
+<!DOCTYPE html>
+<html>
+    
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
+  <title>Edition d'un vol</title>
+  
+  <style>
+    .fullwidth {
+        width: 100%;
+    }
+  </style>
+
 <script type="text/javascript">
 
     window.onload = function()
@@ -184,6 +198,10 @@
         return false;
     }
 </script>
+
+</head>
+<body>
+    
 <form action="<?php echo $_SERVER['REQUEST_URI'];?>" name="formvol" method="post" onsubmit="return onsubmitSite();">
  <p>Site : <select name="site" onchange="onSiteChange(this);"></select><span name="infobox"></span>
 </p>
@@ -193,3 +211,7 @@
  <p>Altitude : <input type="text" name="alt" /></p>
  <p><input type="submit" value="OK"><input type="button" value="delete" onclick="onsubmitSite(true);"></p>
 </form>
+
+
+</body>
+</html>

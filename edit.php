@@ -3,7 +3,14 @@
     
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
   <title>Edition d'un vol</title>
+  
+  <style>
+    .fullwidth {
+        width: 100%;
+    }
+  </style>
 </head>
 <body>
   
@@ -167,7 +174,7 @@ vol à editer/créer : <select name="vol" onchange="onVolChange(this.value);">
  <p>Heure : <input type="text" name="heure" value="<?php echo date('H:i:s');?>"/></p>
  <p>Durée (secondes) : <input type="text" name="duree" onKeyUp="cleRelachee(event)"/>&nbsp;soit <span id="dureetemps"></span></p>
  <p>Voile : <input type="text" name="voile" /></p>
- <p>Commentaire : <textarea name="commentaire" cols="40" rows="5"/></textarea></p>
+ <p>Commentaire : <textarea name="commentaire" class="fullwidth" rows="10"/></textarea></p>
  <p><input type="submit" value="OK"></p>
 </form>
 
