@@ -66,7 +66,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
-  <title>Edition d'un vol</title>
+  <title>Edition d'un site</title>
   
   <style>
     .fullwidth {
