@@ -1,12 +1,12 @@
 <?php
 
-if ($_GET['clepwd'] != "password")
+if ($_GET['pouetpwd'] != "toto")
 {
     http_response_code(404);
     exit(0);
 }
-
 /*
+
 	require("logfilereader.php");
 
 	try
@@ -21,7 +21,7 @@ if ($_GET['clepwd'] != "password")
 $db = new LogFlyDB();
 if(!$db)
   throw new Exception($db->lastErrorMsg());
-$sql = "UPDATE VOL SET V_ID=263 WHERE V_ID=265";
+$sql = "UPDATE VOL SET V_ID=156 WHERE V_ID=1580";
 $ret = $db->query($sql);
 while($row = $ret->fetchArray(SQLITE3_ASSOC))
 echo intval($row['V_ID']).";";
