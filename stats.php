@@ -19,7 +19,7 @@ if (isset($_GET['dl'])) {
 <head>
   <meta charset="UTF-8">
   <title>Statistiques de vol</title>
-  
+
     <link rel="stylesheet" href="//cdn.jsdelivr.net/chartist.js/latest/chartist.min.css">
     <script src="//cdn.jsdelivr.net/chartist.js/latest/chartist.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.1/moment.min.js"></script>
@@ -30,15 +30,15 @@ if (isset($_GET['dl'])) {
             /*width:700px;
             height:200px;*/
         }
-        
+
         .full {
             width : 100%;
         }
-        
+
         .zoom:hover{
             transform: scale(2.5);
         }
-        
+
         svg.ct-chart-bar, svg.ct-chart-line{
             overflow: visible;
         }
@@ -66,11 +66,13 @@ if (isset($_GET['dl'])) {
 	if ($nbrvols <= 0) {
 	    exit(0);
 	}
-    $d1 = $vols->vols[0]->date;
-    $d2 = $vols->vols[$nbrvols-1]->date;
-    $monthsdiff = $d1->diff($d2)->m + ($d1->diff($d2)->y*12);
+  $d1 = $vols->vols[0]->date;
+  $d2 = $vols->vols[$nbrvols-1]->date;
+  $monthsdiff = $d1->diff($d2)->m + ($d1->diff($d2)->y*12);
+  if ($monthsdiff <= 0)
+    $monthsdiff = 1;
 	echo "<h1>Statistiques de vol (".$nbrvols." vols, ".Utils::timeFromSeconds($vols->tempstotalvol, TRUE).") :<a href=\"?dl\"><img src=\"csv.svg\" width=\"32px\" title=\"télécharger un fichier csv\"></h1></a>";
-    echo "moyenne : ".round($nbrvols/$monthsdiff)." vols par mois, ".Utils::timeFromSeconds($vols->tempstotalvol/$nbrvols, TRUE)." par vol<BR>";
+  echo "moyenne : ".round($nbrvols/$monthsdiff)." vols par mois, ".Utils::timeFromSeconds($vols->tempstotalvol/$nbrvols, TRUE)." par vol<BR>";
 
 	//echo "<pre>";print_r($vols);echo "</pre>";
 ?>
