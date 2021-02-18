@@ -39,7 +39,7 @@ function url_with_parameter($paramname, $paramvalue) {
 }
 ?><!DOCTYPE html>
 <html>
-    
+
 <head>
   <meta charset="UTF-8">
   <title>Carnet de vol</title>
@@ -65,7 +65,7 @@ td.desc {
 .ppt_info:hover {
     background : #efefef;
 }
-.editsitetexte {	
+.editsitetexte {
     position: absolute;
     font-size: 12pt;
     left: 12px;
@@ -84,9 +84,6 @@ a {
 }
 a:hover {
     text-decoration : underline;
-}
-a:visited {
-    color: #984695;
 }
 #details {
     font-size : 10pt;
@@ -118,7 +115,7 @@ a:visited {
 	if (strlen($voile)>0)
 	    $titrevoile .= " pour \"".$voile."\"";
 	if (strlen($site)>0) {
-	    if (strlen($titrevoile)>0) 
+	    if (strlen($titrevoile)>0)
 	        $titrevoile .= " et";
 	    $titrevoile .= " pour \"".$site."\"";
 	}

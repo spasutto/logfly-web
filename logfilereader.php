@@ -29,7 +29,7 @@ require("logfileutils.php");
 		{
 			$dbname = LOGFLYDB;
 			if (!file_exists($dbname))
-				return null;//throw new Exception($dbname." doesn't exists");
+				throw new Exception($dbname." not found");
 			$this->open($dbname);
 		}
 	}
@@ -38,8 +38,8 @@ require("logfileutils.php");
 		protected $db = FALSE;
 		function __construct()
 		{
-			$this->db = new LogFlyDB();
-			if(!$this->db)
+      $this->db = new LogFlyDB();
+      if(!$this->db)
 				throw new Exception($this->db->lastErrorMsg());
 		}
 		function __destruct ()
@@ -116,34 +116,34 @@ require("logfileutils.php");
 			}
 			return $sites;
 		}
-		
+
 		function createSite($nom)
 		{
 			$sql = "INSERT INTO SITE (S_Nom) VALUES ('".str_replace("'", "''", strtoupper($nom))."') ";
 			//echo $sql."<BR>\n";
 			$ret = $this->db->query($sql);
-			
+
 			return $this->getInfoSite($nom);
 		}
-		
+
 		function editSite($nom, $newnom, $lat, $lon, $alt)
 		{
 			$sql = "UPDATE SITE set S_Latitude='".$lat."', S_Longitude='".$lon."', S_Alti='".$alt."', S_Nom='".str_replace("'", "''", $newnom)."' WHERE S_Nom='".str_replace("'", "''", $nom)."';";
 			//echo $sql."<BR>\n";
 			$ret = $this->db->query($sql);
-			
+
 			return $ret != FALSE;
 		}
-		
+
 		function deleteSite($nom)
 		{
 			$sql = "DELETE FROM SITE WHERE S_Nom='".str_replace("'", "''", $nom)."';";
 			echo $sql."<BR>\n";
 			$ret = $this->db->query($sql);
-			
+
 			return $ret != FALSE;
 		}
-		
+
 		function getInfoSite($nom = NULL, $tritemps = FALSE, $datemin=null, $datemax=null, $voile=null)
 		{
 		    $sites = array();
@@ -242,7 +242,7 @@ require("logfileutils.php");
 				$vol->londeco = $row['S_Longitude'];//$row['V_LongDeco'];
 				$vol->commentaire = $row['V_Commentaire'];
 				$vol->voile = $row['V_Engin'];
-				
+
 				if ($unvol)
 				    return $vol;
 
@@ -284,7 +284,7 @@ require("logfileutils.php");
 		{
 			$vols = $this->getRecords(null, TRUE);
 			$tempvol = 0;
-			
+
             header('Content-Type: application/octet-stream');
             header('Content-Disposition: attachment; filename="logflystats.csv');
         	foreach ($vols->vols as $vol)
@@ -300,19 +300,19 @@ require("logfileutils.php");
         	}
             flush();
 		}
-		
+
 		function downloadDB()
 		{
             $readableStream = fopen(LOGFLYDB, 'rb');
             $writableStream = fopen('php://output', 'wb');
-            
+
             header('Content-Type: application/octet-stream');
             header('Content-Disposition: attachment; filename="'.LOGFLYDB.'"');
             stream_copy_to_stream($readableStream, $writableStream);
             ob_flush();
             flush();
 		}
-		
+
 		function getStats()
 		{
 		    $stats = array();
