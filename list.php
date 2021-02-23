@@ -106,6 +106,23 @@ a:hover {
 }
 </style>
 
+<script>
+function editvol(id) {
+  let url = 'edit.php';
+  if (id > 0)
+    url += '?id='+parseInt(id);
+  var MyWindow=window.open(url,'MyWindow','width=600,height=480');
+}
+window.onload = function() {
+    const lignes = document.querySelectorAll('tr');
+    lignes.forEach(function(ligne) {
+        ligne.addEventListener('dblclick', function (e) {
+          e.preventDefault();
+          editvol(e.target.closest("tr").querySelector("td").innerText);
+        });
+    });
+};
+</script>
 </head>
 
 <body>
@@ -156,7 +173,7 @@ a:hover {
 
   echo "<h1><a href=\"".$_SERVER["SCRIPT_NAME"]."\" style=\"text-decoration:none;\">Carnet de vol".$titrevoile." (".$vols->nbvols." vols, ".Utils::timeFromSeconds($vols->tempstotalvol, TRUE)."".$titredate.")</a> : <a href=\"download.php\" title=\"télécharger la base logfly\"><img src=\"download.svg\" width=\"32px\"></a>";
   echo "&nbsp;<a href=\"#\" onClick=\"MyWindow=window.open('stats.php','MyWindow','width=900,height=380'); return false;\" title=\"Statistiques de vol\"><img src=\"stats.svg\" width=\"32px\"></a>";
-  echo "&nbsp;<a href=\"#\" onClick=\"MyWindow=window.open('edit.php','MyWindow','width=600,height=480'); return false;\" title=\"editer le carnet de vol\"><img src=\"edit.svg\" width=\"32px\"></a>";
+  echo "&nbsp;<a href=\"#\" onClick=\"editvol(); return false;\" title=\"editer le carnet de vol\"><img src=\"edit.svg\" width=\"32px\"></a>";
   echo "&nbsp;<a href=\"#\" style=\"position: relative;\" onClick=\"MyWindow=window.open('editsite.php','MyWindowSite','width=600,height=380'); return false;\" title=\"editer un site\"><span class=\"editsitetexte\">site</span><img src=\"edit.svg\" style=\"position: absolute;\" width=\"32px\"></a>";
   echo "</h1>";
   echo "<h2>Voiles  (".count($vols->voiles).") : </h2><p>".implode(", ", array_map(function($x) { return "<a href=\"".url_with_parameter("voile", $x->nom, "offset")."\" class=\"ppt_info\">".$x->nom." (".$x->nombrevols." vols, ".Utils::timeFromSeconds($x->tempsvol, TRUE).")</a>"; }, $vols->voiles))."</p>";
