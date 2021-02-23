@@ -1,11 +1,11 @@
 <!DOCTYPE html>
 <html>
-    
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
   <title>Edition d'un vol</title>
-  
+
   <style>
     .fullwidth {
         width: 100%;
@@ -13,7 +13,7 @@
   </style>
 </head>
 <body>
-  
+
 <?php
 	/*if ($_GET['user'] != 'sylvain')
 	{
@@ -38,7 +38,7 @@
 	    $id = intval($_GET['id']);
 	if ($id <= 0)
 	    $id = FALSE;
-	
+
 	//htmlspecialchars($_POST['nom']);
 	//
 	if (isset($_POST['site']) && isset($_POST['date']) && isset($_POST['heure']) && isset($_POST['duree']) && isset($_POST['voile']) && isset($_POST['commentaire'])
@@ -81,6 +81,10 @@ if (window.opener !== window && !window.menubar.visible)
     window.onload = function()
     {
 <?php
+function decode_dbstring($dbstring)
+{
+    return htmlspecialchars_decode(str_replace("'", "\\'", str_replace("\r", "", str_replace("\n", "\\n", $dbstring))));
+}
     if ($id)
     {
         $vol  = $lgfr->getRecords($id);
@@ -92,8 +96,8 @@ if (window.opener !== window && !window.menubar.visible)
         document.getElementsByName("heure")[0].value = '<?php echo $vol->date->format('H:i:s');?>';
         document.getElementsByName("duree")[0].value = <?php echo $vol->duree;?>;
         document.getElementsByName("voile")[0].value = '<?php echo $vol->voile;?>';
-        document.getElementsByName("commentaire")[0].value = '<?php echo htmlspecialchars_decode(str_replace("'", "\\'", str_replace("\r", "", str_replace("\n", "\\n", $vol->commentaire))));?>'
-        document.getElementsByName("site")[0].value = '<?php echo $vol->site;?>'
+        document.getElementsByName("commentaire")[0].value = '<?php echo decode_dbstring($vol->commentaire);?>'
+        document.getElementsByName("site")[0].value = '<?php echo decode_dbstring($vol->site);?>'
         onSiteChange(document.getElementsByName("site")[0].value);
         document.getElementsByName("vol")[0].value = <?php echo $id;?>;
 <?php
@@ -104,7 +108,7 @@ if (window.opener !== window && !window.menubar.visible)
 ?>
         calctemps();
     };
-    
+
     function onSiteChange(val)
     {
         var champautresite = document.getElementsByName("autresite")[0];
@@ -113,7 +117,7 @@ if (window.opener !== window && !window.menubar.visible)
         else
             champautresite.style.display = 'none';
     }
-    
+
     function onVolChange(val)
     {
         let url = '<?php echo $_SERVER['SCRIPT_NAME'];?>';
@@ -121,23 +125,23 @@ if (window.opener !== window && !window.menubar.visible)
             url += '?id=' + val;
         window.location = url;
     }
-    
+
     function cleRelachee(evt)
     {
         //alert(evt.keyCode);
         calctemps();
     }
-    
+
     function calctemps()
     {
         let temps = document.getElementsByName("duree")[0].value.toHHMMSS();
         document.getElementById("dureetemps").innerHTML = temps;
     }
-    
+
     function onsubmitVol()
     {
     }
-    
+
     String.prototype.toHHMMSS = function () {
         var sec_num = parseInt(this, 10); // don't forget the second param
         if (isNaN(sec_num))
@@ -145,7 +149,7 @@ if (window.opener !== window && !window.menubar.visible)
         var hours   = Math.floor(sec_num / 3600);
         var minutes = Math.floor((sec_num - (hours * 3600)) / 60);
         var seconds = sec_num - (hours * 3600) - (minutes * 60);
-    
+
         if (hours   < 10) {hours   = "0"+hours;}
         if (minutes < 10) {minutes = "0"+minutes;}
         if (seconds < 10) {seconds = "0"+seconds;}
