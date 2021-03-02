@@ -1,62 +1,62 @@
 <?php
-	/*if ($_GET['user'] != 'sylvain')
-	{
-		exit(0);
-		return;
-	}*/
-	//phpinfo();
-	require("logfilereader.php");
-	try
-	{
-		$lgfr = new LogflyReader();
-	}
-	catch(Exception $e)
-	{
-		echo "error!!! : ".$e->getMessage();
-		exit(0);
-	}
+  /*if ($_GET['user'] != 'sylvain')
+  {
+    exit(0);
+    return;
+  }*/
+  //phpinfo();
+  require("logfilereader.php");
+  try
+  {
+    $lgfr = new LogflyReader();
+  }
+  catch(Exception $e)
+  {
+    echo "error!!! : ".$e->getMessage();
+    exit(0);
+  }
 
-	if (isset($_REQUEST['sites']))
-	{
-	  foreach ($lgfr->getSites() as $site)
-		  echo $site.",";
+  if (isset($_REQUEST['sites']))
+  {
+    foreach ($lgfr->getSites() as $site)
+      echo $site.",";
 
-		exit(0);
-		return;
-	}
-	else if (isset($_REQUEST['site']))
-	{
-  	$site = htmlspecialchars(urldecode($_REQUEST['site']));
-	  $site = $lgfr->getInfoSite($site);
+    exit(0);
+    return;
+  }
+  else if (isset($_REQUEST['site']))
+  {
+    $site = htmlspecialchars(urldecode($_REQUEST['site']));
+    $site = $lgfr->getInfoSite($site);
     echo $site->nom.",".$site->latitude.",".$site->longitude.",".$site->altitude;
 
-		exit(0);
-		return;
-	}
-	else if (isset($_REQUEST['action']))
-	{
-  	if (isset($_REQUEST['nom']) && isset($_REQUEST['newnom']) && isset($_REQUEST['lat']) && isset($_REQUEST['lon']) && isset($_REQUEST['alt']))
-  	{
-  	  $site = htmlspecialchars(urldecode($_REQUEST['nom']));
-  	  $newnom = htmlspecialchars(urldecode($_REQUEST['newnom']));
-  	  if ($_REQUEST['action'] == 'delete')
-  	  {
-  	  	$ret = $lgfr->deleteSite($site);
-  		  if ($ret)
-  		  	echo "OK";
-  	  }
-  	  else
-  	  {
-  	    if ($_REQUEST['action'] == 'create')
-  	  	  $ret = $lgfr->createSite($site);
-  	    $ret = $lgfr->editSite($site, $newnom, $_REQUEST['lat'], $_REQUEST['lon'], $_REQUEST['alt']);
-  		  if ($ret)
-  		  	echo "OK";
-  	  }
-  	}
-		exit(0);
-		return;
-	}
+    exit(0);
+    return;
+  }
+  else if (isset($_REQUEST['action']))
+  {
+    if (isset($_REQUEST['nom']) && isset($_REQUEST['newnom']) && isset($_REQUEST['lat']) && isset($_REQUEST['lon']) && isset($_REQUEST['alt']))
+    {
+      $site = htmlspecialchars(urldecode($_REQUEST['nom']));
+      $newnom = htmlspecialchars(urldecode($_REQUEST['newnom']));
+      if ($_REQUEST['action'] == 'delete')
+      {
+        $ret = $lgfr->deleteSite($site);
+        if ($ret)
+          echo "OK";
+      }
+      else
+      {
+        if ($_REQUEST['action'] == 'create')
+          $ret = $lgfr->createSite($site);
+        $ret = $lgfr->editSite($site, $newnom, $_REQUEST['lat'], $_REQUEST['lon'], $_REQUEST['alt']);
+        if ($ret)
+          echo "OK";
+      }
+    }
+    exit(0);
+    return;
+  }
 
 ?>
 
@@ -183,8 +183,11 @@
       if (this.readyState == 4 && this.status == 200) {
         if (this.responseText != "OK")
           alert(this.responseText);
-        else
+        else {
           getSiteList(newnom);
+          alert((action=='update'?'MAJ':'Suppression') + ' OK !');
+          window.opener.location.reload();
+        }
         message("");
       }
     };
