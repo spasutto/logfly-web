@@ -106,7 +106,7 @@ function decode_dbstring($dbstring)
       $id = -1;
   }
 ?>
-    calctemps();
+    calcheures();
   };
 
   function onSiteChange(val)
@@ -126,16 +126,16 @@ function decode_dbstring($dbstring)
     window.location = url;
   }
 
-  function cleRelachee(evt)
+  function calcheures()
   {
-    //alert(evt.keyCode);
-    calctemps();
+    let temps = document.getElementsByName("duree")[0].value;
+    document.getElementsByName("dureeheures")[0].value = temps.toHHMMSS();
   }
 
-  function calctemps()
+  function calcsecondes()
   {
-    let temps = document.getElementsByName("duree")[0].value.toHHMMSS();
-    document.getElementById("dureetemps").innerHTML = temps;
+    let temps = document.getElementsByName("dureeheures")[0].value;
+    document.getElementsByName("duree")[0].value = temps.toS();
   }
 
   function onsubmitVol()
@@ -154,6 +154,21 @@ function decode_dbstring($dbstring)
     if (minutes < 10) {minutes = "0"+minutes;}
     if (seconds < 10) {seconds = "0"+seconds;}
     return hours+':'+minutes+':'+seconds;
+  }
+
+  String.prototype.toS = function () {
+    var secs = 0;
+    var temps = this.replace(/[^0-9:]/g, '').substr(0,8).split(':').filter(function (e){return (e||"").trim().length>0;});
+    switch (temps.length)
+    {
+      case 3:
+        secs += parseInt(temps[2].substr(-2));
+      case 2:
+        secs += 3600 * parseInt(temps[0].substr(-2));
+        secs += 60 * parseInt(temps[1].substr(-2));
+        break;
+    }
+    return isNaN(secs)?0:secs;
   }
 </script>
 vol à editer/créer : <select name="vol" onchange="onVolChange(this.value);">
@@ -176,7 +191,7 @@ vol à editer/créer : <select name="vol" onchange="onVolChange(this.value);">
   <input type="hidden" name="id" value="<?php echo $id;?>">
  <p>Date : <input type="text" name="date" value="<?php echo date('d/m/Y');?>"/></p>
  <p>Heure : <input type="text" name="heure" value="<?php echo date('H:i:s');?>"/></p>
- <p>Durée (secondes) : <input type="text" name="duree" onKeyUp="cleRelachee(event)"/>&nbsp;soit <span id="dureetemps"></span></p>
+ <p>Durée (secondes) : <input type="text" name="duree" onKeyUp="calcheures();"/>&nbsp;soit&nbsp;<input type="text" name="dureeheures" onKeyUp="calcsecondes()"/></p>
  <p>Voile : <input type="text" name="voile" /></p>
  <p>Commentaire : <textarea name="commentaire" class="fullwidth" rows="10"/></textarea></p>
  <p><input type="submit" value="OK"></p>
