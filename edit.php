@@ -164,8 +164,11 @@ function decode_dbstring($dbstring)
       case 3:
         secs += parseInt(temps[2].substr(-2));
       case 2:
-        secs += 3600 * parseInt(temps[0].substr(-2));
         secs += 60 * parseInt(temps[1].substr(-2));
+        secs += 3600 * parseInt(temps[0].substr(-2));
+        break;
+      case 1:
+        secs += 60 * parseInt(temps[0].substr(-2));
         break;
     }
     return isNaN(secs)?0:secs;
