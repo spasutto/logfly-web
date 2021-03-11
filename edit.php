@@ -1,4 +1,28 @@
-<!DOCTYPE html>
+<?php
+require("logfilereader.php");
+try
+{
+  $lgfr = new LogflyReader();
+}
+catch(Exception $e)
+{
+  echo "error!!! : ".$e->getMessage();
+  exit(0);
+}
+$id=FALSE;
+if (isset($_POST['id']) && preg_match('/^\d+$/', $_POST['id']))
+  $id = intval($_POST['id']);
+else if (isset($_GET['id']) && preg_match('/^\d+$/', $_GET['id']))
+  $id = intval($_GET['id']);
+if ($id <= 0)
+  $id = FALSE;
+if ($id && isset($_GET["del"]))
+{
+  $lgfr->deleteVol($id);
+  echo "OK";
+  exit(0);
+}
+?><!DOCTYPE html>
 <html>
 
 <head>
@@ -21,24 +45,6 @@
   return;
   }*/
   //phpinfo();
-  require("logfilereader.php");
-  try
-  {
-  $lgfr = new LogflyReader();
-  }
-  catch(Exception $e)
-  {
-  echo "error!!! : ".$e->getMessage();
-  exit(0);
-  }
-  $id=FALSE;
-  if (isset($_POST['id']) && preg_match('/^\d+$/', $_POST['id']))
-    $id = intval($_POST['id']);
-  else if (isset($_GET['id']) && preg_match('/^\d+$/', $_GET['id']))
-    $id = intval($_GET['id']);
-  if ($id <= 0)
-    $id = FALSE;
-
   //htmlspecialchars($_POST['nom']);
   //
   if (isset($_POST['site']) && isset($_POST['date']) && isset($_POST['heure']) && isset($_POST['duree']) && isset($_POST['voile']) && isset($_POST['commentaire'])
@@ -54,11 +60,11 @@
       return;
     }
     if (!$id)
-    $ret = $lgfr->addVol($site, $_POST['date'], $_POST['heure'], $_POST['duree'], $_POST['voile'], htmlspecialchars($_POST['commentaire']));
+      $ret = $lgfr->addVol($site, $_POST['date'], $_POST['heure'], $_POST['duree'], $_POST['voile'], htmlspecialchars($_POST['commentaire']));
     else
-    $ret = $lgfr->updateVol($id, $site, $_POST['date'], $_POST['heure'], $_POST['duree'], $_POST['voile'], htmlspecialchars($_POST['commentaire']));
-  if ($ret)
-  {
+      $ret = $lgfr->updateVol($id, $site, $_POST['date'], $_POST['heure'], $_POST['duree'], $_POST['voile'], htmlspecialchars($_POST['commentaire']));
+    if ($ret)
+    {
     //header("Location : /list.php");
 ?>
 <script type="text/javascript">
@@ -69,15 +75,22 @@ if (window.opener !== window && !window.menubar.visible)
   function refreshParent() {
     window.opener.location.reload();
   }
-  window.close();
 }
+window.close();
 </script>
 <?php
-  }
+    }
   }
 ?>
 
 <script type="text/javascript">
+  if (window.opener !== window && !window.menubar.visible)
+  {
+    window.onunload = refreshParent;
+    function refreshParent() {
+      window.opener.location.reload();
+    }
+  }
   window.onload = function()
   {
 <?php
@@ -108,6 +121,11 @@ function decode_dbstring($dbstring)
 ?>
     calcheures();
   };
+
+  function message(mesg)
+  {
+    document.getElementsByName("infobox")[0].innerHTML = mesg;
+  }
 
   function onSiteChange(val)
   {
@@ -140,6 +158,36 @@ function decode_dbstring($dbstring)
 
   function onsubmitVol()
   {
+    if (document.getElementsByName("site")[0].value <= 0)
+    {
+      alert('Renseigner un site !');
+      return false;
+    }
+  }
+
+  function delVol()
+  {
+    if (confirm("Êtes-vous sûr?"))
+    {
+      var xhttp = new XMLHttpRequest();
+      message("loading...");
+      xhttp.onreadystatechange = function() {
+        if (this.readyState == 4 && this.status == 200) {
+          if (this.responseText != "OK")
+            alert(this.responseText);
+          else {
+            document.getElementById('delbtn').style.display = 'none';
+            alert('Ce vol vient d\'être supprimé. Appuyer sur OK pour annuler la suppression');
+            if (window.opener !== window && !window.menubar.visible)
+              window.opener.location.reload();
+          }
+          message("");
+        }
+      };
+      xhttp.open("GET", "<?php echo $_SERVER['REQUEST_URI'];?>&del", true);
+      xhttp.send();
+    }
+    //window.location = "?del&id=" + document.getElementsByName("id")[0].value;
   }
 
   String.prototype.toHHMMSS = function () {
@@ -174,6 +222,7 @@ function decode_dbstring($dbstring)
     return isNaN(secs)?0:secs;
   }
 </script>
+<h3 name="infobox"></h3>
 vol à editer/créer : <select name="vol" onchange="onVolChange(this.value);">
   <option value="-1">Nouveau...</option>
 <?php
@@ -181,7 +230,11 @@ vol à editer/créer : <select name="vol" onchange="onVolChange(this.value);">
   echo "  <option value=\"".$vol->id."\">".$vol->id." : (".$vol->date->format('d/m/Y').") ".$vol->site."</option>\n";
 ?>
 </select>
-<form action="<?php echo $_SERVER['REQUEST_URI'];?>" name="formvol" method="post" onsubmit="onsubmitVol();">
+<?php
+if ($id && !isset($_GET["del"]))
+  echo "    <input type=\"button\" id=\"delbtn\" value=\"Suppr\" onclick=\"delVol();\">";
+?>
+<form action="<?php echo $_SERVER['REQUEST_URI'];?>" name="formvol" method="post" onsubmit="return onsubmitVol();">
  <p>Site : <select name="site" onchange="onSiteChange(this.value);">
   <option value="-1">Nouveau...</option>
 <?php
@@ -194,9 +247,9 @@ vol à editer/créer : <select name="vol" onchange="onVolChange(this.value);">
   <input type="hidden" name="id" value="<?php echo $id;?>">
  <p>Date : <input type="text" name="date" value="<?php echo date('d/m/Y');?>"/></p>
  <p>Heure : <input type="text" name="heure" value="<?php echo date('H:i:s');?>"/></p>
- <p>Durée (secondes) : <input type="text" name="duree" onKeyUp="calcheures();"/>&nbsp;soit&nbsp;<input type="text" name="dureeheures" onKeyUp="calcsecondes()"/></p>
+ <p>Durée (secondes) : <input type="text" name="duree" value="0" onKeyUp="calcheures();"/>&nbsp;soit&nbsp;<input type="text" name="dureeheures" onKeyUp="calcsecondes()"/></p>
  <p>Voile : <input type="text" name="voile" /></p>
- <p>Commentaire : <textarea name="commentaire" class="fullwidth" rows="10"/></textarea></p>
+ <p>Commentaire : <textarea name="commentaire" class="fullwidth" rows="10"></textarea></p>
  <p><input type="submit" value="OK"></p>
 </form>
 

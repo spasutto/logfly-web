@@ -57,8 +57,23 @@ class LogflyReader
       return intval($row['ID']);
   }
 
+  function deleteVol($id)
+  {
+    $sql = "DELETE FROM Vol WHERE V_ID=".$id.";";
+    $ret = $this->db->query($sql);
+  }
+
+  function existeVol($id)
+  {
+    $sql = "SELECT 1 FROM Vol WHERE V_ID=".$id.";";
+    $ret = $this->db->query($sql);
+    return $ret->fetchArray(SQLITE3_ASSOC);
+  }
+
   function updateVol($id, $nomsite, $date, $heure, $duree, $voile, $commentaire)
   {
+    if (!$this->existeVol($id))
+      return $this->addVol($nomsite, $date, $heure, $duree, $voile, $commentaire, $id);
     $heureformat = "H:i:s";
     if (strlen($heure) != 8)
       $heureformat = "H:i";
@@ -71,7 +86,7 @@ class LogflyReader
     //echo "<pre>".print_r($site)."</pre>";
     $sduree = Utils::timeFromSeconds($duree, TRUE);
     //echo print_r($site);
-    $sql = "UPDATE Vol SET V_Score=NULL,V_League=NULL,V_Engin='".$voile."',V_CFD=NULL,UTC=0,V_Photos=NULL,V_IGC=NULL,V_Commentaire='".str_replace("'", "''", $commentaire)."',V_Pays='FRANCE',V_Site='".str_replace("'", "''", $site->nom)."',V_AltDeco='".$site->altitude."',V_LongDeco='".$site->longitude."',V_LatDeco='".$site->latitude."',V_sDuree='".$sduree."',V_Duree=".$duree.",V_Date='".$date->format('Y-m-d H:i:s')."' WHERE V_ID=".$id.";";
+    $sql = "UPDATE Vol SET V_Score=NULL,V_League=NULL,V_Engin='".$voile."',V_CFD=NULL,UTC=0,V_Photos=NULL,V_IGC=NULL,V_Commentaire='".str_replace("'", "''", htmlspecialchars_decode($commentaire))."',V_Pays='FRANCE',V_Site='".str_replace("'", "''", $site->nom)."',V_AltDeco='".$site->altitude."',V_LongDeco='".$site->longitude."',V_LatDeco='".$site->latitude."',V_sDuree='".$sduree."',V_Duree=".$duree.",V_Date='".$date->format('Y-m-d H:i:s')."' WHERE V_ID=".$id.";";
     //echo $sql."<BR>\n";
     $ret = $this->db->query($sql);
     if(!$ret)
@@ -82,12 +97,13 @@ class LogflyReader
     return TRUE;
   }
 
-  function addVol($nomsite, $date, $heure, $duree, $voile, $commentaire)
+  function addVol($nomsite, $date, $heure, $duree, $voile, $commentaire, $id=FALSE)
   {
     $heureformat = "H:i:s";
     if (strlen($heure) < 8)
       $heureformat = "H:i";
-    $id = $this->getNextID();
+    if (!$id)
+      $id = $this->getNextID();
     $date =  DateTime::createFromFormat('d/m/Y '.$heureformat, $date." ".$heure);
     $nomsite = strtoupper($nomsite);
     $site = $this->getInfoSite($nomsite);
@@ -95,7 +111,7 @@ class LogflyReader
       $site = $this->createSite($nomsite);
     $sduree = Utils::timeFromSeconds($duree, TRUE);
     $sql = "INSERT INTO Vol (V_Score,V_League,V_Engin,V_CFD,UTC,V_Photos,V_IGC,V_Commentaire,V_Pays,V_Site,V_AltDeco,V_LongDeco,V_LatDeco,V_sDuree,V_Duree,V_Date,V_ID)\n";
-    $sql .= "VALUES (NULL,NULL,'".$voile."',NULL,0,NULL,NULL,'".str_replace("'", "''", $commentaire)."','FRANCE','".str_replace("'", "''", $nomsite)."','".$site->altitude."','".$site->longitude."','".$site->latitude."','".$sduree."',".$duree.",'".$date->format('Y-m-d H:i:s')."',".$id.");";
+    $sql .= "VALUES (NULL,NULL,'".$voile."',NULL,0,NULL,NULL,'".str_replace("'", "''", htmlspecialchars_decode($commentaire))."','FRANCE','".str_replace("'", "''", $nomsite)."','".$site->altitude."','".$site->longitude."','".$site->latitude."','".$sduree."',".$duree.",'".$date->format('Y-m-d H:i:s')."',".$id.");";
     //echo $sql."<BR>\n";
     $ret = $this->db->query($sql);
     if(!$ret)
@@ -309,23 +325,47 @@ class LogflyReader
     return $vols;
   }
 
-  function downloadCSV()
+  function echoUTF16($str)
+  {
+    echo mb_convert_encoding($str, 'UTF-16LE', 'UTF-8');
+  }
+
+  function downloadCSV($stats = FALSE)
   {
     $vols = $this->getRecords(null, TRUE);
     $tempvol = 0;
+    $CSVSEP = "\t";
 
-    header('Content-Type: application/octet-stream');
-    header('Content-Disposition: attachment; filename="logflystats.csv');
+    //header('Content-Type: text');
+    header('Content-Type: application/octet-stream');header('Content-Disposition: attachment; filename="logfly'.($stats?"stats":"").'.csv');
+    echo chr(255) . chr(254);
+    $this->echoUTF16("No".$CSVSEP."date".$CSVSEP."voile".$CSVSEP."site".$CSVSEP."duree (en secondes)");
+    if ($stats)
+      $this->echoUTF16($CSVSEP."temps de vol total (en secondes)");
+    else
+      $this->echoUTF16($CSVSEP."commentaire");
+    $this->echoUTF16("\n");
     foreach ($vols->vols as $vol)
     {
       $tempvol += $vol->duree;
-      echo $vol->id.";";
-      echo $vol->date->format('d/m/Y H:i:s').";";
-      echo $vol->voile.";";
-      echo $vol->site.";";
-      echo $vol->duree.";";
-      echo $tempvol.";";
-      echo "\n";
+      $this->echoUTF16($vol->id.$CSVSEP);
+      $this->echoUTF16($vol->date->format('d/m/Y H:i:s').$CSVSEP);
+      $this->echoUTF16($vol->voile.$CSVSEP);
+      $this->echoUTF16($vol->site.$CSVSEP);
+      $this->echoUTF16($vol->duree.$CSVSEP);
+      if ($stats)
+        $this->echoUTF16($tempvol);
+      else
+      {
+        $textevol = $vol->commentaire;
+        if (preg_match('/[\n'.$CSVSEP.']/', $textevol))
+        {
+          $textevol = str_replace("\"", "\"\"", $textevol);
+          $textevol = "\"".$textevol."\"";
+        }
+        $this->echoUTF16($textevol);
+      }
+      $this->echoUTF16("\n");
     }
     flush();
   }

@@ -10,7 +10,7 @@ catch(Exception $e)
   exit(0);
 }
 if (isset($_GET['dl'])) {
-  $lgfr->downloadCSV();
+  $lgfr->downloadCSV(TRUE);
   exit(0);
 }
 ?><!DOCTYPE html>
@@ -70,7 +70,7 @@ if (isset($_GET['dl'])) {
   $monthsdiff = $d1->diff($d2)->m + ($d1->diff($d2)->y*12);
   if ($monthsdiff <= 0)
   $monthsdiff = 1;
-  echo "<h1>Statistiques de vol (".$nbrvols." vols, ".Utils::timeFromSeconds($vols->tempstotalvol, TRUE).") :<a href=\"?dl\"><img src=\"csv.svg\" width=\"32px\" title=\"télécharger un fichier csv\"></h1></a>";
+  echo "<h1>Statistiques de vol (".$nbrvols." vols, ".Utils::timeFromSeconds($vols->tempstotalvol, TRUE).") :<a href=\"?dl\"><img src=\"csv.svg\" width=\"32px\" title=\"télécharger un fichier csv\"></a></h1>";
   echo "moyenne : ".round($nbrvols/$monthsdiff)." vols par mois, ".Utils::timeFromSeconds($vols->tempstotalvol/$nbrvols, TRUE)." par vol<BR>";
 
   //echo "<pre>";print_r($vols);echo "</pre>";

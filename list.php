@@ -1,4 +1,20 @@
 <?php
+require("logfilereader.php");
+
+try
+{
+  $lgfr = new LogflyReader();
+}
+catch(Exception $e)
+{
+  echo "error!!! : ".$e->getMessage();
+  exit(0);
+}
+if (isset($_GET['dl'])) {
+  $lgfr->downloadCSV(FALSE);
+  exit(0);
+}
+
 parse_str($_SERVER["QUERY_STRING"]  , $get_array);//print_r($get_array);
 //phpinfo();return;
 $voile=null;
@@ -127,17 +143,6 @@ window.onload = function() {
 
 <body>
 <?php
-  require("logfilereader.php");
-
-  try
-  {
-    $lgfr = new LogflyReader();
-  }
-  catch(Exception $e)
-  {
-    echo "error!!! : ".$e->getMessage();
-    exit(0);
-  }
   $vols = $lgfr->getRecords(NULL, FALSE, $resperpage, $offset, $datemin, $datemax, $voile, $site);
   $titrevoile = "";
   if (strlen($voile)>0)
@@ -171,7 +176,7 @@ window.onload = function() {
   }
   $lnpages .= "<BR>";
 
-  echo "<h1><a href=\"".$_SERVER["SCRIPT_NAME"]."\" style=\"text-decoration:none;\">Carnet de vol".$titrevoile." (".$vols->nbvols." vols, ".Utils::timeFromSeconds($vols->tempstotalvol, TRUE)."".$titredate.")</a> : <a href=\"download.php\" title=\"télécharger la base logfly\"><img src=\"download.svg\" width=\"32px\"></a>";
+  echo "<h1><a href=\"".$_SERVER["SCRIPT_NAME"]."\" style=\"text-decoration:none;\">Carnet de vol".$titrevoile." (".$vols->nbvols." vols, ".Utils::timeFromSeconds($vols->tempstotalvol, TRUE)."".$titredate.")</a> : <a href=\"download.php\" title=\"télécharger la base logfly\"><img src=\"download.svg\" width=\"32px\"></a><a href=\"?dl\"><img src=\"csv.svg\" width=\"32px\" title=\"télécharger un fichier csv\"></a>";
   echo "&nbsp;<a href=\"#\" onClick=\"MyWindow=window.open('stats.php','MyWindow','width=900,height=380'); return false;\" title=\"Statistiques de vol\"><img src=\"stats.svg\" width=\"32px\"></a>";
   echo "&nbsp;<a href=\"#\" onClick=\"editvol(); return false;\" title=\"editer le carnet de vol\"><img src=\"edit.svg\" width=\"32px\"></a>";
   echo "&nbsp;<a href=\"#\" style=\"position: relative;\" onClick=\"MyWindow=window.open('editsite.php','MyWindowSite','width=600,height=380'); return false;\" title=\"editer un site\"><span class=\"editsitetexte\">site</span><img src=\"edit.svg\" style=\"position: absolute;\" width=\"32px\"></a>";
@@ -200,7 +205,7 @@ window.onload = function() {
     }
     $nomsjours = ['dim', 'lun', 'mar', 'mer', 'jeu', 'ven', 'sam'];
     $jour = $nomsjours[$vol->date->format('w')];
-    $textevol = preg_replace("/(\w+:\/\/[^\s]+)/","<a href=\"$1\">$1</a>",$vol->commentaire);
+    $textevol = preg_replace("/(\w+:\/\/[^\s]+)/","<a href=\"$1\">$1</a>",htmlspecialchars($vol->commentaire));
     $textevol = str_replace("\n", "<BR>", $textevol);
     echo "<TD><a href=\"".url_with_parameter($nom_parametredate, $vol->date->format('Y-m-d'), "offset")."\" title=\"filtrer les vols ".$texte_parametredate." cette date\"><p class=\"jrsem\">".$jour."</p>". $vol->date->format('d/m/Y')."</a></TD>";
     echo "<TD>". $vol->date->format('H:i:s')."</TD>";
