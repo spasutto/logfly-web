@@ -339,7 +339,7 @@ class LogflyReader
     //header('Content-Type: text');
     header('Content-Type: application/octet-stream');header('Content-Disposition: attachment; filename="logfly'.($stats?"stats":"").'.csv');
     echo chr(255) . chr(254);
-    $this->echoUTF16("No".$CSVSEP."date".$CSVSEP."voile".$CSVSEP."site".$CSVSEP."duree (en secondes)");
+    $this->echoUTF16("No".$CSVSEP."date".$CSVSEP."voile".$CSVSEP."site".$CSVSEP."duree (en secondes)".$CSVSEP."duree");
     if ($stats)
       $this->echoUTF16($CSVSEP."temps de vol total (en secondes)");
     else
@@ -353,6 +353,7 @@ class LogflyReader
       $this->echoUTF16($vol->voile.$CSVSEP);
       $this->echoUTF16($vol->site.$CSVSEP);
       $this->echoUTF16($vol->duree.$CSVSEP);
+      $this->echoUTF16(Utils::timeFromSeconds($vol->duree, TRUE).$CSVSEP);
       if ($stats)
         $this->echoUTF16($tempvol);
       else
@@ -360,6 +361,7 @@ class LogflyReader
         $textevol = $vol->commentaire;
         if (preg_match('/[\n'.$CSVSEP.']/', $textevol))
         {
+          $textevol = str_replace($CSVSEP, " ", $textevol);
           $textevol = str_replace("\"", "\"\"", $textevol);
           $textevol = "\"".$textevol."\"";
         }
