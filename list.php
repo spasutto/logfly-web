@@ -120,6 +120,10 @@ a:hover {
   margin: 0px;
   padding: 0px;
 }
+.inline {
+  display: inline-block;
+  margin: 5px;
+}
 </style>
 
 <script>
@@ -128,6 +132,10 @@ function editvol(id) {
   if (id > 0)
     url += '?id='+parseInt(id);
   var MyWindow=window.open(url,'MyWindow','width=600,height=480');
+}
+function onchangevoilesite(nom) {
+  if (nom != "-1")
+    window.location = nom;
 }
 window.onload = function() {
     const lignes = document.querySelectorAll('tr');
@@ -181,10 +189,20 @@ window.onload = function() {
   echo "&nbsp;<a href=\"#\" onClick=\"editvol(); return false;\" title=\"editer le carnet de vol\"><img src=\"edit.svg\" width=\"32px\"></a>";
   echo "&nbsp;<a href=\"#\" style=\"position: relative;\" onClick=\"MyWindow=window.open('editsite.php','MyWindowSite','width=600,height=380'); return false;\" title=\"editer un site\"><span class=\"editsitetexte\">site</span><img src=\"edit.svg\" style=\"position: absolute;\" width=\"32px\"></a>";
   echo "</h1>";
-  echo "<h2>Voiles  (".count($vols->voiles).") : </h2><p>".implode(", ", array_map(function($x) { return "<a href=\"".url_with_parameter("voile", $x->nom, "offset")."\" class=\"ppt_info\">".$x->nom." (".$x->nombrevols." vols, ".Utils::timeFromSeconds($x->tempsvol, TRUE).")</a>"; }, $vols->voiles))."</p>";
+  echo "<div class=\"inline\">";
+  echo "<h2>Voiles  (".count($vols->voiles).") : </h2>";//<p>".implode(", ", array_map(function($x) { return "<a href=\"".url_with_parameter("voile", $x->nom, "offset")."\" class=\"ppt_info\">".$x->nom." (".$x->nombrevols." vols, ".Utils::timeFromSeconds($x->tempsvol, TRUE).")</a>"; }, $vols->voiles))."</p>";
+  echo "<select class=\"ppt_info\" onchange=\"onchangevoilesite(this.value);\"><option value=\"-1\">Choisir une voile</option>";
+  echo implode("\n", array_map(function($x) { return "<option value=\"".url_with_parameter("voile", $x->nom, "offset")."\">".$x->nom." (".$x->nombrevols." vols, ".Utils::timeFromSeconds($x->tempsvol, TRUE).")</option>"; }, $vols->voiles));
+  echo "</select>";
+  echo "</div>";
   if (!is_array($vols->sites))
     $vols->sites = [$vols->sites];
-  echo "<h2>Sites (".count($vols->sites).") : </h2><p>".implode(", ", array_map(function($x) { return "<a href=\"".url_with_parameter("site", $x->nom, "offset")."\" class=\"ppt_info\">".str_replace(" ", "&nbsp;", $x->nom)." (".$x->nombrevols." vols, ".Utils::timeFromSeconds($x->tempsvol, TRUE).")</a>"; }, $vols->sites/*$lgfr->getInfoSite()*/))."</p>";
+  echo "<div class=\"inline\">";
+  echo "<h2>Sites (".count($vols->sites).") : </h2>";//<p>".implode(", ", array_map(function($x) { return "<a href=\"".url_with_parameter("site", $x->nom, "offset")."\" class=\"ppt_info\">".str_replace(" ", "&nbsp;", $x->nom)." (".$x->nombrevols." vols, ".Utils::timeFromSeconds($x->tempsvol, TRUE).")</a>"; }, $vols->sites/*$lgfr->getInfoSite()*/))."</p>";
+  echo "<select class=\"ppt_info\" onchange=\"onchangevoilesite(this.value);\"><option value=\"-1\">Choisir un site</option>";
+  echo implode("\n", array_map(function($x) { return "<option value=\"".url_with_parameter("site", $x->nom, "offset")."\">".$x->nom." (".$x->nombrevols." vols, ".Utils::timeFromSeconds($x->tempsvol, TRUE).")</option>"; }, $vols->sites/*$lgfr->getInfoSite()*/));
+  echo "</select>";
+  echo "</div>";
   echo "<h2>Détails : </h2>";
   echo $lnpages;
   echo "<TABLE id=\"details\">";
