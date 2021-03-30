@@ -158,7 +158,9 @@ function decode_dbstring($dbstring)
 
   function onsubmitVol()
   {
-    if (document.getElementsByName("site")[0].value <= 0)
+    let siteid = document.getElementsByName("site")[0].value;
+    let champautresite = document.getElementsByName("autresite")[0].value;
+    if (siteid == -1 && (typeof champautresite != "string" || trim(champautresite) == ""))
     {
       alert('Renseigner un site !');
       return false;

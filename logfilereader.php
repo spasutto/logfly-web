@@ -147,7 +147,7 @@ class LogflyReader
   {
     $ret2 = FALSE;
     $nom = str_replace("'", "''", $nom);
-    $newnom = str_replace("'", "''", $newnom);
+    $newnom = strtoupper(str_replace("'", "''", $newnom));
     $sql = "UPDATE SITE set S_Latitude='".$lat."', S_Longitude='".$lon."', S_Alti='".$alt."', S_Nom='".$newnom."' WHERE S_Nom='".$nom."';";
     //echo $sql."<BR>\n";
     $ret1 = $this->db->query($sql);
