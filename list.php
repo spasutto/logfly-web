@@ -115,10 +115,14 @@ a:hover {
 #details {
   font-size : 10pt;
 }
-.jrsem {
-  font-size: 7pt;
+.small {
+  font-size: 9pt;
   margin: 0px;
   padding: 0px;
+  color: #aaa;
+}
+.small:hover {
+  color: #000;
 }
 .inline {
   display: inline-block;
@@ -225,15 +229,17 @@ window.onload = function() {
     $jour = $nomsjours[$vol->date->format('w')];
     $textevol = preg_replace("/(\w+:\/\/[^\s]+)/","<a href=\"$1\">$1</a>",htmlspecialchars($vol->commentaire));
     $textevol = str_replace("\n", "<BR>", $textevol);
-    echo "<TD><a href=\"".url_with_parameter($nom_parametredate, $vol->date->format('Y-m-d'), "offset")."\" title=\"filtrer les vols ".$texte_parametredate." cette date\"><p class=\"jrsem\">".$jour."</p>". $vol->date->format('d/m/Y')."</a></TD>";
-    echo "<TD>". $vol->date->format('H:i:s')."</TD>";
+    echo "<TD><a href=\"".url_with_parameter($nom_parametredate, $vol->date->format('Y-m-d'), "offset")."\" title=\"filtrer les vols ".$texte_parametredate." cette date\"><p class=\"small\">".$jour."</p>". $vol->date->format('d/m/Y')."</a></TD>";
+    $datefin = clone $vol->date;
+    $datefin = $datefin->add(new DateInterval("PT".$vol->duree."S"));
+    echo "<TD><span title=\"heure de décollage\">&#8613;&nbsp;". $vol->date->format('H:i:s')."</span><p class=\"small\" title=\"heure de posé\">&#8615;&nbsp;".$datefin->format('H:i:s')."</p></TD>";
     echo "<TD>". Utils::timeFromSeconds($vol->duree)."</TD>";
     //echo "<TD>". $vol->sduree."</TD>";
     echo "<TD><a href=\"".url_with_parameter("site", $vol->site, "offset")."\" title=\"filtrer les vols pour ce site\">".$vol->site."</a>&nbsp;<a href=\"https://maps.google.com/?q=".$vol->latdeco.",".$vol->londeco."\" target=\"_Blank\" class=\"lien_gmaps\" title=\"google maps\">&#9936;</a></TD>";
     echo "<TD class=\"desc\">".$textevol."</TD>";
     echo "<TD><a href=\"".url_with_parameter("voile", $vol->voile, "offset")."\" title=\"filtrer les vols pour cette voile\">".$vol->voile."</a></TD>";
     echo "</TR>";
-    }
+  }
   echo "<TABLE>";
   echo $lnpages;
 ?>

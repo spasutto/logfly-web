@@ -337,7 +337,7 @@ class LogflyReader
     $CSVSEP = "\t";
 
     //header('Content-Type: text');
-    header('Content-Type: application/octet-stream');header('Content-Disposition: attachment; filename="logfly'.($stats?"stats":"").'.csv');
+    header('Content-Type: application/octet-stream');header('Content-Disposition: attachment; filename="carnet'.($stats?"_stats":"").'.csv');
     echo chr(255) . chr(254);
     $this->echoUTF16("No".$CSVSEP."date".$CSVSEP."voile".$CSVSEP."site".$CSVSEP."duree (en secondes)".$CSVSEP."duree");
     if ($stats)
