@@ -53,10 +53,12 @@ if (isset($_GET['offset'])) {
 function url_with_parameter($paramname, $paramvalue, $paramtoremove = null) {
   global $get_array;
   $url = $_SERVER["SCRIPT_NAME"]."?";
+  if (!$paramtoremove) $paramtoremove = [];
+  else if (!is_array($paramtoremove)) $paramtoremove = [$paramtoremove];
   foreach ($get_array as $key => $value) {
-  if ($key == $paramtoremove) continue;
-  if ($key == $paramname) continue;
-  $url.=$key."=".urlencode($value)."&";
+    if (in_array($key, $paramtoremove)) continue;
+    if ($key == $paramname) continue;
+    $url.=$key."=".urlencode($value)."&";
   }
   $url .= $paramname."=".urlencode($paramvalue);
   return $url;
@@ -137,9 +139,42 @@ function editvol(id) {
     url += '?id='+parseInt(id);
   var MyWindow=window.open(url,'MyWindow','width=600,height=480');
 }
-function onchangevoilesite(nom) {
+function parse_query_string(query) {
+  if (query.trim().length <= 0 || query.indexOf("=") == -1) return {};
+  var vars = query.split("&");
+  var query_string = {};
+  for (var i = 0; i < vars.length; i++) {
+    var pair = vars[i].split("=");
+    var key = decodeURIComponent(pair[0]);
+    var value = decodeURIComponent(pair[1]);
+    // If first entry with this name
+    if (typeof query_string[key] === "undefined") {
+      query_string[key] = decodeURIComponent(value);
+      // If second entry with this name
+    } else if (typeof query_string[key] === "string") {
+      var arr = [query_string[key], decodeURIComponent(value)];
+      query_string[key] = arr;
+      // If third or later entry with this name
+    } else {
+      query_string[key].push(decodeURIComponent(value));
+    }
+  }
+  return query_string;
+}
+function onchangevoilesite(nom, voile) {
+  var rooturl = "<?php echo $_SERVER["SCRIPT_NAME"];?>";
+  var query = window.location.search.substring(1);
+  var qs = parse_query_string(query);
+  var url = rooturl+"?";
   if (nom != "-1")
-    window.location = nom;
+    url += (voile?"voile":"site") + "=" + encodeURI(nom);
+  for (var key in qs) {
+    if (qs.hasOwnProperty(key)) {
+        if (key == (voile?"voile":"site")) continue;
+        url += "&" + key + "=" + encodeURI(qs[key]);
+    }
+  }
+  window.location = url;
 }
 window.onload = function() {
     const lignes = document.querySelectorAll('tr');
@@ -195,16 +230,16 @@ window.onload = function() {
   echo "</h1>";
   echo "<div class=\"inline\">";
   echo "<h2>Voiles  (".count($vols->voiles).") : </h2>";//<p>".implode(", ", array_map(function($x) { return "<a href=\"".url_with_parameter("voile", $x->nom, "offset")."\" class=\"ppt_info\">".$x->nom." (".$x->nombrevols." vols, ".Utils::timeFromSeconds($x->tempsvol, TRUE).")</a>"; }, $vols->voiles))."</p>";
-  echo "<select class=\"ppt_info\" onchange=\"onchangevoilesite(this.value);\"><option value=\"-1\">Choisir une voile</option>";
-  echo implode("\n", array_map(function($x) { return "<option value=\"".url_with_parameter("voile", $x->nom, "offset")."\">".$x->nom." (".$x->nombrevols." vols, ".Utils::timeFromSeconds($x->tempsvol, TRUE).")</option>"; }, $vols->voiles));
+  echo "<select class=\"ppt_info\" onchange=\"onchangevoilesite(this.value, true);\"><option value=\"-1\">Aucun filtre de voile</option>";
+  echo implode("\n", array_map(function($x) {global $voile; return "<option value=\"".$x->nom."\" ".((strlen($voile)>0 && $voile==$x->nom)?" selected":"").">".$x->nom." (".$x->nombrevols." vols, ".Utils::timeFromSeconds($x->tempsvol, TRUE).")</option>"; }, $vols->voiles));
   echo "</select>";
   echo "</div>";
   if (!is_array($vols->sites))
     $vols->sites = [$vols->sites];
   echo "<div class=\"inline\">";
   echo "<h2>Sites (".count($vols->sites).") : </h2>";//<p>".implode(", ", array_map(function($x) { return "<a href=\"".url_with_parameter("site", $x->nom, "offset")."\" class=\"ppt_info\">".str_replace(" ", "&nbsp;", $x->nom)." (".$x->nombrevols." vols, ".Utils::timeFromSeconds($x->tempsvol, TRUE).")</a>"; }, $vols->sites/*$lgfr->getInfoSite()*/))."</p>";
-  echo "<select class=\"ppt_info\" onchange=\"onchangevoilesite(this.value);\"><option value=\"-1\">Choisir un site</option>";
-  echo implode("\n", array_map(function($x) { return "<option value=\"".url_with_parameter("site", $x->nom, "offset")."\">".$x->nom." (".$x->nombrevols." vols, ".Utils::timeFromSeconds($x->tempsvol, TRUE).")</option>"; }, $vols->sites/*$lgfr->getInfoSite()*/));
+  echo "<select class=\"ppt_info\" onchange=\"onchangevoilesite(this.value, false);\"><option value=\"-1\">Aucun filtre de site</option>";
+  echo implode("\n", array_map(function($x) {global $site; return "<option value=\"".$x->nom."\" ".((strlen($site)>0 && $site==$x->nom)?" selected":"").">".$x->nom." (".$x->nombrevols." vols, ".Utils::timeFromSeconds($x->tempsvol, TRUE).")</option>"; }, $vols->sites/*$lgfr->getInfoSite()*/));
   echo "</select>";
   echo "</div>";
   echo "<h2>Détails : </h2>";
