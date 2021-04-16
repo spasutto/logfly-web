@@ -147,6 +147,7 @@ function parse_query_string(query) {
     var pair = vars[i].split("=");
     var key = decodeURIComponent(pair[0]);
     var value = decodeURIComponent(pair[1]);
+    if (key.trim().length <= 0) continue;
     // If first entry with this name
     if (typeof query_string[key] === "undefined") {
       query_string[key] = decodeURIComponent(value);
@@ -165,16 +166,21 @@ function onchangevoilesite(nom, voile) {
   var rooturl = "<?php echo $_SERVER["SCRIPT_NAME"];?>";
   var query = window.location.search.substring(1);
   var qs = parse_query_string(query);
-  var url = rooturl+"?";
+  var url = "";
   if (nom != "-1")
-    url += (voile?"voile":"site") + "=" + encodeURI(nom);
+    qs[voile?"voile":"site"] = nom;
+  var first = true;
   for (var key in qs) {
     if (qs.hasOwnProperty(key)) {
-        if (key == (voile?"voile":"site")) continue;
-        url += "&" + key + "=" + encodeURI(qs[key]);
+      if (key == "offset" || (nom == "-1" && key == (voile?"voile":"site"))) continue;
+      if (!first) url += "&";
+      url += key + "=" + encodeURI(qs[key]);
+      first = false;
     }
   }
-  window.location = url;
+  if (url.length > 0)
+    rooturl += "?" + url;
+  window.location = rooturl;
 }
 window.onload = function() {
     const lignes = document.querySelectorAll('tr');
