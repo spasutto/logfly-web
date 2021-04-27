@@ -120,6 +120,7 @@ function decode_dbstring($dbstring)
   }
 ?>
     calcheures();
+    calcdate();
   };
 
   function message(mesg)
@@ -156,11 +157,20 @@ function decode_dbstring($dbstring)
     document.getElementsByName("duree")[0].value = temps.toS();
   }
 
+  function calcdate()
+  {
+    var days = ['Dimanche', 'Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi'];
+    let dateParts = document.getElementsByName("date")[0].value.split("/");
+    let dateVol = new Date(+dateParts[2], dateParts[1] - 1, +dateParts[0]);
+    let jrDate = (dateVol.getDay() < 7)?days[dateVol.getDay()]:'?';
+    document.getElementsByName("jrsem")[0].innerHTML = '('+jrDate+')';
+  }
+
   function onsubmitVol()
   {
     let siteid = document.getElementsByName("site")[0].value;
     let champautresite = document.getElementsByName("autresite")[0].value;
-    if (siteid == -1 && (typeof champautresite != "string" || trim(champautresite) == ""))
+    if (siteid == -1 && (typeof champautresite != "string" || champautresite.trim() == ""))
     {
       alert('Renseigner un site !');
       return false;
@@ -223,6 +233,12 @@ function decode_dbstring($dbstring)
     }
     return isNaN(secs)?0:secs;
   }
+  
+  if (!String.prototype.trim) {
+    String.prototype.trim = function () {
+      return this.replace(/^[\s\uFEFF\xA0]+|[\s\uFEFF\xA0]+$/g, '');
+    };
+  }
 </script>
 <h3 name="infobox"></h3>
 vol à editer/créer : <select name="vol" onchange="onVolChange(this.value);">
@@ -247,7 +263,7 @@ if ($id && !isset($_GET["del"]))
 </select>
 </p>
   <input type="hidden" name="id" value="<?php echo $id;?>">
- <p>Date : <input type="text" name="date" value="<?php echo date('d/m/Y');?>"/></p>
+ <p>Date : <input type="text" name="date" value="<?php echo date('d/m/Y');?>" onKeyUp="calcdate();"/>&nbsp;&nbsp;<span name="jrsem"></span></p>
  <p>Heure : <input type="text" name="heure" value="<?php echo date('H:i:s');?>"/></p>
  <p>Durée (secondes) : <input type="text" name="duree" value="0" onKeyUp="calcheures();"/>&nbsp;soit&nbsp;<input type="text" name="dureeheures" onKeyUp="calcsecondes()"/></p>
  <p>Voile : <input type="text" name="voile" /></p>
