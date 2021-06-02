@@ -32,7 +32,7 @@ if ($id && isset($_GET["del"]))
 
   <style>
   .fullwidth {
-    width: 100%;
+  width: 100%;
   }
   </style>
 </head>
@@ -65,7 +65,7 @@ if ($id && isset($_GET["del"]))
       $ret = $lgfr->updateVol($id, $site, $_POST['date'], $_POST['heure'], $_POST['duree'], $_POST['voile'], htmlspecialchars($_POST['commentaire']));
     if ($ret)
     {
-    //header("Location : /list.php");
+      //header("Location : /list.php");
 ?>
 <script type="text/javascript">
 alert('<?php echo $id?"updated !!!":"new record ok !!! ";?>');
@@ -73,7 +73,7 @@ if (window.opener !== window && !window.menubar.visible)
 {
   window.onunload = refreshParent;
   function refreshParent() {
-    window.opener.location.reload();
+  window.opener.location.reload();
   }
 }
 window.close();
@@ -103,7 +103,7 @@ function decode_dbstring($dbstring)
     $vol  = $lgfr->getRecords($id);
     if($vol)
     {
-      //echo"<pre>".print_r($vol)."</pre>";
+    //echo"<pre>".print_r($vol)."</pre>";
 ?>
     document.getElementsByName("date")[0].value = '<?php echo $vol->date->format('d/m/Y');?>';
     document.getElementsByName("heure")[0].value = '<?php echo $vol->date->format('H:i:s');?>';
@@ -121,7 +121,86 @@ function decode_dbstring($dbstring)
 ?>
     calcheures();
     calcdate();
+    
+    let dureeheures = document.getElementsByName("dureeheures")[0];
+    let duree = document.getElementsByName("duree")[0];
+    let heure = document.getElementsByName("heure")[0];
+    let date = document.getElementsByName("date")[0];
+    
+    dureeheures.onkeypress  = replaceDot;
+    heure.onkeypress = replaceDot;
+
+    dureeheures.addEventListener("focus", function() { this.select(); });
+    duree.addEventListener("focus", function() { this.select(); });
+    heure.addEventListener("focus", function() { this.select(); });
+    date.addEventListener("focus", function() { createSelection(this, 0, 2); });
   };
+  
+  function createSelection(field, start, end) {
+    if( field.createTextRange ) {
+      var selRange = field.createTextRange();
+      selRange.collapse(true);
+      selRange.moveStart('character', start);
+      selRange.moveEnd('character', end);
+      selRange.select();
+      field.focus();
+    } else if( field.setSelectionRange ) {
+      field.focus();
+      field.setSelectionRange(start, end);
+    } else if( typeof field.selectionStart != 'undefined' ) {
+      field.selectionStart = start;
+      field.selectionEnd = end;
+      field.focus();
+    }
+  }
+  function transformTypedChar(charStr) {
+    return charStr == "." ? ":" : charStr;
+  }
+  function replaceDot(evt) {
+    var val = this.value;
+    evt = evt || window.event;
+    
+    // Ensure we only handle printable keys, excluding enter and space
+    var charCode = typeof evt.which == "number" ? evt.which : evt.keyCode;
+    if (charCode && charCode > 32) {
+      var keyChar = String.fromCharCode(charCode);
+      
+      // Transform typed character
+      var mappedChar = transformTypedChar(keyChar);
+      
+      var start, end;
+      if (typeof this.selectionStart == "number" && typeof this.selectionEnd == "number") {
+        // Non-IE browsers and IE 9
+        start = this.selectionStart;
+        end = this.selectionEnd;
+        this.value = val.slice(0, start) + mappedChar + val.slice(end);
+        
+        // Move the caret
+        this.selectionStart = this.selectionEnd = start + 1;
+      } else if (document.selection && document.selection.createRange) {
+        // For IE up to version 8
+        var selectionRange = document.selection.createRange();
+        var textInputRange = this.createTextRange();
+        var precedingRange = this.createTextRange();
+        var bookmark = selectionRange.getBookmark();
+        textInputRange.moveToBookmark(bookmark);
+        precedingRange.setEndPoint("EndToStart", textInputRange);
+        start = precedingRange.text.length;
+        end = start + selectionRange.text.length;
+        
+        this.value = val.slice(0, start) + mappedChar + val.slice(end);
+        start++;
+        
+        // Move the caret
+        textInputRange = this.createTextRange();
+        textInputRange.collapse(true);
+        textInputRange.move("character", start - (this.value.slice(0, start).split("\r\n").length - 1));
+        textInputRange.select();
+      }
+      
+      return false;
+    }
+  }
 
   function message(mesg)
   {
@@ -250,7 +329,7 @@ vol à editer/créer : <select name="vol" onchange="onVolChange(this.value);">
 </select>
 <?php
 if ($id && !isset($_GET["del"]))
-  echo "    <input type=\"button\" id=\"delbtn\" value=\"Suppr\" onclick=\"delVol();\">";
+  echo "  <input type=\"button\" id=\"delbtn\" value=\"Suppr\" onclick=\"delVol();\">";
 ?>
 <form action="<?php echo $_SERVER['REQUEST_URI'];?>" name="formvol" method="post" onsubmit="return onsubmitVol();">
  <p>Site : <select name="site" onchange="onSiteChange(this.value);">
