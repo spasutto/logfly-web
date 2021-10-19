@@ -229,7 +229,7 @@ window.onload = function() {
   }
   $lnpages .= "<BR>";
 
-  echo "<h1><a href=\"".$_SERVER["SCRIPT_NAME"]."\" style=\"text-decoration:none;\">Carnet de vol".$titrevoile." (".$vols->nbvols." vols, ".Utils::timeFromSeconds($vols->tempstotalvol, 1)."".$titredate.")</a> : <a href=\"download.php\" title=\"télécharger la base logfly\"><img src=\"download.svg\" width=\"32px\"></a><a href=\"?dl\"><img src=\"csv.svg\" width=\"32px\" title=\"télécharger un fichier csv\"></a>";
+  echo "<h1><a href=\"".$_SERVER["SCRIPT_NAME"]."\" style=\"text-decoration:none;\">Carnet de vol".$titrevoile." (".$vols->nbvols." vol".($vols->nbvols>1?"s":"").", ".Utils::timeFromSeconds($vols->tempstotalvol, 1)."".$titredate.")</a> : <a href=\"download.php\" title=\"télécharger la base logfly\"><img src=\"download.svg\" width=\"32px\"></a><a href=\"?dl\"><img src=\"csv.svg\" width=\"32px\" title=\"télécharger un fichier csv\"></a>";
   echo "&nbsp;<a href=\"#\" onClick=\"MyWindow=window.open('stats.php','MyWindow','width=900,height=380'); return false;\" title=\"Statistiques de vol\"><img src=\"stats.svg\" width=\"32px\"></a>";
   echo "&nbsp;<a href=\"#\" onClick=\"editvol(); return false;\" title=\"editer le carnet de vol\"><img src=\"edit.svg\" width=\"32px\"></a>";
   echo "&nbsp;<a href=\"#\" style=\"position: relative;\" onClick=\"MyWindow=window.open('editsite.php','MyWindowSite','width=600,height=380'); return false;\" title=\"editer un site\"><span class=\"editsitetexte\">site</span><img src=\"edit.svg\" style=\"position: absolute;\" width=\"32px\"></a>";
@@ -237,7 +237,7 @@ window.onload = function() {
   echo "<div class=\"inline\">";
   echo "<h2>Voiles  (".count($vols->voiles).") : </h2>";//<p>".implode(", ", array_map(function($x) { return "<a href=\"".url_with_parameter("voile", $x->nom, "offset")."\" class=\"ppt_info\">".$x->nom." (".$x->nombrevols." vols, ".Utils::timeFromSeconds($x->tempsvol, 1).")</a>"; }, $vols->voiles))."</p>";
   echo "<select class=\"ppt_info\" onchange=\"onchangevoilesite(this.value, true);\"><option value=\"-1\">Aucun filtre de voile</option>";
-  echo implode("\n", array_map(function($x) {global $voile; return "<option value=\"".$x->nom."\" ".((strlen($voile)>0 && $voile==$x->nom)?" selected":"").">".$x->nom." (".$x->nombrevols." vols, ".Utils::timeFromSeconds($x->tempsvol, 1).")</option>"; }, $vols->voiles));
+  echo implode("\n", array_map(function($x) {global $voile; return "<option value=\"".$x->nom."\" ".((strlen($voile)>0 && $voile==$x->nom)?" selected":"").">".$x->nom." (".$x->nombrevols." vol".($x->nombrevols>1?"s":"").", ".Utils::timeFromSeconds($x->tempsvol, 1).")</option>"; }, $vols->voiles));
   echo "</select>";
   echo "</div>";
   if (!is_array($vols->sites))
@@ -245,7 +245,7 @@ window.onload = function() {
   echo "<div class=\"inline\">";
   echo "<h2>Sites (".count($vols->sites).") : </h2>";//<p>".implode(", ", array_map(function($x) { return "<a href=\"".url_with_parameter("site", $x->nom, "offset")."\" class=\"ppt_info\">".str_replace(" ", "&nbsp;", $x->nom)." (".$x->nombrevols." vols, ".Utils::timeFromSeconds($x->tempsvol, 1).")</a>"; }, $vols->sites/*$lgfr->getInfoSite()*/))."</p>";
   echo "<select class=\"ppt_info\" onchange=\"onchangevoilesite(this.value, false);\"><option value=\"-1\">Aucun filtre de site</option>";
-  echo implode("\n", array_map(function($x) {global $site; return "<option value=\"".$x->nom."\" ".((strlen($site)>0 && $site==$x->nom)?" selected":"").">".$x->nom." (".$x->nombrevols." vols, ".Utils::timeFromSeconds($x->tempsvol, 1).")</option>"; }, $vols->sites/*$lgfr->getInfoSite()*/));
+  echo implode("\n", array_map(function($x) {global $site; return "<option value=\"".$x->nom."\" ".((strlen($site)>0 && $site==$x->nom)?" selected":"").">".$x->nom." (".$x->nombrevols." vol".($x->nombrevols>1?"s":"").", ".Utils::timeFromSeconds($x->tempsvol, 1).")</option>"; }, $vols->sites/*$lgfr->getInfoSite()*/));
   echo "</select>";
   echo "</div>";
   echo "<h2>Détails : </h2>";

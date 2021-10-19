@@ -41,6 +41,12 @@ if (isset($_GET['dl'])) {
   svg.ct-chart-bar, svg.ct-chart-line{
     overflow: visible;
   }
+  svg text {
+      text-shadow: 0px 0px 9px rgba(255,0,0,1);
+    fill: #ff00cf;
+    font-family:sans-serif;
+    font-weight:600;
+  }
   .ct-label.ct-label.ct-horizontal.ct-end {
     position: relative;
     justify-content: flex-end;
@@ -100,7 +106,45 @@ echo "labels: [".implode(",", $years)."],series:[[".implode(",", $time)."]]";
 echo "labels: [".implode(",", $years)."],series:[[".implode(",", $count)."]]";
 ?>
   };
+  
+  function isNumeric(str) {
+      if (typeof str != "string") return false // we only process strings!  
+      return !isNaN(str) && // use type coercion to parse the _entirety_ of the string (`parseFloat` alone does not do this)...
+             !isNaN(parseFloat(str)) // ...and ensure strings of whitespace fail
+    }
 
+  Chartist.plugins = Chartist.plugins || {};
+  Chartist.plugins.ctBarLabels = function (options) {
+
+    options = Chartist.extend({}, options);
+
+    return function ctBarLabels(chart) {
+      if (chart instanceof Chartist.Bar) {
+        chart.on('draw', function (data) {
+          var barHorizontalCenter, barVerticalCenter, label, value;
+          if (data.type === "bar") {
+            barHorizontalCenter = data.x1 + (data.element.width() * .5);// + 20;
+            barVerticalCenter = data.y1 + (data.element.height() * -1) - 10;
+            value = data.element.attr('ct:value');
+            if (isNumeric(value)) {
+              value = Math.round(value);
+              if (typeof options.suffix === 'string')
+                value = "" + value + options.suffix;
+              label = new Chartist.Svg('text');
+              label.text(value);
+              label.addClass("ct-barlabel");
+              label.attr({
+                x: barHorizontalCenter,
+                y: barVerticalCenter,
+                'text-anchor': 'middle'
+              });
+              return data.group.append(label);
+            }
+          }
+        });
+      }
+    };
+  };
   var options = {/*
     high: 10,
     low: -10,
@@ -110,12 +154,15 @@ echo "labels: [".implode(",", $years)."],series:[[".implode(",", $count)."]]";
     }
     }*/
   };
+  
+  let plughours = Chartist.plugins.ctBarLabels({suffix : ' h'});
+  let plugnb = Chartist.plugins.ctBarLabels();
 
-  new Chartist.Bar('#chartYearTime', dataTime, options);
-  new Chartist.Bar('#chartYearCount', dataCount, options);
+  new Chartist.Bar('#chartYearTime', dataTime, Object.assign(options, {plugins: [plughours]}));
+  new Chartist.Bar('#chartYearCount', dataCount, Object.assign(options, {plugins: [plugnb]}));
   });
 </script>
-<h2>Sites</h2>
+<h2>Sites (temps de vol)</h2>
 
 <div class="ct-chart full" id="chartSites"></div>
 <script type="text/javascript">
@@ -141,7 +188,7 @@ echo "labels: [".implode(",", $sites)."],series:[[".implode(",", $count)."]]";
   });
 </script>
 
-<h2>Voiles</h2>
+<h2>Voiles (temps de vol)</h2>
 
 <div class="ct-chart zoom" id="chartVoiles"></div>
 <script type="text/javascript">
