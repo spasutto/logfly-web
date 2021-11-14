@@ -89,7 +89,10 @@
         message("Certains sites ne sont pas affichés car ils comportaient des positions invalides : " + sitesko.join(", "));
       //sites = sites.filter(function(s) { return (typeof s.latitude != 'number') || (typeof s.longitude != 'number') || (!isNumeric(s.altitude)); });
       sites.forEach(function(s) {
-          L.marker([s.latitude, s.longitude]).addTo(map).bindPopup(s.nom)
+        let sitenom = s.nom;
+        if (isInLogflyPopup())
+          sitenom = "<a href=\"#\" onclick=\"filtre('"+sitenom.replace('\'', '\\\'')+"');\" title=\"filtrer les vols pour ce site\">"+sitenom+"</a>";
+        L.marker([s.latitude, s.longitude]).addTo(map).bindPopup(sitenom);
       });
       let maxlat = Math.max.apply(Math, sites.map(function(o) { return o.latitude; }));
       let minlat = Math.min.apply(Math, sites.map(function(o) { return o.latitude; }));
@@ -113,6 +116,15 @@
       msg.style.display = 'none';
     else
       msg.style.display = 'initial';
+  }
+  function filtre(site) {
+    if (isInLogflyPopup()) {
+      window.opener.onchangevoilesite(site, false);
+      //window.close();
+    }
+  }
+  function isInLogflyPopup() {
+    return (window.opener != null && typeof window.opener.onchangevoilesite == 'function');
   }
 
   var map = L.map('map').setView([45.182471 , 5.725589], 13);
@@ -166,10 +178,10 @@
   }).addTo(map);
 
   var baseMaps = {
-    "mapbox": MapBox,
-    "ignphoto": Photos Satellite,
-    "carteign": Carte IGN,
-    "opentopomap": Carte Topo
+    "MapBox": mapbox,
+    "Photos Satellite": ignphoto,
+    "Carte IGN": carteign,
+    "Carte Topo": opentopomap
   };
   L.control.layers(baseMaps).addTo(map);
 
