@@ -155,8 +155,8 @@ echo "labels: [".implode(",", $years)."],series:[[".implode(",", $count)."]]";
     }*/
   };
   
-  let plughours = Chartist.plugins.ctBarLabels({suffix : ' h'});
-  let plugnb = Chartist.plugins.ctBarLabels();
+  window.plughours = Chartist.plugins.ctBarLabels({suffix : ' h'});
+  window.plugnb = Chartist.plugins.ctBarLabels();
 
   new Chartist.Bar('#chartYearTime', dataTime, Object.assign(options, {plugins: [plughours]}));
   new Chartist.Bar('#chartYearCount', dataCount, Object.assign(options, {plugins: [plugnb]}));
@@ -171,6 +171,8 @@ echo "labels: [".implode(",", $years)."],series:[[".implode(",", $count)."]]";
 //echo "<pre>";print_r($lgfr->getStats());echo "</pre>";
 $sites = array_map(function($s) {return "'".str_replace("'", "\\'", $s->nom)."'";}, $vols->sites);
 $count = array_map(function($s) {return $s->tempsvol/3600;}, $vols->sites);
+$tempsparvol = "<ul>".implode("\n",array_map(function($v) {return "<li>".$v->nom." =&gt; ".Utils::timeFromSeconds(60*round(($v->tempsvol/$v->nombrevols)/60), 2)."</li>";}, $vols->sites))."</ul>";
+//$countparvols = array_map(function($s) {return ($s->tempsvol/$s->nombrevols)/3600;}, $vols->sites);
 //$maxvols = max(array_map(function($o) {return $o->tempsvol;}, $vols->sites));
 //$sumvols = array_sum(array_map(function($o) {return $o->tempsvol;}, $vols->sites));
 //$percent = round($site->tempsvol*100/$maxvols);
@@ -187,6 +189,12 @@ echo "labels: [".implode(",", $sites)."],series:[[".implode(",", $count)."]]";
     new Chartist.Bar('#chartSites', data);
   });
 </script>
+<h3>temps par vol moyen :</h3>
+<div style="max-height:250px;overflow-y:scroll;border:solid 1px lightgray;">
+<?php
+echo $tempsparvol;
+?>
+</div>
 
 <h2>Voiles (temps de vol)</h2>
 
@@ -197,6 +205,7 @@ echo "labels: [".implode(",", $sites)."],series:[[".implode(",", $count)."]]";
 //echo "<pre>";print_r($lgfr->getStats());echo "</pre>";
 $voiles = array_map(function($v) {return "'".$v->nom."'";}, $vols->voiles);
 $count = array_map(function($v) {return $v->tempsvol/3600;}, $vols->voiles);
+$tempsparvol = "<ul>".implode("\n",array_map(function($v) {return "<li>".$v->nom." =&gt; ".Utils::timeFromSeconds(60*round(($v->tempsvol/$v->nombrevols)/60), 2)."</li>";}, $vols->voiles))."</ul>";
 //$maxvols = max(array_map(function($o) {return $o->tempsvol;}, $vols->voiles));
 //$sumvols = array_sum(array_map(function($o) {return $o->tempsvol;}, $vols->voiles));
 //$percent = round($voile->tempsvol*100/$maxvols);
@@ -213,7 +222,12 @@ echo "labels: [".implode(",", $voiles)."],series:[".implode(",", $count)."]";
 new Chartist.Pie('#chartVoiles', data);
   });
 </script>
-
+<h3>temps par vol moyen :</h3>
+<div style="max-height:250px;overflow-y:scroll;border:solid 1px lightgray;">
+<?php
+echo $tempsparvol;
+?>
+</div>
 
 <h2>Evolution du temps de vol</h2>
 
