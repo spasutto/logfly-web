@@ -1,0 +1,1 @@
+Dans ce dossier seront placés les fichiers IGC

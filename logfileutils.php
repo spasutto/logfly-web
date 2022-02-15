@@ -28,7 +28,7 @@
             if ($mins == 0)
               $ret = substr($ret, 0, -3);
           }
-          if ($ret[0]=='0')
+          if ($ret && $ret[0]=='0')
             $ret = substr($ret, 1);
           break;
       }

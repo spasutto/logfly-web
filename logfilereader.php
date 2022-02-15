@@ -91,7 +91,7 @@ class LogflyReader
     $ret = $this->db->query($sql);
     if(!$ret)
     {
-      echo $db->lastErrorMsg();
+      echo $this->db->lastErrorMsg();
       return FALSE;
     }
     return TRUE;
@@ -105,21 +105,31 @@ class LogflyReader
     if (!$id)
       $id = $this->getNextID();
     $date =  DateTime::createFromFormat('d/m/Y '.$heureformat, $date." ".$heure);
-    $nomsite = strtoupper($nomsite);
-    $site = $this->getInfoSite($nomsite);
-    if (!$site)
-      $site = $this->createSite($nomsite);
+    $sitealt = 0;
+    $sitelon = 0;
+    $sitelat = 0;
+    if ($nomsite != null) {
+      $nomsite = strtoupper($nomsite);
+      $site = $this->getInfoSite($nomsite);
+      if (!$site)
+        $site = $this->createSite($nomsite);
+      $sitealt = $site->altitude;
+      $sitelon = $site->longitude;
+      $sitelat = $site->latitude;
+    } else {
+      $nomsite = "";
+    }
     $sduree = Utils::timeFromSeconds($duree, TRUE);
     $sql = "INSERT INTO Vol (V_Score,V_League,V_Engin,V_CFD,UTC,V_Photos,V_IGC,V_Commentaire,V_Pays,V_Site,V_AltDeco,V_LongDeco,V_LatDeco,V_sDuree,V_Duree,V_Date,V_ID)\n";
-    $sql .= "VALUES (NULL,NULL,'".$voile."',NULL,0,NULL,NULL,'".str_replace("'", "''", htmlspecialchars_decode($commentaire))."','FRANCE','".str_replace("'", "''", $nomsite)."','".$site->altitude."','".$site->longitude."','".$site->latitude."','".$sduree."',".$duree.",'".$date->format('Y-m-d H:i:s')."',".$id.");";
+    $sql .= "VALUES (NULL,NULL,'".$voile."',NULL,0,NULL,NULL,'".str_replace("'", "''", htmlspecialchars_decode($commentaire))."','FRANCE','".str_replace("'", "''", $nomsite)."','".$sitealt."','".$sitelon."','".$sitelat."','".$sduree."',".$duree.",'".$date->format('Y-m-d H:i:s')."',".$id.");";
     //echo $sql."<BR>\n";
     $ret = $this->db->query($sql);
     if(!$ret)
     {
-      echo $db->lastErrorMsg();
+      echo $this->db->lastErrorMsg();
       return FALSE;
     }
-    return TRUE;
+    return $this->db->lastInsertRowID();
   }
 
   function getSites()
@@ -220,6 +230,22 @@ class LogflyReader
       return $sites[0];
     return FALSE;
   }
+  
+  function getIGC($id)
+  {
+    $sql = "SELECT V_IGC FROM VOL WHERE V_ID=".$id;
+    $ret = $this->db->query($sql);
+    $row = $ret->fetchArray();
+    return $row['V_IGC'];
+  }
+  
+  function setIGC($id, $igc)
+  {
+    $igc = str_replace("'", "''", $igc);
+    $sql = "UPDATE VOL set V_IGC='".$igc."' WHERE V_ID=".$id;
+    $ret = $this->db->query($sql);
+    return $ret != FALSE;
+  }
 
   function getRecords($id=null, $tritemps = FALSE, $maxres = null, $offset = null, $datemin=null, $datemax=null, $voile=null, $site=null)
   {
@@ -273,7 +299,7 @@ class LogflyReader
     $row = $ret->fetchArray();
     $vols->tempstotalvol = $numRows = $row['sum'];
 
-    $ret = $this->db->query(str_replace("%COLUMNS%","*",$sql.$sqllimit));
+    $ret = $this->db->query(str_replace("%COLUMNS%","V_ID,V_Date,V_Duree,V_sDuree,V_Site,S_Latitude,S_Longitude,V_Commentaire,V_Engin,(V_IGC IS NOT NULL AND TRIM(V_IGC) != '') AS V_IGC",$sql.$sqllimit));
     $vols->datemin = new DateTime("99999/12/31 00:00:00");
     $vols->datemax = new DateTime("1950/01/01 00:00:00");
     while($row = $ret->fetchArray(SQLITE3_ASSOC))
@@ -288,6 +314,7 @@ class LogflyReader
       $vol->londeco = $row['S_Longitude'];//$row['V_LongDeco'];
       $vol->commentaire = $row['V_Commentaire'];
       $vol->voile = $row['V_Engin'];
+      $vol->igc = $row['V_IGC'];
 
       if ($unvol)
         return $vol;

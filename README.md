@@ -21,5 +21,8 @@ Options +Indexes
 
 Ainsi les fichiers edit.php et editsite.php seront protégés par un mot de passe.
 
+# Credits
+visualisation GPX sur leaflet : https://github.com/mpetazzoni/leaflet-gpx
+
 # Historique
 13/10/2020		V0.1

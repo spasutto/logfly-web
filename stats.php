@@ -127,10 +127,16 @@ echo "labels: [".implode(",", $years)."],series:[[".implode(",", $count)."]]";
             barVerticalCenter = data.y1 + (data.element.height() * -1) - 10;
             value = data.element.attr('ct:value');
             if (isNumeric(value)) {
+              title = new Chartist.Svg('title');
+              if (typeof options.suffix === 'string')
+                title.text(("" + Math.round(value*10)/10) + options.suffix);
+              else
+                title.text(("" + Math.round(value*10)/10));
               value = Math.round(value);
               if (typeof options.suffix === 'string')
                 value = "" + value + options.suffix;
               label = new Chartist.Svg('text');
+              label.append(title);
               label.text(value);
               label.addClass("ct-barlabel");
               label.attr({

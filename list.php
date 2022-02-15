@@ -232,6 +232,7 @@ window.onload = function() {
   echo "<h1><a href=\"".$_SERVER["SCRIPT_NAME"]."\" style=\"text-decoration:none;\">Carnet de vol".$titrevoile." (".$vols->nbvols." vol".($vols->nbvols>1?"s":"").", ".Utils::timeFromSeconds($vols->tempstotalvol, 1)."".$titredate.")</a> : <a href=\"download.php\" title=\"télécharger la base logfly\"><img src=\"download.svg\" width=\"32px\"></a><a href=\"?dl\"><img src=\"csv.svg\" width=\"32px\" title=\"télécharger un fichier csv\"></a>";
   echo "&nbsp;<a href=\"#\" onClick=\"MyWindow=window.open('stats.php','MyWindow','width=900,height=380'); return false;\" title=\"Statistiques de vol\"><img src=\"stats.svg\" width=\"32px\"></a>";
   echo "&nbsp;<a href=\"#\" onClick=\"MyWindow=window.open('map.php','MyWindow','width=900,height=380'); return false;\" title=\"Carte des sites de vol\"><img src=\"map.svg\" width=\"32px\"></a>";
+  echo "&nbsp;<a href=\"#\" onClick=\"MyWindow=window.open('upload.php','MyWindow','width=900,height=380'); return false;\" title=\"Uploader un fichier IGC pour créer un nouveau vol\"><img src=\"upload.svg\" width=\"32px\"></a>";
   echo "&nbsp;<a href=\"#\" onClick=\"editvol(); return false;\" title=\"editer le carnet de vol\"><img src=\"edit.svg\" width=\"32px\"></a>";
   echo "&nbsp;<a href=\"#\" style=\"position: relative;\" onClick=\"MyWindow=window.open('editsite.php','MyWindowSite','width=600,height=380'); return false;\" title=\"editer un site\"><span class=\"editsitetexte\">site</span><img src=\"edit.svg\" style=\"position: absolute;\" width=\"32px\"></a>";
   echo "</h1>";
@@ -252,7 +253,7 @@ window.onload = function() {
   echo "<h2>Détails : </h2>";
   echo $lnpages;
   echo "<TABLE id=\"details\">";
-  echo "<TR><TH>N&deg;</TH><TH>Date</TH><TH>Heure</TH><TH>Duree</TH><TH>Site</TH><TH>Commentaire</TH><TH>Voile</TH></TR>";
+  echo "<TR><TH>N&deg;</TH><TH>Date</TH><TH>Heure</TH><TH>Duree</TH><TH>Site</TH><TH>Commentaire</TH><TH>Voile</TH><TH>Trace</TH></TR>";
   /*echo "<TR>";
   echo "<TD colspan=\"3\"><b>temps de vol :</b></TD>";
   echo "<TD>".Utils::timeFromSeconds($vols->tempstotalvol)."</TD>";
@@ -280,6 +281,11 @@ window.onload = function() {
     echo "<TD><a href=\"".url_with_parameter("site", $vol->site, "offset")."\" title=\"filtrer les vols pour ce site\">".$vol->site."</a>&nbsp;<a href=\"https://maps.google.com/?q=".$vol->latdeco.",".$vol->londeco."\" target=\"_Blank\" class=\"lien_gmaps\" title=\"google maps\">&#9936;</a></TD>";
     echo "<TD class=\"desc\">".$textevol."</TD>";
     echo "<TD><a href=\"".url_with_parameter("voile", $vol->voile, "offset")."\" title=\"filtrer les vols pour cette voile\">".$vol->voile."</a></TD>";
+    echo "<TD>";
+    if ($vol->igc) {
+      echo "<a href=\"#\" onClick=\"MyWindow=window.open('trace.php?id=".$vol->id."','MyWindow','width=900,height=380'); return false;\" title=\"voir la trace GPS de ce vol\"><img src=\"map.svg\" width=\"18px\"></a>";
+    }
+    echo "</TD>";
     echo "</TR>";
   }
   echo "<TABLE>";

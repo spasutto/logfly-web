@@ -268,7 +268,7 @@ function decode_dbstring($dbstring)
             alert(this.responseText);
           else {
             document.getElementById('delbtn').style.display = 'none';
-            alert('Ce vol vient d\'être supprimé. Appuyer sur OK pour annuler la suppression');
+            alert('Ce vol vient d\'être supprimé. Revalider la popup pour annuler la suppression');
             if (window.opener !== window && !window.menubar.visible)
               window.opener.location.reload();
           }
