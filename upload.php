@@ -21,7 +21,7 @@ if (!isset($_FILES['userfile']['tmp_name'])) {
   } else {
     //echo "file : \"".$_FILES['userfile']['tmp_name']."\"<BR>";
     
-    require("TrackLogManager.php");
+    require("tracklogmanager.php");
 
     $mgr = new TrackLogManager();
     $ext = $_FILES['userfile']['name'];
