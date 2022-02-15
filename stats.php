@@ -168,7 +168,7 @@ echo "labels: [".implode(",", $years)."],series:[[".implode(",", $count)."]]";
   new Chartist.Bar('#chartYearCount', dataCount, Object.assign(options, {plugins: [plugnb]}));
   });
 </script>
-<h2>Sites (temps de vol)</h2>
+<h2>Sites (<?php echo count($vols->sites);?> sites, par temps de vol)</h2>
 
 <div class="ct-chart full" id="chartSites"></div>
 <script type="text/javascript">
@@ -202,7 +202,7 @@ echo $tempsparvol;
 ?>
 </div>
 
-<h2>Voiles (temps de vol)</h2>
+<h2>Voiles (<?php echo count($vols->voiles);?> voiles, par temps de vol)</h2>
 
 <div class="ct-chart zoom" id="chartVoiles"></div>
 <script type="text/javascript">
