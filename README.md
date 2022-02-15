@@ -19,7 +19,7 @@ Options +Indexes
 ```
 (Bien penser à changer le chemin vers le fichier htpasswd! Pour plus d'informations sur le fichier htpasswd se renseigner sur la marche à suivre sur google, exemple : https://stackoverflow.com/a/5229803)
 
-Ainsi les fichiers edit.php et editsite.php seront protégés par un mot de passe.
+Ainsi les fichiers edit.php, upload.php et editsite.php seront protégés par un mot de passe.
 
 # Credits
 visualisation GPX sur leaflet : https://github.com/mpetazzoni/leaflet-gpx

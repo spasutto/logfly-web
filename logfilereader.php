@@ -86,7 +86,7 @@ class LogflyReader
     //echo "<pre>".print_r($site)."</pre>";
     $sduree = Utils::timeFromSeconds($duree, TRUE);
     //echo print_r($site);
-    $sql = "UPDATE Vol SET V_Score=NULL,V_League=NULL,V_Engin='".$voile."',V_CFD=NULL,UTC=0,V_Photos=NULL,V_IGC=NULL,V_Commentaire='".str_replace("'", "''", htmlspecialchars_decode($commentaire))."',V_Pays='FRANCE',V_Site='".str_replace("'", "''", $site->nom)."',V_AltDeco='".$site->altitude."',V_LongDeco='".$site->longitude."',V_LatDeco='".$site->latitude."',V_sDuree='".$sduree."',V_Duree=".$duree.",V_Date='".$date->format('Y-m-d H:i:s')."' WHERE V_ID=".$id.";";
+    $sql = "UPDATE Vol SET V_Score=NULL,V_League=NULL,V_Engin='".$voile."',V_CFD=NULL,UTC=0,V_Photos=NULL,V_Commentaire='".str_replace("'", "''", htmlspecialchars_decode($commentaire))."',V_Pays='FRANCE',V_Site='".str_replace("'", "''", $site->nom)."',V_AltDeco='".$site->altitude."',V_LongDeco='".$site->longitude."',V_LatDeco='".$site->latitude."',V_sDuree='".$sduree."',V_Duree=".$duree.",V_Date='".$date->format('Y-m-d H:i:s')."' WHERE V_ID=".$id.";";
     //echo $sql."<BR>\n";
     $ret = $this->db->query($sql);
     if(!$ret)
