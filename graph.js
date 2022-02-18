@@ -35,6 +35,7 @@ class GraphGPX {
     this.ctx = this.canvas.getContext('2d');
     this.ctx2 = this.canvas2.getContext('2d');
     this.canvas2.addEventListener('mousemove', this.mousemove.bind(this));
+    this.canvas2.addEventListener('touchmove', this.mousemove.bind(this));
     this.paint();
   }
   
@@ -82,7 +83,7 @@ class GraphGPX {
       return;
     let t=0;
     let minmil = Math.floor(this.minalt/500)*500;
-    let maxmil = Math.floor(this.maxalt/500)*500;
+    let maxmil = Math.ceil(this.maxalt/500)*500;
     if (maxmil == minmil) maxmil+=500;
     //console.log(this.minalt, this.maxalt, minmil, maxmil, this.pts[0]);
     let altdiff = maxmil-minmil;//this.maxalt-this.minalt;

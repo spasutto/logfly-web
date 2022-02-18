@@ -95,17 +95,16 @@
 <script>
 var id = new URL(window.location.href).searchParams.get("id");
 if (id > 0) {
-  document.getElementById('formigc').style.display = 'none';
+  document.getElementById('formcont').style.display = 'none';
 }
 else {
-  document.getElementById('formigc').style.display = 'block';
+  document.getElementById('formcont').style.display = 'block';
 }
 
   var graph = new GraphGPX(document.getElementById("graph"));
   graph.addEventListener('onposchanged', function(e) {
     marker.setLatLng([e.detail.lat, e.detail.lon]).update();
   });
-  
 
   var map = loadCarto();
 
@@ -117,7 +116,7 @@ else {
     xhttp.onreadystatechange = function() {
       if (this.readyState == 4 && this.status == 200) {
         if (!this.response) return;
-        document.getElementById('formigc').style.display = 'none';
+        document.getElementById('formcont').style.display = 'none';
         xml = new XMLSerializer().serializeToString(this.responseXML);
         //console.log(this.response, this.responseXML);
         new L.GPX(xml, {async: true,
