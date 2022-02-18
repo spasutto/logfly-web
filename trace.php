@@ -39,15 +39,31 @@
     <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js" integrity="sha512-XQoYMqMTK8LvdxXYG3nZ448hOEQiglfqkJs1NOQV44cWnUrBc8PkAOcXy20w0vlaXaVUearIOBhiXZ5V3ynxwA==" crossorigin=""></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet-gpx/1.7.0/gpx.min.js"></script>
     <script src="carto.js"></script>
+    <script src="graph.js"></script>
 
 <style>
   body {
     padding: 0;
     margin: 0;
   }
-  html, body, #map {
+  html, body {
     height: 100%;
     width: 100%;
+  }
+  #map {
+    position: fixed;
+    top: 0;
+    bottom: 100px;
+    left: 0;
+    right: 0;
+    overflow: hidden;
+  }
+  #graph {
+    position:fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 100px;
   }
 </style>
   
@@ -57,21 +73,27 @@
 
 
 <div id="map"></div>
+<div id="graph"></div>
 
 <script>
+  var graph = new GraphGPX(document.getElementById("graph"));
+  graph.addEventListener('onposchanged', function(e) {
+    marker.setLatLng([e.detail.lat, e.detail.lon]).update();
+  });
 
   var map = loadCarto();
 
   function loadGPX() {
     var xhttp = new XMLHttpRequest();
-    xhttp.responseType = 'text';
-    //xhttp.responseType = 'document';
-    //xhttp.overrideMimeType('text/xml');
+    //xhttp.responseType = 'text';
+    xhttp.responseType = 'document';
+    xhttp.overrideMimeType('text/xml');
     xhttp.onreadystatechange = function() {
       if (this.readyState == 4 && this.status == 200) {
         if (!this.response) return;
+        xml = new XMLSerializer().serializeToString(this.responseXML);
         //console.log(this.response, this.responseXML);
-        new L.GPX(this.responseText, {async: true,
+        new L.GPX(xml, {async: true,
   marker_options: {
     startIconUrl: '',
     endIconUrl: '',
@@ -79,6 +101,8 @@
   }}).on('loaded', function(e) {
     map.fitBounds(e.target.getBounds());
   }).addTo(map);
+        window.marker = L.marker([0,0]).addTo(map);
+        graph.setGPX(this.responseXML);
       }
     };
     xhttp.open("GET", "<?php echo $_SERVER['REQUEST_URI'];?>&gpx", true);
