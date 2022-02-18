@@ -1,4 +1,5 @@
 <?php
+require("logfilereader.php");
 require('Trackfile-Lib/TrackfileLoader.php');
 class TrackLogManager
 {
@@ -23,7 +24,6 @@ class TrackLogManager
         // TODO : insérer le vol dans la base
         //$fpt->date
         //addVol($nomsite, $date, $heure, $duree, $voile, $commentaire, $id=FALSE)
-        require("logfilereader.php");
 
         try
         {

@@ -59,7 +59,19 @@
 <div id="map"></div>
 
 <script>
-  new L.GPX("<?php echo $_SERVER['REQUEST_URI'];?>&gpx", {async: true,
+
+  var map = loadCarto();
+
+  function loadGPX() {
+    var xhttp = new XMLHttpRequest();
+    xhttp.responseType = 'text';
+    //xhttp.responseType = 'document';
+    //xhttp.overrideMimeType('text/xml');
+    xhttp.onreadystatechange = function() {
+      if (this.readyState == 4 && this.status == 200) {
+        if (!this.response) return;
+        //console.log(this.response, this.responseXML);
+        new L.GPX(this.responseText, {async: true,
   marker_options: {
     startIconUrl: '',
     endIconUrl: '',
@@ -67,6 +79,13 @@
   }}).on('loaded', function(e) {
     map.fitBounds(e.target.getBounds());
   }).addTo(map);
+      }
+    };
+    xhttp.open("GET", "<?php echo $_SERVER['REQUEST_URI'];?>&gpx", true);
+    xhttp.send();
+  }
+  loadGPX();
+
 </script>
 
 

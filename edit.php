@@ -1,14 +1,29 @@
 <?php
 require("logfilereader.php");
-try
-{
-  $lgfr = new LogflyReader();
-}
-catch(Exception $e)
-{
-  echo "error!!! : ".$e->getMessage();
+
+if (isset($_REQUEST["listevols"])) {
+  header('Content-Type: application/json; charset=utf-8');
+  echo '[';
+  $first = true;
+  foreach ((new LogflyReader())->getRecords()->vols as $vol) {
+    if (!$first) {echo ",";}$first = false;
+    echo "{\"id\":".$vol->id.", \"date\":\"".$vol->date->format('d/m/Y')."\", \"site\":\"".str_replace("\"", "\\\"", $vol->site)."\"}";
+  }
+  echo ']';
   exit(0);
 }
+else if (isset($_REQUEST["listesites"])) {
+  header('Content-Type: application/json; charset=utf-8');
+  echo '[';
+  $first = true;
+  foreach ((new LogflyReader())->getSites() as $site) {
+    if (!$first) {echo ",";}$first = false;
+    echo "{\"site\":\"".str_replace("\"", "\\\"", $site)."\"}";
+  }
+  echo ']';
+  exit(0);
+}
+
 $id=FALSE;
 if (isset($_POST['id']) && preg_match('/^\d+$/', $_POST['id']))
   $id = intval($_POST['id']);
@@ -16,12 +31,55 @@ else if (isset($_GET['id']) && preg_match('/^\d+$/', $_GET['id']))
   $id = intval($_GET['id']);
 if ($id <= 0)
   $id = FALSE;
-if ($id && isset($_GET["del"]))
+if ($id > 0)
 {
-  $lgfr->deleteVol($id);
-  echo "OK";
-  exit(0);
+  if (isset($_GET["del"]))
+  {
+    (new LogflyReader())->deleteVol($id);
+    echo "OK";
+    exit(0);
+  }
+  else if (isset($_POST['deligc']) && $_POST['deligc'] == '1') {
+    (new LogflyReader())->setIGC($id, "");
+  }
+  else if (isset($_REQUEST["vol"])) {
+    $vol  = (new LogflyReader())->getRecords($id);
+    if($vol)
+    {
+      $date = $vol->date;
+      $vol->date = $date->format('d/m/Y');
+      $vol->heure = $date->format('H:i:s');
+      echo json_encode($vol);
+      exit(0);
+    }
+  }
 }
+
+/*if (isset($_REQUEST["uvol"])) {
+    print_r($_POST);
+    exit(0);
+}*/
+
+if (isset($_POST['site']) && isset($_POST['date']) && isset($_POST['heure']) && isset($_POST['duree']) && isset($_POST['voile']) && isset($_POST['commentaire'])
+&& preg_match('/^\d+$/', $_POST['duree']))
+{
+if ($_POST['site'] != '-1')
+  $site = htmlspecialchars($_POST['site']);
+else if (isset($_POST['autresite']) && $_POST['autresite'] != '')
+  $site = htmlspecialchars($_POST['autresite']);
+else
+{
+  echo "err pas de site renseigné!!!";
+  return;
+}
+if (!$id)
+  $ret = @(new LogflyReader())->addVol($site, $_POST['date'], $_POST['heure'], $_POST['duree'], $_POST['voile'], htmlspecialchars($_POST['commentaire']));
+else
+  $ret = @(new LogflyReader())->updateVol($id, $site, $_POST['date'], $_POST['heure'], $_POST['duree'], $_POST['voile'], htmlspecialchars($_POST['commentaire']));
+echo $ret?"OK":"KO";
+exit(0);
+}
+
 ?><!DOCTYPE html>
 <html>
 
@@ -47,43 +105,12 @@ if ($id && isset($_GET["del"]))
   //phpinfo();
   //htmlspecialchars($_POST['nom']);
   //
-  if (isset($_POST['site']) && isset($_POST['date']) && isset($_POST['heure']) && isset($_POST['duree']) && isset($_POST['voile']) && isset($_POST['commentaire'])
-  && preg_match('/^\d+$/', $_POST['duree']))
-  {
-    if ($_POST['site'] != '-1')
-      $site = htmlspecialchars($_POST['site']);
-    else if (isset($_POST['autresite']) && $_POST['autresite'] != '')
-      $site = htmlspecialchars($_POST['autresite']);
-    else
-    {
-      echo "err pas de site renseigné!!!";
-      return;
-    }
-    if (!$id)
-      $ret = $lgfr->addVol($site, $_POST['date'], $_POST['heure'], $_POST['duree'], $_POST['voile'], htmlspecialchars($_POST['commentaire']));
-    else
-      $ret = $lgfr->updateVol($id, $site, $_POST['date'], $_POST['heure'], $_POST['duree'], $_POST['voile'], htmlspecialchars($_POST['commentaire']));
-    if ($ret)
-    {
-      //header("Location : /list.php");
-?>
-<script type="text/javascript">
-alert('<?php echo $id?"updated !!!":"new record ok !!! ";?>');
-if (window.opener !== window && !window.menubar.visible)
-{
-  window.onunload = refreshParent;
-  function refreshParent() {
-  window.opener.location.reload();
-  }
-}
-window.close();
-</script>
-<?php
-    }
-  }
+
 ?>
 
 <script type="text/javascript">
+  var id = <?php echo $id>0?$id:-1; ?>;
+  cursite = "";
   if (window.opener !== window && !window.menubar.visible)
   {
     window.onunload = refreshParent;
@@ -93,32 +120,9 @@ window.close();
   }
   window.onload = function()
   {
-<?php
-function decode_dbstring($dbstring)
-{
-  return htmlspecialchars_decode(str_replace("'", "\\'", str_replace("\r", "", str_replace("\n", "\\n", $dbstring))));
-}
-  if ($id)
-  {
-    $vol  = $lgfr->getRecords($id);
-    if($vol)
-    {
-    //echo"<pre>".print_r($vol)."</pre>";
-?>
-    document.getElementsByName("date")[0].value = '<?php echo $vol->date->format('d/m/Y');?>';
-    document.getElementsByName("heure")[0].value = '<?php echo $vol->date->format('H:i:s');?>';
-    document.getElementsByName("duree")[0].value = <?php echo $vol->duree;?>;
-    document.getElementsByName("voile")[0].value = '<?php echo $vol->voile;?>';
-    document.getElementsByName("commentaire")[0].value = '<?php echo decode_dbstring($vol->commentaire);?>'
-    document.getElementsByName("site")[0].value = '<?php echo decode_dbstring($vol->site);?>'
-    onSiteChange(document.getElementsByName("site")[0].value);
-    document.getElementsByName("vol")[0].value = <?php echo $id;?>;
-<?php
-    }
-    else
-      $id = -1;
-  }
-?>
+      loadData();
+      if (id > 0)
+        loadVol(id);
     calcheures();
     calcdate();
     
@@ -135,6 +139,130 @@ function decode_dbstring($dbstring)
     heure.addEventListener("focus", function() { this.select(); });
     date.addEventListener("focus", function() { createSelection(this, 0, 2); });
   };
+
+  function clearList(list)
+  {
+    let length = list.options.length;
+    for (let i=length; i>=0; i--)
+      list.options[i] = null;
+    addOption(list, 'Nouveau...', -1, false);
+  }
+
+  function loadData() {
+    loadVols();
+    loadSites();
+  }
+
+  function loadVols() {
+    var xhttp = new XMLHttpRequest();
+    xhttp.responseType = 'json';
+    message("loading...");
+    xhttp.onreadystatechange = function() {
+      if (this.readyState == 4 && this.status == 200) {
+        if (!this.response) return;
+        var list = document.getElementsByName('vol')[0];
+        clearList(list);
+        for (let i=0; i<this.response.length; i++)
+          addOption(list, this.response[i].id+" ("+this.response[i].date+") " + this.response[i].site, this.response[i].id);
+        if (id > 0)
+          list.value = id;
+        message("");
+      }
+    };
+    xhttp.open("GET", "<?php echo strtok($_SERVER["REQUEST_URI"], '?');?>?listevols", true);
+    xhttp.send();
+  }
+
+  function loadSites() {
+    var xhttp = new XMLHttpRequest();
+    xhttp.responseType = 'json';
+    message("loading...");
+    xhttp.onreadystatechange = function() {
+      if (this.readyState == 4 && this.status == 200) {
+        if (!this.response) return;
+        var list = document.getElementsByName('site')[0];
+        clearList(list);
+        for (let i=0; i<this.response.length; i++)
+          addOption(list, this.response[i].site, this.response[i].site);
+        if (id > 0)
+          list.value = cursite;
+        message("");
+      }
+    };
+    xhttp.open("GET", "<?php echo strtok($_SERVER["REQUEST_URI"], '?');?>?listesites", true);
+    xhttp.send();
+  }
+
+  function loadVol(id) {
+    var xhttp = new XMLHttpRequest();
+    xhttp.responseType = 'json';
+    message("loading...");
+    xhttp.onreadystatechange = function() {
+      if (this.readyState == 4 && this.status == 200) {
+        if (!this.response) return;
+        message("");
+        document.getElementsByName("date")[0].value = this.response.date;
+        document.getElementsByName("heure")[0].value = this.response.heure;
+        document.getElementsByName("duree")[0].value = this.response.duree;
+        document.getElementsByName("dureeheures")[0].value = this.response.sduree;
+        document.getElementsByName("voile")[0].value = this.response.voile;
+        document.getElementsByName("commentaire")[0].value = this.response.commentaire;
+        cursite = this.response.site;
+        document.getElementsByName("site")[0].value = this.response.site;
+        onSiteChange(document.getElementsByName("site")[0].value);
+        document.getElementsByName("vol")[0].value = id;
+      }
+    };
+    xhttp.open("GET", "<?php echo strtok($_SERVER["REQUEST_URI"], '?');?>?vol&id="+id, true);
+    xhttp.send();
+  }
+  
+  function saveVol()
+  {
+    var params = new Object();
+    params.id = document.getElementsByName("vol")[0].value;
+    params.date = document.getElementsByName("date")[0].value;
+    params.heure = document.getElementsByName("heure")[0].value;
+    params.duree = document.getElementsByName("duree")[0].value;
+    params.voile = document.getElementsByName("voile")[0].value;
+    params.commentaire = document.getElementsByName("commentaire")[0].value;
+    params.site = document.getElementsByName("site")[0].value;
+    // Turn the data object into an array of URL-encoded key/value pairs.
+    let urlEncodedData = "";
+    for( name in params ) {
+     urlEncodedData += encodeURIComponent(name)+'='+encodeURIComponent(params[name])+'&';
+    }
+    var xhttp = new XMLHttpRequest();
+    message("loading...");
+    xhttp.onreadystatechange = function() {
+      if (this.readyState == 4 && this.status == 200) {
+        message("");
+        if (this.responseText != "OK") {
+            alert("l'enregistrement semble avoir échoué ! " + this.responseText);
+        }
+        else {
+            alert(params.id>0?"updated !!!":"new record ok !!! ");
+            if (window.opener) {
+                window.opener.location.reload();
+                window.close();
+            }
+        }
+      }
+    };
+    xhttp.open("POST", "<?php echo strtok($_SERVER["REQUEST_URI"], '?');?>?uvol&id="+id, true);
+    xhttp.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');
+    xhttp.send(urlEncodedData);
+  }
+
+  function addOption(list, nom, value, selected)
+  {
+    var option = document.createElement("option");
+    option.text = nom;
+    option.value = value;
+    if (selected)
+      option.selected = true;
+    list.add(option);
+  }
   
   function createSelection(field, start, end) {
     if( field.createTextRange ) {
@@ -218,10 +346,9 @@ function decode_dbstring($dbstring)
 
   function onVolChange(val)
   {
-    let url = '<?php echo $_SERVER['SCRIPT_NAME'];?>';
+    id = val;
     if (val > 0)
-      url += '?id=' + val;
-    window.location = url;
+      loadVol(val);
   }
 
   function calcheures()
@@ -275,7 +402,7 @@ function decode_dbstring($dbstring)
           message("");
         }
       };
-      xhttp.open("GET", "<?php echo $_SERVER['REQUEST_URI'];?>&del", true);
+      xhttp.open("GET", "<?php echo strtok($_SERVER["REQUEST_URI"], '?');?>?del&id="+id, true);
       xhttp.send();
     }
     //window.location = "?del&id=" + document.getElementsByName("id")[0].value;
@@ -321,10 +448,10 @@ function decode_dbstring($dbstring)
 </script>
 <h3 name="infobox"></h3>
 vol à editer/créer : <select name="vol" onchange="onVolChange(this.value);">
-  <option value="-1">Nouveau...</option>
+  <option value="-1" selected>Chargement...</option>
 <?php
-  foreach ($lgfr->getRecords()->vols as $vol)
-  echo "  <option value=\"".$vol->id."\">".$vol->id." : (".$vol->date->format('d/m/Y').") ".$vol->site."</option>\n";
+  //foreach ($lgfr->getRecords()->vols as $vol)
+  //  echo "  <option value=\"".$vol->id."\">".$vol->id." : (".$vol->date->format('d/m/Y').") ".$vol->site."</option>\n";
 ?>
 </select>
 <?php
@@ -333,10 +460,10 @@ if ($id && !isset($_GET["del"]))
 ?>
 <form action="<?php echo $_SERVER['REQUEST_URI'];?>" name="formvol" method="post" onsubmit="return onsubmitVol();">
  <p>Site : <select name="site" onchange="onSiteChange(this.value);">
-  <option value="-1">Nouveau...</option>
+  <option value="-1" selected>Chargement...</option>
 <?php
-  foreach ($lgfr->getSites() as $site)
-  echo "  <option value=\"".$site."\">".$site."</option>\n";
+  //foreach ($lgfr->getSites() as $site)
+  //echo "  <option value=\"".$site."\">".$site."</option>\n";
 ?>
 <input type="text" name="autresite"/>
 </select>
@@ -347,7 +474,8 @@ if ($id && !isset($_GET["del"]))
  <p>Durée (secondes) : <input type="text" name="duree" value="0" onKeyUp="calcheures();"/>&nbsp;soit&nbsp;<input type="text" name="dureeheures" onKeyUp="calcsecondes()"/></p>
  <p>Voile : <input type="text" name="voile" /></p>
  <p>Commentaire : <textarea name="commentaire" class="fullwidth" rows="10"></textarea></p>
- <p><input type="submit" value="OK"></p>
+ <p><input type="checkbox" name="deligc" value="1"> supprimer le fichier IGC</p>
+ <p><input type="button" value="OK" onclick="saveVol()"></p>
 </form>
 
 </body>
