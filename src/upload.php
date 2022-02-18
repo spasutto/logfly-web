@@ -41,7 +41,7 @@ if (!isset($_FILES['userfile']['tmp_name'])) {
 <form enctype="multipart/form-data" action="<?php echo $url;?>" method="post">
     vol à editer/créer :<select name="id">
   <option value="-1">Nouveau...</option>
-</select>
+</select><BR>
   <!-- MAX_FILE_SIZE doit précéder le champ input de type file -->
   <input type="hidden" name="MAX_FILE_SIZE" value="10000000" />
   <!-- Le nom de l'élément input détermine le nom dans le tableau $_FILES -->

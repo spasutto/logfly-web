@@ -51,14 +51,35 @@ function loadCarto(clegeoportail) {
     attribution: 'Map data: &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, <a href="http://viewfinderpanoramas.org">SRTM</a> | Map style: &copy; <a href="https://opentopomap.org">OpenTopoMap</a> (<a href="https://creativecommons.org/licenses/by-sa/3.0/">CC-BY-SA</a>)'
   }).addTo(map);
 
-  var baseMaps = {
-    "MapBox": mapbox,
-    "Carte Topo": opentopomap
-  };
+  var baseMaps = {};
   if (useign) {
     baseMaps["Photos Satellite"] = ignphoto;
     baseMaps["Carte IGN"] = carteign;
   }
+  baseMaps["MapBox"] = mapbox;
+  baseMaps["Carte Topo"] = opentopomap;
+
   L.control.layers(baseMaps).addTo(map);
+  L.Control.DlIGC = L.Control.extend({
+    onAdd: function(map) {
+      var img = L.DomUtil.create('img');
+      img.src = 'download.svg';
+      img.style.width = '32px';
+      var btn = L.DomUtil.create('button');
+      btn.id = "btnDlTrace";
+      btn.title = "Télécharger la trace";
+      btn.style.display = 'none';
+      btn.appendChild(img);
+
+      return btn;
+    },
+    onRemove: function(map) {}
+  });
+
+  L.control.dligc = function(opts) {
+    return new L.Control.DlIGC(opts);
+  }
+
+  L.control.dligc({ position: 'topright' }).addTo(map);
   return map;
 }

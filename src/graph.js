@@ -82,11 +82,11 @@ class GraphGPX {
     if (!Array.isArray(this.pts) || this.pts.length <= 0)
       return;
     let t=0;
-    let minmil = Math.floor(this.minalt/500)*500;
-    let maxmil = Math.ceil(this.maxalt/500)*500;
-    if (maxmil == minmil) maxmil+=500;
-    //console.log(this.minalt, this.maxalt, minmil, maxmil, this.pts[0]);
-    let altdiff = maxmil-minmil;//this.maxalt-this.minalt;
+    let minaltg = Math.floor(this.minalt/100)*100;
+    let maxaltg = Math.ceil(this.maxalt/100)*100;
+    if (maxaltg == minaltg) maxaltg+=500;
+    //console.log(this.minalt, this.maxalt, minaltg, maxaltg, this.pts[0]);
+    let altdiff = maxaltg-minaltg;//this.maxalt-this.minalt;
     //altdiff *= 1.05;
     let coefh = this.canvas.height/altdiff;
     let getY = function(alt) {return this.canvas.height-Math.round(coefh*(alt-this.minalt));}.bind(this);
@@ -111,7 +111,8 @@ class GraphGPX {
     this.ctx.fillStyle = "#5f5f5f";
     this.ctx.font = '10px sans-serif';
     let x = 0, y=getY(this.pts[0].alt);
-    for (t=minmil; t<=maxmil; t+=500) {
+    minaltg = Math.floor(minaltg/500)*500;
+    for (t=minaltg; t<=maxaltg; t+=500) {
       y=getY(t);
       if (y<=0 || y>this.canvas.height) continue;
       this.ctx.beginPath();

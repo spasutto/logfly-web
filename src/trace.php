@@ -16,8 +16,12 @@
       }
       else 
         $igc = $_POST['igccont'];
-      if (!isset($_REQUEST['gpx']))
+      if (!isset($_REQUEST['gpx'])) {
+        header('Content-type: text/plain');
+        if (isset($_REQUEST['dl']))
+          header('Content-Disposition: attachment; filename="flightlog.igc"');
         echo $igc;
+      }
       else {
         $gpx = TrackfileLoader::toGPX($igc, "igc");
         //header('Content-Type: application/json; charset=utf-8');
@@ -98,13 +102,10 @@
 </div>
 
 <script>
-var id = new URL(window.location.href).searchParams.get("id");
-if (id > 0) {
-  document.getElementById('formcont').style.display = 'none';
-}
-else {
-  document.getElementById('formcont').style.display = 'block';
-}
+  var id = new URL(window.location.href).searchParams.get("id");
+  if (id > 0) {
+    document.getElementById('formcont').style.display = 'none';
+  }
 
   var graph = new GraphGPX(document.getElementById("graph"));
   graph.addEventListener('onposchanged', function(e) {
@@ -125,15 +126,18 @@ else {
         xml = new XMLSerializer().serializeToString(this.responseXML);
         //console.log(this.response, this.responseXML);
         new L.GPX(xml, {async: true,
-  marker_options: {
-    startIconUrl: '',
-    endIconUrl: '',
-    shadowUrl: ''
-  }}).on('loaded', function(e) {
-    map.fitBounds(e.target.getBounds());
-  }).addTo(map);
+          marker_options: {
+            startIconUrl: '',
+            endIconUrl: '',
+            shadowUrl: ''
+          }}).on('loaded', function(e) {
+            map.fitBounds(e.target.getBounds());
+          }).addTo(map);
         window.marker = L.marker([0,0]).addTo(map);
         graph.setGPX(this.responseXML);
+        let btndl = document.getElementById('btnDlTrace');
+        btndl.onclick = function() {window.location = "<?php echo strtok($_SERVER['REQUEST_URI'], '?');?>?id="+id+"&igc&dl";};
+        btndl.style.display = 'block';
       }
     };
     let data = null;

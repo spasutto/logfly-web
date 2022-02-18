@@ -1,6 +1,7 @@
 <?php
 require("logfilereader.php");
 require('Trackfile-Lib/TrackfileLoader.php');
+@include("keys.php");
 class TrackLogManager
 {
   const FOLDER_TL = 'Tracklogs';
@@ -11,6 +12,15 @@ class TrackLogManager
       echo "bad IGC file!!!";
       return FALSE;
     } else {
+      $zone = 'Europe/Paris';
+      try
+      {
+        if (defined('CLETIMEZONEDB')) {
+          $xml = new SimpleXMLElement("http://api.timezonedb.com/v2.1/get-time-zone?key=".CLETIMEZONEDB."&format=xml&by=position&lat=".$fpt->latitude."&lng=".$fpt->longitude, 0, true);
+          $zone = (string)$xml->zoneName;
+        }
+      } catch (Exception $e) {}
+      $fpt->date->setTimeZone(new DateTimeZone($zone));
       $cmpt = 0;
       do {
         $cmpt++;
@@ -96,7 +106,15 @@ class TrackLogManager
         }
         //$tz = $igc['date']->getTimezone();echo $tz->getName()."\n";
         $localdate = $fpt->date;
-        $localdate->setTimeZone(new DateTimeZone('Europe/Paris')); // TODO récupérer ça sur le webservice geo via $pt
+        $zone = 'Europe/Paris';
+        try
+        {
+          if (defined('CLETIMEZONEDB')) {
+            $xml = new SimpleXMLElement("http://api.timezonedb.com/v2.1/get-time-zone?key=".CLETIMEZONEDB."&format=xml&by=position&lat=".$fpt->latitude."&lng=".$fpt->longitude, 0, true);
+            $zone = (string)$xml->zoneName;
+          }
+        } catch (Exception $e) {}
+        $localdate->setTimeZone(new DateTimeZone($zone));
         $results[] = ["path"=>$path, "date"=>$localdate, "diff"=>abs($localdate->getTimestamp()-$date->getTimestamp())];
       }
     }
