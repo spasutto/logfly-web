@@ -1,1 +1,2 @@
-Tracklogs/*.IGC
+src/Tracklogs/*.IGC
+*/*.db

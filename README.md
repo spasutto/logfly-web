@@ -1,6 +1,8 @@
 # logfly-web
 Visualiseur/editeur rudimentaire de carnet LogFly
 
+![alt text](https://github.com/spasutto/logfly-web/blob/main/img/mainscreen.jpg?raw=true)
+
 # installation
 Placer tous les fichiers à la racine du répertoire web où on veut placer le visualisateur, y placer aussi le fichier Logfly.db
 
@@ -9,7 +11,7 @@ Le serveur web doit disposer du [module PHP permettant de lire les bases de donn
 # sécurité
 Pour protéger en écriture le carnet de vol on peut placer un fichier ".htaccess" à la racine du répertoire LogFly et y mettre le contenu suivant :
 ```ApacheConf
-<FilesMatch "^(admin|edit).*\.php$">
+<FilesMatch "^(admin|edit|upload).*\.php$">
 AuthUserFile /le/chemin/absolu/vers/le/fichier/de/mots/de/passes/.htpasswd
 AuthName "prive"
 AuthType Basic

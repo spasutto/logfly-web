@@ -3,7 +3,7 @@
   if (isset($_REQUEST['id']) && preg_match('/^\d+$/', $_REQUEST['id']))
     $id = intval($_REQUEST['id']);
 
-  if (isset($_REQUEST['gpx']) && ($id>0 || isset($_POST['igccont'])))
+  if ((isset($_REQUEST['gpx']) || isset($_REQUEST['igc'])) && ($id>0 || isset($_POST['igccont'])))
   {
     require("logfilereader.php");
     require('Trackfile-Lib/TrackfileLoader.php');
@@ -16,11 +16,15 @@
       }
       else 
         $igc = $_POST['igccont'];
-      $gpx = TrackfileLoader::toGPX($igc, "igc");
-      //header('Content-Type: application/json; charset=utf-8');
-      //echo json_encode(array('GPX' => $gpx));
-      header("Content-type: text/xml");
-      echo $gpx;
+      if (!isset($_REQUEST['gpx']))
+        echo $igc;
+      else {
+        $gpx = TrackfileLoader::toGPX($igc, "igc");
+        //header('Content-Type: application/json; charset=utf-8');
+        //echo json_encode(array('GPX' => $gpx));
+        header("Content-type: text/xml");
+        echo $gpx;
+      }
     }
     catch(Exception $e)
     {
