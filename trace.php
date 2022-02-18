@@ -1,16 +1,21 @@
 <?php
   $id = -1;
-  if (isset($_REQUEST['id']))
-    $id = $_REQUEST['id'];
+  if (isset($_REQUEST['id']) && preg_match('/^\d+$/', $_REQUEST['id']))
+    $id = intval($_REQUEST['id']);
 
-  if ($id>0 && isset($_REQUEST['gpx']))
+  if (isset($_REQUEST['gpx']) && ($id>0 || isset($_POST['igccont'])))
   {
     require("logfilereader.php");
     require('Trackfile-Lib/TrackfileLoader.php');
     try
     {
-      $lgfr = new LogflyReader();
-      $igc = $lgfr->getIGC($id);
+      if ($id>0)
+      {
+        $lgfr = new LogflyReader();
+        $igc = $lgfr->getIGC($id);
+      }
+      else 
+        $igc = $_POST['igccont'];
       $gpx = TrackfileLoader::toGPX($igc, "igc");
       //header('Content-Type: application/json; charset=utf-8');
       //echo json_encode(array('GPX' => $gpx));
@@ -50,6 +55,11 @@
     height: 100%;
     width: 100%;
   }
+  #formcont {
+    position:fixed;
+    left:0;top:0;right:0;bottom:0;    
+    background-color:white;
+  }
   #map {
     position: fixed;
     top: 0;
@@ -70,16 +80,32 @@
 </head>
 <body>
 
+<div id="mapcont">
+  <div id="map"></div>
+  <div id="graph"></div>
+</div>
 
-
-<div id="map"></div>
-<div id="graph"></div>
+<div id="formcont">
+<form id="formigc" method="post" action="<?php echo strtok($_SERVER['REQUEST_URI'], '?');?>" onsubmit="loadGPX();return false;">
+<input type="submit" style="height:100%; width:20%">
+<textarea type="text" size="50" id="igccont" style="width:95%;height:95vh"></textarea>
+</form>
+</div>
 
 <script>
+var id = new URL(window.location.href).searchParams.get("id");
+if (id > 0) {
+  document.getElementById('formigc').style.display = 'none';
+}
+else {
+  document.getElementById('formigc').style.display = 'block';
+}
+
   var graph = new GraphGPX(document.getElementById("graph"));
   graph.addEventListener('onposchanged', function(e) {
     marker.setLatLng([e.detail.lat, e.detail.lon]).update();
   });
+  
 
   var map = loadCarto();
 
@@ -91,6 +117,7 @@
     xhttp.onreadystatechange = function() {
       if (this.readyState == 4 && this.status == 200) {
         if (!this.response) return;
+        document.getElementById('formigc').style.display = 'none';
         xml = new XMLSerializer().serializeToString(this.responseXML);
         //console.log(this.response, this.responseXML);
         new L.GPX(xml, {async: true,
@@ -105,10 +132,16 @@
         graph.setGPX(this.responseXML);
       }
     };
-    xhttp.open("GET", "<?php echo $_SERVER['REQUEST_URI'];?>&gpx", true);
-    xhttp.send();
+    let data = null;
+    let url = "<?php echo strtok($_SERVER['REQUEST_URI'], '?');?>?";
+    if (id>0) url += "id="+id+"&";
+    else data = "igccont="+escape(document.getElementById('igccont').value);
+    xhttp.open("POST", url+"gpx", true);
+    xhttp.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');
+    xhttp.send(data);
   }
-  loadGPX();
+  if (id>0)
+    loadGPX();
 
 </script>
 
