@@ -1,4 +1,5 @@
-<?php  /*if ($_GET['user'] != 'sylvain')  {    exit(0);    return;  }*/  //phpinfo();  require("logfilereader.php");  try  {    $lgfr = new LogflyReader();  }  catch(Exception $e)  {    echo "error!!! : ".$e->getMessage();    exit(0);  }
+<?php  /*if ($_GET['user'] != 'sylvain')  {    exit(0);    return;  }*/  //phpinfo();  require("logfilereader.php");  @include("keys.php");
+  try  {    $lgfr = new LogflyReader();  }  catch(Exception $e)  {    echo "error!!! : ".$e->getMessage();    exit(0);  }
   if (isset($_REQUEST['sites']))  {    /*foreach ($lgfr->getSites() as $site)      echo $site.",";*/    header('Content-Type: application/json; charset=utf-8');    echo json_encode($lgfr->getInfoSite());
     exit(0);    return;  }?><!DOCTYPE html><html><head>
   <title>Carte des sites de vol</title>
@@ -17,6 +18,7 @@
   var popup = L.popup();
   function onMapClick(e) {    popup      .setLatLng(e.latlng)      .setContent("You clicked the map at " + e.latlng.toString())      .openOn(map);  }
   map.on('click', onMapClick);*/
-  var map = loadCarto();
+
+  var map = loadCarto("<?php if (defined('CLEGEOPORTAIL')) echo CLEGEOPORTAIL;?>");
   //window.onload= function() {    window.msg = document.getElementById("infobox");    getSiteList();    msg.onclick = function() {message();};  //};</script>
 </body></html>

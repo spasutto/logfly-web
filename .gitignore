@@ -1,2 +1,3 @@
 src/Tracklogs/*.IGC
 */*.db
+src/keys.php

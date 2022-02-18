@@ -8,6 +8,8 @@ Placer tous les fichiers à la racine du répertoire web où on veut placer le v
 
 Le serveur web doit disposer du [module PHP permettant de lire les bases de données SQLite](https://www.php.net/manual/fr/book.sqlite3.php)
 
+Pour pouvoir utiliser la cartographie IGN il faut aussi renommer le fichier _keys.php en keys.php puis l'éditer pour remplacer la chaîne "VOTRECLEGEOPORTAILICI" par votre clé API Géoportail.
+
 # sécurité
 Pour protéger en écriture le carnet de vol on peut placer un fichier ".htaccess" à la racine du répertoire LogFly et y mettre le contenu suivant :
 ```ApacheConf

@@ -32,6 +32,7 @@
     }
     exit(0);
   }
+  @include("keys.php");
 ?>
 <!DOCTYPE html>
 <html>
@@ -110,7 +111,7 @@ else {
     marker.setLatLng([e.detail.lat, e.detail.lon]).update();
   });
 
-  var map = loadCarto();
+  var map = loadCarto("<?php if (defined('CLEGEOPORTAIL')) echo CLEGEOPORTAIL;?>");
 
   function loadGPX() {
     var xhttp = new XMLHttpRequest();
