@@ -8,14 +8,6 @@ class GraphGPX {
     this.createCanvas();
   }
 
-  get area() {
-    return this.calcArea();
-  }
-
-  calcArea() {
-    return this.elem;
-  }
-  
   createCanvas() {
     this.canvas = document.createElement("canvas");
     var newContent = document.createTextNode('Navigateur obsolète!');
@@ -36,19 +28,42 @@ class GraphGPX {
     this.ctx2 = this.canvas2.getContext('2d');
     this.canvas2.addEventListener('mousemove', this.mousemove.bind(this));
     this.canvas2.addEventListener('touchmove', this.mousemove.bind(this));
+    this.canvas2.addEventListener('click', this.click.bind(this));
+    this.canvas2.addEventListener('touchend', this.click.bind(this));
+    this.canvas2.addEventListener('wheel', this.wheel.bind(this));
     this.paint();
   }
-  
+
   addEventListener(evtname, fct) {
     this.elem.addEventListener(evtname, fct, false);
   }
-  
+
   fitCanvas() {
     this.canvas2.width  = this.canvas.width  = this.canvas.offsetWidth;
     this.canvas2.height = this.canvas.height = this.canvas.offsetHeight;
     this.paint();
   }
-  
+
+  wheel(e) {
+    let event = new CustomEvent('onwheel', {"detail": e.deltaY});
+    this.elem.dispatchEvent(event);
+  }
+
+  click(e) {
+    if (!Array.isArray(this.pts) || this.pts.length <= 0)
+      return;
+    let rect = this.elem.getBoundingClientRect(),
+        x = e.clientX - rect.left,
+        idxpt = Math.round(x/this.incx)*this.incr;
+    if (idxpt > this.pts.length-1) {
+      idxpt = this.pts.length-1;
+      x = Math.round((idxpt / this.incr) * this.incx);
+    }
+    let curpt = this.pts[idxpt];
+    let event = new CustomEvent('onclick', {"detail": curpt});
+    this.elem.dispatchEvent(event);
+  }
+
   mousemove(e) {
     if (!Array.isArray(this.pts) || this.pts.length <= 0)
       return;
@@ -72,22 +87,34 @@ class GraphGPX {
     this.ctx2.fillStyle = "#5f5f5f";
     this.ctx2.fillText(curpt.alt+' m', this.canvas2.width-50, 10);
     this.ctx2.fillText(curpt.time.toLocaleString('fr-FR'/*, { timeZone: 'UTC' }*/).substr(-8, 5), this.canvas2.width-50, 20);
-    let onposchanged = new CustomEvent('onposchanged', {"detail": curpt});
-    this.elem.dispatchEvent(onposchanged);
+    let event = new CustomEvent('onposchanged', {"detail": curpt});
+    this.elem.dispatchEvent(event);
   }
-  
+
   paint() {
     this.ctx.fillStyle = "#EAF8C4";
     this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
-    if (!Array.isArray(this.pts) || this.pts.length <= 0)
+    this.ctx.lineWidth = 2;
+    this.ctx.beginPath();
+    this.ctx.moveTo(0,0);
+    this.ctx.lineTo(0,this.canvas.height);
+    this.ctx.lineTo(this.canvas.width-1,this.canvas.height);
+    this.ctx.stroke();
+    this.ctx.lineWidth = 1;
+    this.ctx.fillStyle = "#5f5f5f";
+    if (!Array.isArray(this.pts) || this.pts.length <= 0) {
+      this.ctx.font = '18px sans-serif';
+      this.ctx.fillText('chargement...', (this.canvas.width/2)-20, (this.canvas.height/2)-5);
       return;
+    }
+    this.ctx.font = '10px sans-serif';
     let t=0;
     let minaltg = Math.floor(this.minalt/100)*100;
     let maxaltg = Math.ceil(this.maxalt/100)*100;
     if (maxaltg == minaltg) maxaltg+=500;
     //console.log(this.minalt, this.maxalt, minaltg, maxaltg, this.pts[0]);
     let altdiff = maxaltg-minaltg;//this.maxalt-this.minalt;
-    //altdiff *= 1.05;
+    altdiff *= 1.05;
     let coefh = this.canvas.height/altdiff;
     let getY = function(alt) {return this.canvas.height-Math.round(coefh*(alt-this.minalt));}.bind(this);
     this.incx = this.canvas.width/this.pts.length;
@@ -100,16 +127,6 @@ class GraphGPX {
     this.incx = Math.floor(this.incx);
     this.incr = Math.ceil(this.incr);
 
-    this.ctx.lineWidth = 2;
-    this.ctx.beginPath();
-    this.ctx.moveTo(0,0);
-    this.ctx.lineTo(0,this.canvas.height);
-    this.ctx.lineTo(this.canvas.width-1,this.canvas.height);
-    this.ctx.stroke();
-    this.ctx.lineWidth = 1;
-
-    this.ctx.fillStyle = "#5f5f5f";
-    this.ctx.font = '10px sans-serif';
     let x = 0, y=getY(this.pts[0].alt);
     minaltg = Math.floor(minaltg/500)*500;
     for (t=minaltg; t<=maxaltg; t+=500) {
@@ -130,7 +147,7 @@ class GraphGPX {
     this.ctx.stroke();
     //this.ctx.fillText(this.pts.length+' pts, incx='+incx+', incr='+this.incr, 10, 10);
   }
-  
+
   setGPX(gpx) {
     let xpts = gpx.getElementsByTagName("trkpt");
     this.pts = [];

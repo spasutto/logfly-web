@@ -14,7 +14,7 @@
         $lgfr = new LogflyReader();
         $igc = $lgfr->getIGC($id);
       }
-      else 
+      else
         $igc = $_POST['igccont'];
       if (!isset($_REQUEST['gpx'])) {
         header('Content-type: text/plain');
@@ -41,12 +41,12 @@
 <!DOCTYPE html>
 <html>
 <head>
-  
+
   <title>Trace GPS de vol</title>
 
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  
+
   <link rel="shortcut icon" type="image/x-icon" href="docs/images/favicon.ico" />
 
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" integrity="sha512-xodZBNTC5n17Xt2atTPuE1HxjVMSvLVW9ocqUKLsCC5CXdbqCmblAshOMAS6/keqq/sMZMZ19scR4PsZChSR7A==" crossorigin=""/>
@@ -66,7 +66,7 @@
   }
   #formcont {
     position:fixed;
-    left:0;top:0;right:0;bottom:0;    
+    left:0;top:0;right:0;bottom:0;
     background-color:white;
   }
   #map {
@@ -85,7 +85,7 @@
     height: 100px;
   }
 </style>
-  
+
 </head>
 <body>
 
@@ -111,8 +111,17 @@
   graph.addEventListener('onposchanged', function(e) {
     marker.setLatLng([e.detail.lat, e.detail.lon]).update();
   });
+  graph.addEventListener('onclick', function(e) {
+    map.setView(new L.LatLng(e.detail.lat, e.detail.lon));
+  });
+  graph.addEventListener('onwheel', function(e) {
+    let center = marker.getLatLng();
+    let zoom = map.getZoom() + (e.detail>0?-1:1);
+    map.setView(center, zoom);
+  });
 
   var map = loadCarto("<?php if (defined('CLEGEOPORTAIL')) echo CLEGEOPORTAIL;?>");
+  var marker = L.marker([0,0]).addTo(map);
 
   function loadGPX() {
     var xhttp = new XMLHttpRequest();
@@ -133,7 +142,6 @@
           }}).on('loaded', function(e) {
             map.fitBounds(e.target.getBounds());
           }).addTo(map);
-        window.marker = L.marker([0,0]).addTo(map);
         graph.setGPX(this.responseXML);
         let btndl = document.getElementById('btnDlTrace');
         btndl.onclick = function() {window.location = "<?php echo strtok($_SERVER['REQUEST_URI'], '?');?>?id="+id+"&igc&dl";};

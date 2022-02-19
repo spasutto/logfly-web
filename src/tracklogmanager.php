@@ -5,7 +5,7 @@ require('Trackfile-Lib/TrackfileLoader.php');
 class TrackLogManager
 {
   const FOLDER_TL = 'Tracklogs';
-  
+
   public function uploadIGC($tmpfname, $ext, $id = null) {
     $tfreader = TrackfileLoader::load($tmpfname, $ext);
     if (!$tfreader || !($fpt = $tfreader->getFirstRecord())) {
@@ -65,12 +65,12 @@ class TrackLogManager
     }
   }
 
-  public function getIGC($date, $pt = null) {
+  public function getIGC($date) {
     //echo $date->format('Y-m-d H:i:s')."\n"; // DEBUG
     if (!($date instanceof DateTime)) {
       return null;
     }
-    $igcs = $this->getIGCs($date, $pt);
+    $igcs = $this->getIGCs($date);
     if (count($igcs)<=0)
       return null;
     usort($igcs, array( $this, 'cmpigc' ));
@@ -81,8 +81,8 @@ class TrackLogManager
     }*/
     return $igcs[0];
   }
-  
-  protected function getIGCs($date, $pt = null) {
+
+  protected function getIGCs($date) {
     $results = [];
     $datefmt = $date->format('Y-m-d');
     //$igcs = glob(FOLDER_TL.'/'.$datefmt.'*.igc', GLOB_BRACE); // pas case insensitive
@@ -121,7 +121,7 @@ class TrackLogManager
 
     return $results;
   }
-    
+
   private function cmpigc($a, $b) {
     return $a['diff']-$b['diff'];
   }
