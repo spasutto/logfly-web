@@ -1,3 +1,6 @@
 [submodule "Trackfile-Lib"]
 	path = src/Trackfile-Lib
 	url = https://github.com/spasutto/Trackfile-Lib
+[submodule "src/PHP-SRTM"]
+	path = src/PHP-SRTM
+	url = https://github.com/bobosola/PHP-SRTM.git

@@ -1,3 +1,5 @@
 src/Tracklogs/*.IGC
 */*.db
 src/keys.php
+src/elevation/SRTM/*.tif
+src/elevation/DEM/*.hgt

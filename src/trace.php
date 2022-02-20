@@ -107,7 +107,7 @@
     document.getElementById('formcont').style.display = 'none';
   }
 
-  var graph = new GraphGPX(document.getElementById("graph"));
+  var graph = new GraphGPX(document.getElementById("graph"), 'elevation/getElevation.php');
   graph.addEventListener('onposchanged', function(e) {
     marker.setLatLng([e.detail.lat, e.detail.lon]).update();
   });
@@ -142,10 +142,10 @@
           }}).on('loaded', function(e) {
             map.fitBounds(e.target.getBounds());
           }).addTo(map);
-        graph.setGPX(this.responseXML);
         let btndl = document.getElementById('btnDlTrace');
         btndl.onclick = function() {window.location = "<?php echo strtok($_SERVER['REQUEST_URI'], '?');?>?id="+id+"&igc&dl";};
         btndl.style.display = 'block';
+        graph.setGPX(this.responseXML);
       }
     };
     let data = null;
