@@ -154,14 +154,14 @@ class GraphGPX {
     this.incr = Math.ceil(this.incr);
 
     let firsthour = new Date(this.start); firsthour.setMilliseconds(0); firsthour.setSeconds(0); firsthour.setMinutes(0);
-    firsthour = (this.start - firsthour) / 1000;
+    firsthour = 3600 - ((this.start - firsthour) / 1000);
     let secstotal = (this.pts[this.pts.length - 1].time - this.start) / 1000;
     let inct = (secstotal / (this.incx * this.pts.length)) / this.incr;
     this.ctx.strokeStyle = "#afafaf";
     this.ctx.beginPath();
     x = 0;
     for (t = firsthour; t < secstotal; t += 3600) {
-      x = inct * t;
+      x = Math.round(inct * t);
       this.ctx.moveTo(x, 0);
       this.ctx.lineTo(x, this.canvas.height);
     }
