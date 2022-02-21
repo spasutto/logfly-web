@@ -246,8 +246,10 @@ class GraphGPX {
       });
       if (alt < this.minalt) this.minalt = alt;
       if (alt > this.maxalt) this.maxalt = alt;
-      //if (i>150) break;
     }
+    // TODO : faire mieux (évaluer vz?)
+    this.minalt = Math.max(0, this.minalt);
+    this.maxalt = Math.min(10000, this.maxalt);
     if (typeof this.elevationservice === 'string') {
       let curelev = 0;
       let locations = [];
