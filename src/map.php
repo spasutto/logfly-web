@@ -6,7 +6,7 @@
   }*/
   //phpinfo();
   require("logfilereader.php");
-  @include("keys.php");
+  @include("config.php");
   try
   {
     $lgfr = new LogflyReader();

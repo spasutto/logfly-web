@@ -6,7 +6,9 @@ class GraphGPX {
     this.minalt = 100000;
     this.start = new Date;
     this.elem = elem;
-    this.elevationservice = elevationservice;
+    if (typeof elevationservice == 'string' && elevationservice.trim().length > 0) {
+      this.elevationservice = elevationservice;
+    }
     this.elevcalls = 0;
     this.createCanvas();
   }
@@ -30,10 +32,13 @@ class GraphGPX {
     this.ctx = this.canvas.getContext('2d');
     this.ctx2 = this.canvas2.getContext('2d');
     this.canvas2.addEventListener('mousemove', this.mousemove.bind(this));
-    this.canvas2.addEventListener('touchmove', this.mousemove.bind(this));
     this.canvas2.addEventListener('click', this.click.bind(this));
-    this.canvas2.addEventListener('touchend', this.click.bind(this));
     this.canvas2.addEventListener('wheel', this.wheel.bind(this));
+    if ('ontouchstart' in document.documentElement) {
+      this.canvas2.addEventListener("touchstart", this.touchevts, true);
+      this.canvas2.addEventListener("touchmove", this.touchevts, true);
+      this.canvas2.addEventListener("touchend", this.touchevts, true);
+    }
     this.paint();
   }
 
@@ -45,6 +50,25 @@ class GraphGPX {
     this.canvas2.width  = this.canvas.width  = this.canvas.offsetWidth;
     this.canvas2.height = this.canvas.height = this.canvas.offsetHeight;
     this.paint();
+  }
+
+  touchevts(e) {
+    let theTouch = e.changedTouches[0];
+    let mouseEv;
+
+    switch(e.type)
+    {
+      case "touchstart": mouseEv="mousedown"; break;
+      case "touchend":   mouseEv="mouseup"; break;
+      case "touchmove":  mouseEv="mousemove"; break;
+      default: return;
+    }
+
+    let mouseEvent = document.createEvent("MouseEvent");
+    mouseEvent.initMouseEvent(mouseEv, true, true, window, 1, theTouch.screenX, theTouch.screenY, theTouch.clientX, theTouch.clientY, false, false, false, false, 0, null);
+    theTouch.target.dispatchEvent(mouseEvent);
+
+    e.preventDefault();
   }
 
   wheel(e) {
@@ -103,12 +127,7 @@ class GraphGPX {
   paint() {
     this.ctx.fillStyle = "#EAF8C4";
     this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
-    this.ctx.lineWidth = 2;
-    this.ctx.beginPath();
-    this.ctx.moveTo(0, 0);
-    this.ctx.lineTo(0, this.canvas.height);
-    this.ctx.lineTo(this.canvas.width - 1, this.canvas.height);
-    this.ctx.stroke();
+    this.ctx.strokeStyle = "#5f5f5f";
     this.ctx.lineWidth = 1;
     if (!Array.isArray(this.pts) || this.pts.length <= 0) {
       this.ctx.font = '18px sans-serif';
@@ -155,6 +174,27 @@ class GraphGPX {
       this.ctx.fill();
     }
 
+    this.ctx.strokeStyle = "#002fff";
+    x = 0;
+    y = getY(this.pts[0].alt);
+    this.ctx.beginPath();
+    this.ctx.moveTo(x, y);
+    for (t = 0; t < this.pts.length; t += this.incr) {
+      y = getY(this.pts[t].alt);
+      if (y >= 0 && y < this.canvas.height) {
+        this.ctx.lineTo(x, y);
+      }
+      x += this.incx;
+    }
+    this.ctx.stroke();
+
+    this.ctx.strokeStyle = "#5f5f5f";
+    this.ctx.lineWidth = 2;
+    this.ctx.beginPath();
+    this.ctx.moveTo(0, 0);
+    this.ctx.lineTo(0, this.canvas.height);
+    this.ctx.lineTo(this.canvas.width - 1, this.canvas.height);
+    this.ctx.stroke();
     this.ctx.fillStyle = "#0f0f0f";
     y = getY(this.pts[0].alt);
     minaltg = Math.floor(minaltg / 500) * 500;
@@ -167,20 +207,7 @@ class GraphGPX {
       this.ctx.stroke();
       this.ctx.fillText(t, 5, y);
     }
-
-    this.ctx.strokeStyle = "#002fff";
-    x = 0;
-    y = getY(this.pts[0].alt);
-    this.ctx.beginPath();
-    this.ctx.moveTo(0, y);
-    for (t = 0; t < this.pts.length; t += this.incr) {
-      y = getY(this.pts[t].alt);
-      if (y >= 0 && y < this.canvas.height) {
-        this.ctx.lineTo(x, y);
-      }
-      x += this.incx;
-    }
-    this.ctx.stroke();
+    //TODO : dessiner les séparations d'heure
 
     //this.ctx.fillText(this.pts.length+' pts, incx='+incx+', incr='+this.incr, 10, 10);
   }

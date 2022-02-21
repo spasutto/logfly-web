@@ -1,4 +1,5 @@
 <?php
 const CLEGEOPORTAIL = "VOTRECLEGEOPORTAIL";
 const CLETIMEZONEDB = "VOTRECLETIMEZONEDB";
+const ELEVATIONSERVICE = "elevation/getElevation.php";
 ?>

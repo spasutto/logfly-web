@@ -36,7 +36,7 @@
     }
     exit(0);
   }
-  @include("keys.php");
+  @include("config.php");
 ?>
 <!DOCTYPE html>
 <html>
@@ -107,7 +107,7 @@
     document.getElementById('formcont').style.display = 'none';
   }
 
-  var graph = new GraphGPX(document.getElementById("graph"), 'elevation/getElevation.php');
+  var graph = new GraphGPX(document.getElementById("graph"), '<?php if (defined('ELEVATIONSERVICE')) echo ELEVATIONSERVICE;?>');
   graph.addEventListener('onposchanged', function(e) {
     marker.setLatLng([e.detail.lat, e.detail.lon]).update();
   });

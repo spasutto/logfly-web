@@ -1,7 +1,7 @@
 <?php
 require("logfilereader.php");
 require('Trackfile-Lib/TrackfileLoader.php');
-@include("keys.php");
+@include("config.php");
 class TrackLogManager
 {
   const FOLDER_TL = 'Tracklogs';

@@ -2,7 +2,7 @@
 
 class ElevationService
 {
-    const DEM_DEFAULT_PATH = './DEM';
+    const DEM_DEFAULT_PATH = './HGT';
     const HGT_SIZE_SMALL = 1201;
     const HGT_SIZE_LARGE = 3601;
     private $dem_path, $ilat, $ilon, $fp, $curfname, $tilesize;

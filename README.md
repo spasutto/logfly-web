@@ -8,7 +8,7 @@ Placer tous les fichiers à la racine du répertoire web où on veut placer le v
 
 Le serveur web doit disposer du [module PHP permettant de lire les bases de données SQLite](https://www.php.net/manual/fr/book.sqlite3.php)
 
-Pour pouvoir utiliser la cartographie IGN il faut aussi renommer le fichier _keys.php en keys.php puis l'éditer pour remplacer la chaîne "VOTRECLEGEOPORTAIL" par votre clé API Géoportail.
+Pour pouvoir utiliser la cartographie IGN il faut aussi renommer le fichier _config_.php en config.php puis l'éditer pour remplacer la chaîne "VOTRECLEGEOPORTAIL" par votre clé API Géoportail.
 De même, pour pouvoir utiliser la détermination du fuseau horaire IGC via [timezonedb.com](https://timezonedb.com/) il faut aussi remplacer la chaîne "CLETIMEZONEDB" par votre clé API timezonedb.
 
 # sécurité
@@ -26,8 +26,18 @@ Options +Indexes
 
 Ainsi les fichiers edit.php, upload.php et editsite.php seront protégés par un mot de passe.
 
+# Gestion de la topographie (DEM)
+Le visualisateur de trace supporte la topographie au format TIF ou HGT. Pour cela il faut télécharger les fichiers DEM et les mettre dans le dossier correspondant (.tif dans elevation/SRTM et .hgt dans elevation/HGT). Ensuite bien penser à renommer le fichier _config.php en config.php.
+
+Par défaut le service utilisera la topographie sous format HGT, pour le changer il faut éditer le fichier config.php et changer la valeur de la constante ELEVATIONSERVICE en "elevation/getElevationSRTM.php"
+
+#### Sources
+ - HGT : http://viewfinderpanoramas.org/dem3.html#alps
+ - SRTM : http://dwtkns.com/srtm/
+
 # Credits
-visualisation GPX sur leaflet : https://github.com/mpetazzoni/leaflet-gpx
+ - visualisation GPX sur leaflet : https://github.com/mpetazzoni/leaflet-gpx
+ - couche de gestion de la topographie SRTM : https://github.com/bobosola/PHP-SRTM
 
 # Historique
 13/10/2020		V0.1
