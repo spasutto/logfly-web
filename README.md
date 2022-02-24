@@ -6,9 +6,11 @@ Visualiseur/editeur rudimentaire de carnet LogFly
 # installation
 Placer tous les fichiers à la racine du répertoire web où on veut placer le visualisateur, y placer aussi le fichier Logfly.db
 
+Renommer le fichier _config.php en config.php
+
 Le serveur web doit disposer du [module PHP permettant de lire les bases de données SQLite](https://www.php.net/manual/fr/book.sqlite3.php)
 
-Pour pouvoir utiliser la cartographie IGN il faut aussi renommer le fichier _config_.php en config.php puis l'éditer pour remplacer la chaîne "VOTRECLEGEOPORTAIL" par votre clé API Géoportail.
+Pour pouvoir utiliser la cartographie IGN il faut éditer le fichier config.php pour remplacer la chaîne "VOTRECLEGEOPORTAIL" par votre clé API Géoportail.
 De même, pour pouvoir utiliser la détermination du fuseau horaire IGC via [timezonedb.com](https://timezonedb.com/) il faut aussi remplacer la chaîne "CLETIMEZONEDB" par votre clé API timezonedb.
 
 # sécurité

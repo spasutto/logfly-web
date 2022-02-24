@@ -145,7 +145,16 @@
         let btndl = document.getElementById('btnDlTrace');
         btndl.onclick = function() {window.location = "<?php echo strtok($_SERVER['REQUEST_URI'], '?');?>?id="+id+"&igc&dl";};
         btndl.style.display = 'block';
-        graph.setGPX(this.responseXML);
+        window.fi = graph.setGPX(this.responseXML);
+        let divTraceInfos = document.getElementById('divTraceInfos');
+        let stats = [
+          `alt. max : ${fi.maxalt}m`,
+          `alt. min : ${fi.minalt}m`,
+          `vz max : ${fi.maxvz}m/s`,
+          `vz min : ${fi.minvz}m/s`,
+        ];
+        divTraceInfos.innerHTML = stats.join("<BR>").replaceAll(" ", "&nbsp;");
+        divTraceInfos.style.display = 'block';
       }
     };
     let data = null;

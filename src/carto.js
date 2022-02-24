@@ -58,8 +58,8 @@ function loadCarto(clegeoportail) {
   }
   baseMaps["MapBox"] = mapbox;
   baseMaps["Carte Topo"] = opentopomap;
-
   L.control.layers(baseMaps).addTo(map);
+
   L.Control.DlIGC = L.Control.extend({
     onAdd: function(map) {
       var img = L.DomUtil.create('img');
@@ -75,11 +75,29 @@ function loadCarto(clegeoportail) {
     },
     onRemove: function(map) {}
   });
-
   L.control.dligc = function(opts) {
     return new L.Control.DlIGC(opts);
   }
-
   L.control.dligc({ position: 'topright' }).addTo(map);
+
+  L.Control.TraceInfos = L.Control.extend({
+    onAdd: function(map) {
+      var divinf = L.DomUtil.create('div');
+      divinf.id = "divTraceInfos";
+
+      divinf.style.border = 'solid 1px #15af22';
+      divinf.style.backgroundColor = '#99ff00af';
+      divinf.style.padding = '2px';
+      divinf.style.display = 'none';
+
+      return divinf;
+    },
+    onRemove: function(map) {}
+  });
+  L.control.traceinfos = function(opts) {
+    return new L.Control.TraceInfos(opts);
+  }
+  L.control.traceinfos({ position: 'topright' }).addTo(map);
+
   return map;
 }
