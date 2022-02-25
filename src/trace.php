@@ -148,10 +148,10 @@
         window.fi = graph.setGPX(this.responseXML);
         let divTraceInfos = document.getElementById('divTraceInfos');
         let stats = [
-          `alt. max : ${fi.maxalt}m`,
-          `alt. min : ${fi.minalt}m`,
-          `vz max : ${fi.maxvz}m/s`,
-          `vz min : ${fi.minvz}m/s`,
+          `alt. max : ${Math.round(fi.maxalt)}m`,
+          `alt. min : ${Math.round(fi.minalt)}m`,
+          `vz max : ${Math.round(fi.maxvz*10)/10}m/s`,
+          `vz min : ${Math.round(fi.minvz*10)/10}m/s`,
         ];
         divTraceInfos.innerHTML = stats.join("<BR>").replaceAll(" ", "&nbsp;");
         divTraceInfos.style.display = 'block';

@@ -1,13 +1,22 @@
 class GraphGPX {
 
-  constructor(elem, elevationservice) {
+  constructor(elem, elevationservice, showvz) {
     this.resetInfos();
     this.elem = elem;
     if (typeof elevationservice == 'string' && elevationservice.trim().length > 0) {
       this.elevationservice = elevationservice;
     }
     this.elevcalls = 0;
+    this.showvz = showvz === true;
     this.createCanvas();
+  }
+
+  set showVz(showvz) {
+    this.showvz = showvz === true;
+    this.paint();
+  }
+  get showVz() {
+    return this.showvz === true;
   }
 
   resetInfos() {
@@ -16,12 +25,12 @@ class GraphGPX {
 
   createCanvas() {
     this.canvas = document.createElement("canvas");
-    var newContent = document.createTextNode('Navigateur obsolète!');
-    this.canvas.appendChild(newContent);
+    let elem = document.createTextNode('Navigateur obsolète!');
+    this.canvas.appendChild(elem);
 
     this.canvas2 = document.createElement("canvas");
-    newContent = document.createTextNode('Navigateur obsolète!');
-    this.canvas2.appendChild(newContent);
+    elem = document.createTextNode('Navigateur obsolète!');
+    this.canvas2.appendChild(elem);
 
     this.elem.appendChild(this.canvas2);
     this.elem.appendChild(this.canvas);
@@ -40,6 +49,44 @@ class GraphGPX {
       this.canvas2.addEventListener("touchmove", this.touchevts, true);
       this.canvas2.addEventListener("touchend", this.touchevts, true);
     }
+
+    elem = document.createElement("button");
+    elem.style.position = 'absolute';
+    elem.style.bottom = '5px';
+    elem.style.right = '5px';
+    elem.style.fontWeight = 'bolder';
+    elem.appendChild(document.createTextNode('\u2699'));
+    elem.onclick = function () {
+      let pp = document.getElementById('grphcfig');
+      pp.style.display = pp.style.display == 'block' ? 'none' : 'block';
+    };
+    this.elem.appendChild(elem);
+
+    elem = document.createElement("div");
+    elem.id = 'grphcfig';
+    elem.style.position = 'absolute';
+    elem.style.bottom = '24px';
+    elem.style.right = '5px';
+    elem.style.padding = '1px';
+    elem.style.display = 'none';
+    elem.style.backgroundColor = '#cfcfcf';
+    elem.style.border = 'solid 1px grey';
+
+    let elem2 = document.createElement("input");
+    elem2.setAttribute('type', 'checkbox');
+    elem2.id = 'grphshowvz';
+    if (this.showvz) {
+      elem2.checked = true;
+    }
+    elem2.onclick = function (evt) {
+      this.showVz = evt.currentTarget.checked;
+    }.bind(this);
+    elem.appendChild(elem2);
+    elem2 = document.createElement("label");
+    elem2.setAttribute('for', 'grphshowvz');
+    elem2.appendChild(document.createTextNode('afficher vz'));
+    elem.appendChild(elem2);
+    this.elem.appendChild(elem);
     this.paint();
   }
 
@@ -144,7 +191,9 @@ class GraphGPX {
     let altdiff = maxaltg - minaltg;//this.fi.maxalt-this.fi.minalt;
     altdiff *= 1.05;
     let coefh = this.canvas.height / altdiff;
+    let coefhvz = this.canvas.height / (this.fi.maxvz-this.fi.minvz);
     let getY = function (alt) { return this.canvas.height - Math.round(coefh * (alt - this.fi.minalt)); }.bind(this);
+    let getYVz = function (vz) { return this.canvas.height - Math.round(coefhvz * (vz - this.fi.minvz)); }.bind(this);
     this.incx = this.canvas.width / this.fi.pts.length;
     this.incr = 1;
     if (this.incx < 1) {
@@ -154,6 +203,7 @@ class GraphGPX {
     this.incx = Math.floor(this.incx);
     this.incr = Math.ceil(this.incr);
 
+    // heures
     let firsthour = new Date(this.start); firsthour.setMilliseconds(0); firsthour.setSeconds(0); firsthour.setMinutes(0);
     firsthour = 3600 - ((this.start - firsthour) / 1000);
     let secstotal = (this.fi.pts[this.fi.pts.length - 1].time - this.start) / 1000;
@@ -169,6 +219,7 @@ class GraphGPX {
     this.ctx.closePath();
     this.ctx.stroke();
 
+    // gnd alt
     if (typeof this.fi.pts[0].gndalt == 'number') {
       this.ctx.fillStyle = "#afafaf";
       this.ctx.strokeStyle = "#5f5f5f";
@@ -191,6 +242,8 @@ class GraphGPX {
     }
 
     this.ctx.strokeStyle = "#002fff";
+
+    // alt
     x = 0;
     y = getY(this.fi.pts[0].alt);
     this.ctx.beginPath();
@@ -204,15 +257,32 @@ class GraphGPX {
     }
     this.ctx.stroke();
 
+    // vz
+    if (this.showvz) {
+      this.ctx.strokeStyle = "#af00af";
+      x = 0;
+      y = getYVz(this.fi.pts[0].vz);
+      this.ctx.beginPath();
+      this.ctx.moveTo(x, y);
+      for (t = 0; t < this.fi.pts.length; t += this.incr) {
+        y = getYVz(this.fi.pts[t].vz);
+        if (y >= 0 && y < this.canvas.height) {
+          this.ctx.lineTo(x, y);
+        }
+        x += this.incx;
+      }
+      this.ctx.stroke();
+    }
+
     this.ctx.strokeStyle = "#5f5f5f";
     this.ctx.lineWidth = 2;
+    // legende alt
     this.ctx.beginPath();
     this.ctx.moveTo(0, 0);
     this.ctx.lineTo(0, this.canvas.height);
     this.ctx.lineTo(this.canvas.width - 1, this.canvas.height);
     this.ctx.stroke();
     this.ctx.fillStyle = "#0f0f0f";
-    y = getY(this.fi.pts[0].alt);
     minaltg = Math.floor(minaltg / 500) * 500;
     for (t = minaltg; t <= maxaltg; t += 500) {
       y = getY(t);
@@ -222,6 +292,36 @@ class GraphGPX {
       this.ctx.lineTo(4, y - 3);
       this.ctx.stroke();
       this.ctx.fillText(t, 5, y);
+    }
+
+    // legende vz
+    if (this.showvz) {
+      this.ctx.strokeStyle = "#8f8f8f";
+      this.ctx.fillStyle = "#af00af";
+      this.ctx.lineWidth = 1;
+      this.ctx.beginPath();
+      this.ctx.moveTo(33, 0);
+      this.ctx.lineTo(33, this.canvas.height);
+      this.ctx.lineTo(this.canvas.width - 1, this.canvas.height);
+      this.ctx.stroke();
+      //this.ctx.fillStyle = "#0f0f0f";
+      let maxvz = Math.ceil(this.fi.maxvz);
+      let minvz = Math.floor(this.fi.minvz);
+      for (t = minvz; t <= maxvz; t++) {
+        y = getYVz(t);
+        if (y <= 0 || y > this.canvas.height) continue;
+        this.ctx.beginPath();
+        this.ctx.moveTo(33, y - 3);
+        this.ctx.lineTo(37, y - 3);
+        this.ctx.stroke();
+        if (t == 0) {
+          this.ctx.beginPath();
+          this.ctx.moveTo(33, y - 3);
+          this.ctx.lineTo(this.canvas.width, y - 3);
+          this.ctx.stroke();
+        }
+        this.ctx.fillText(t, 38, y);
+      }
     }
   }
 
@@ -265,10 +365,10 @@ class GraphGPX {
       if (vz > this.fi.maxvz) this.fi.maxvz = vz;
     }
     // TODO : faire mieux (évaluer vz?)
-    this.fi.minalt = Math.round(Math.max(0, this.fi.minalt));
-    this.fi.maxalt = Math.round(Math.min(10000, this.fi.maxalt));
-    this.fi.minvz = Math.round(Math.max(-15, this.fi.minvz) * 10) / 10;
-    this.fi.maxvz = Math.round(Math.min(15, this.fi.maxvz) * 10) / 10;
+    this.fi.minalt = Math.max(0, this.fi.minalt);
+    this.fi.maxalt = Math.min(10000, this.fi.maxalt);
+    this.fi.minvz = Math.max(-15, this.fi.minvz);
+    this.fi.maxvz = Math.min(15, this.fi.maxvz);
     if (typeof this.elevationservice === 'string') {
       let curelev = 0;
       let locations = [];
