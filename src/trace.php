@@ -133,6 +133,7 @@
         if (!this.response) return;
         document.getElementById('formcont').style.display = 'none';
         xml = new XMLSerializer().serializeToString(this.responseXML);
+        window.fi = graph.setGPX(this.responseXML);
         //console.log(this.response, this.responseXML);
         new L.GPX(xml, {async: true,
           marker_options: {
@@ -145,7 +146,6 @@
         let btndl = document.getElementById('btnDlTrace');
         btndl.onclick = function() {window.location = "<?php echo strtok($_SERVER['REQUEST_URI'], '?');?>?id="+id+"&igc&dl";};
         btndl.style.display = 'block';
-        window.fi = graph.setGPX(this.responseXML);
         let divTraceInfos = document.getElementById('divTraceInfos');
         let stats = [
           `alt. max : ${Math.round(fi.maxalt)}m`,

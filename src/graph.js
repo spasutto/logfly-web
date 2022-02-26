@@ -1,3 +1,4 @@
+
 class GraphGPX {
 
   constructor(elem, elevationservice, showvz) {
@@ -8,6 +9,7 @@ class GraphGPX {
     }
     this.elevcalls = 0;
     this.showvz = showvz === true;
+    this.delaytouch = 0;
     this.createCanvas();
   }
 
@@ -106,10 +108,14 @@ class GraphGPX {
 
     switch(e.type)
     {
-      case "touchstart": mouseEv="mousedown"; break;
-      case "touchend":   mouseEv="mouseup"; break;
+      case "touchstart": mouseEv = "mousedown"; this.delaytouch = Date.now(); break;
+      case "touchend": mouseEv = "mouseup"; this.delaytouch = Date.now() - this.delaytouch; break;
       case "touchmove":  mouseEv="mousemove"; break;
       default: return;
+    }
+
+    if (e.type == "touchend" && this.delaytouch < 250) {
+      mouseEv = "click";
     }
 
     let mouseEvent = document.createEvent("MouseEvent");
@@ -331,9 +337,12 @@ class GraphGPX {
   }
 
   setGPX(gpx) {
+    // les vz max/min sont en instantané donc très grandes
+    const VZMAX = 30;
+    const VZMIN = -30;
     let xpts = gpx.getElementsByTagName("trkpt");
     this.resetInfos();
-    let i = 0, j = 0, k = 0, alt = 0, lat = 0, lon = 0, vz = 0, vzm = [];
+    let i = 0, j = 0, k = 0, alt = 0, lat = 0, lon = 0, vz = 0, tdiff = 0, vzm = [];
     let time;
     for (i=0; i<xpts.length; i++) {
       alt = parseFloat(xpts[i].getElementsByTagName("ele")[0].textContent);
@@ -349,7 +358,13 @@ class GraphGPX {
       if (i == 0) {
         this.start = time;
       } else {
-        vz = (alt - this.fi.pts[i - 1].alt) / ((time.getTime() - this.fi.pts[i - 1].time.getTime()) / 1000);
+        tdiff = (time.getTime() - this.fi.pts[i - 1].time.getTime()) / 1000;
+        vz = (alt - this.fi.pts[i - 1].alt) / tdiff;
+        // si VZ > max alors on réévalue alt avec VZ -antérieur- ne fonctionne pas, on prends vz = 0 et l'altitude du point précédent
+        if (vz > VZMAX || vz < VZMIN) {
+          vz = 0;//Math.max(VZMIN, Math.min(VZMAX, vz));//this.fi.pts[i - 1].vz
+          this.fi.pts[i].alt = alt = this.fi.pts[i - 1].alt;//vz * tdiff + this.fi.pts[i - 1].alt;
+        }
         if (vzm.length < 25) {
           vzm.push(vz);
         } else {
