@@ -1,5 +1,6 @@
 <?php
 define("LOGFLYDB", "Logfly.db");
+define("FOLDER_TL", "Tracklogs");
 require("logfileutils.php");
 
 class Vol
@@ -230,21 +231,31 @@ class LogflyReader
       return $sites[0];
     return FALSE;
   }
-  
+
   function getIGC($id)
   {
     $sql = "SELECT V_IGC FROM VOL WHERE V_ID=".$id;
     $ret = $this->db->query($sql);
     $row = $ret->fetchArray();
-    return $row['V_IGC'];
+    $igc = $row['V_IGC'];
+    if (strlen(trim($igc)) <= 0) {
+      $igc_file = dirname(__FILE__) . DIRECTORY_SEPARATOR . FOLDER_TL . DIRECTORY_SEPARATOR . $id  .".igc";
+      if (file_exists($igc_file))
+        $igc = file_get_contents($igc_file);
+    }
+    return $igc;
   }
-  
+
   function setIGC($id, $igc)
   {
-    $igc = str_replace("'", "''", $igc);
+    /*$igc = str_replace("'", "''", $igc);
     $sql = "UPDATE VOL set V_IGC='".$igc."' WHERE V_ID=".$id;
     $ret = $this->db->query($sql);
-    return $ret != FALSE;
+    return $ret != FALSE;*/
+    $sql = "UPDATE VOL set V_IGC=NULL WHERE V_ID=".$id;
+    $ret = $this->db->query($sql);
+    $igc_file = dirname(__FILE__) . DIRECTORY_SEPARATOR . FOLDER_TL . DIRECTORY_SEPARATOR . $id  .".igc";
+    return file_put_contents($igc_file, $igc);
   }
 
   function getRecords($id=null, $tritemps = FALSE, $maxres = null, $offset = null, $datemin=null, $datemax=null, $voile=null, $site=null)
@@ -315,6 +326,11 @@ class LogflyReader
       $vol->commentaire = $row['V_Commentaire'];
       $vol->voile = $row['V_Engin'];
       $vol->igc = $row['V_IGC'];
+
+      if (!$vol->igc) {
+        $igc_file = dirname(__FILE__) . DIRECTORY_SEPARATOR . FOLDER_TL . DIRECTORY_SEPARATOR . $vol->id .".igc";
+        $vol->igc = file_exists($igc_file);
+      }
 
       if ($unvol)
         return $vol;

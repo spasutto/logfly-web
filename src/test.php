@@ -1,7 +1,5 @@
 <?php
 exit(0);
-/*
-require("logfilereader.php");
 require("tracklogmanager.php");
 
 try
@@ -20,7 +18,8 @@ catch(Exception $e)
   for ($i=0; $i<$vols->nbvols; $i++) {
     $vol = $vols->vols[$i];
     $igc = $lgfr->getIGC($vol->id);
-    if (strlen(trim($igc))>0) {
+    $lgfr->setIGC($vol->id, $igc);
+/*    if (strlen(trim($igc))>0) {
       echo "already IGC for ".$vol->id."<BR>";
       continue;
     }
@@ -37,6 +36,7 @@ catch(Exception $e)
       continue;
     }
     echo "set for ".$vol->id." ".($lgfr->setIGC($vol->id, $igc)?"":"X")."<BR>";
-  }
 */
+  }
+
 ?>
