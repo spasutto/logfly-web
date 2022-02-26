@@ -1,4 +1,4 @@
-src/Tracklogs/*.IGC
+src/Tracklogs/*
 */*.db
 src/config.php
 src/elevation/SRTM/*.tif

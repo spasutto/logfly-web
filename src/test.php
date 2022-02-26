@@ -1,4 +1,23 @@
 <?php
+require('tracklogmanager.php');
+header("Content-Type: text/plain");
+$lat = 44.567933333333;
+$lon = 6.0191666666667;
+//$site = TrackLogManager::getSite(44.91205, 5.5913);
+$lgfr = new LogflyReader();
+$site = $lgfr->getSite($lat, $lon);
+if (!$site)
+  $site = TrackLogManager::getSite($lat, $lon);
+$dist = 0;
+if ($site) {
+  $dist = $site['dist'];
+  $site = $site['nom'];
+}
+if ($dist > 1000) {
+  echo "site non trouvé";
+} else {
+  echo "site : " . $site. " à ".round($dist)." m";
+}
 exit(0);
 require("tracklogmanager.php");
 

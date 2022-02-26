@@ -157,7 +157,7 @@ class LogflyReader
   function editSite($nom, $newnom, $lat, $lon, $alt)
   {
     $ret2 = FALSE;
-    $nom = str_replace("'", "''", $nom);
+    $nom = str_replace("'", "''", strtoupper($nom));
     $newnom = strtoupper(str_replace("'", "''", $newnom));
     $sql = "UPDATE SITE set S_Latitude='".$lat."', S_Longitude='".$lon."', S_Alti='".$alt."', S_Nom='".$newnom."' WHERE S_Nom='".$nom."';";
     //echo $sql."<BR>\n";
@@ -192,7 +192,7 @@ class LogflyReader
     //$sql = "SELECT S_Alti, S_Nom, S_Latitude, S_Longitude from SITE WHERE S_Nom= '".$nom."';";
     $sql = "SELECT s.S_Alti, s.S_Nom, s.S_Latitude, s.S_Longitude, SUM(V_Duree) AS TempsVol, COUNT(V_Site) AS NombreVols from SITE s, VOL v WHERE 1=1";
     if ($nom != NULL && is_string($nom))
-      $sql.= " AND s.S_Nom='".str_replace("'", "''", $nom)."'";
+      $sql.= " AND s.S_Nom='".str_replace("'", "''", strtoupper($nom))."'";
     else
       $sql .= " AND s.S_Nom=v.V_Site";
     if ($voile !== null)
@@ -230,6 +230,31 @@ class LogflyReader
     else if (count($sites) == 1)
       return $sites[0];
     return FALSE;
+  }
+
+  function getSite($lat, $lon) {
+    $sites = $this->getSites();
+    $site = "";
+    $dist = 1000000000;
+    if (is_array($sites)) {
+      $distmp = 0;
+      for ($i=0; $i<count($sites); $i++) {
+        $sitetmp = $this->getInfoSite($sites[$i]);
+        $distmp = distance($sitetmp->latitude, $sitetmp->longitude, $lat, $lon);
+        if ($distmp<$dist) {
+          $dist = $distmp;
+          $site = new \StdClass();
+          $site->lat = $sitetmp->latitude;
+          $site->lat = $sitetmp->longitude;
+          $site->alt = $sitetmp->altitude;
+          $site->nom = $sitetmp->nom;
+        }
+      }
+    }
+    if ($dist > 1000) {
+      return NULL;
+    }
+    return ["nom"=> $site->nom, "site"=> $site, "dist"=>$dist];
   }
 
   function getIGC($id)

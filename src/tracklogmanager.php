@@ -6,6 +6,27 @@ class TrackLogManager
 {
   const FOLDER_TL = 'Tracklogs';
 
+  public static function getSite($lat, $lon) {
+    $sites = @json_decode(@file_get_contents('https://data.ffvl.fr/json/sites.json'));
+    $site = "";
+    $dist = 1000000000;
+    if (is_array($sites)) {
+      $distmp = 0;
+      for ($i=0; $i<count($sites); $i++) {
+        //lat="44.91205" lon="5.5913"
+        $distmp = distance($sites[$i]->lat, $sites[$i]->lon, $lat, $lon);
+        if ($distmp<$dist) {
+          $dist = $distmp;
+          $site = $sites[$i];
+        }
+      }
+    }
+    if ($dist > 1000) {
+      return NULL;
+    }
+    return ["nom"=> $site->nom, "site"=> $site, "dist"=>$dist];
+  }
+
   public function uploadIGC($tmpfname, $ext, $id = null) {
     $tfreader = TrackfileLoader::load($tmpfname, $ext);
     if (!$tfreader || !($fpt = $tfreader->getFirstRecord())) {
@@ -31,9 +52,6 @@ class TrackLogManager
       if (!move_uploaded_file($tmpfname, $destname)) {
         echo "impossible d'uploader le fichier IGC";
       } else {
-        // TODO : insérer le vol dans la base
-        //$fpt->date
-        //addVol($nomsite, $date, $heure, $duree, $voile, $commentaire, $id=FALSE)
 
         try
         {
@@ -42,7 +60,22 @@ class TrackLogManager
           if (isset($tfreader->duration))
             $duree = $tfreader->duration;
           if (!$id) {
-            $id = $lgfr->addVol(null, $fpt->date->format("d/m/Y"), $fpt->date->format("H:i:s"), $duree, "", "");
+            $osite = $lgfr->getSite($fpt->latitude, $fpt->longitude);
+            if (!$osite)
+              $osite = TrackLogManager::getSite($fpt->latitude, $fpt->longitude);
+            $dist = 0;
+            $sitenom = NULL;
+            $site = NULL;
+            if ($osite) {
+              $dist = $osite['dist'];
+              $site = $osite['site'];
+              $sitenom = $osite['nom'];
+            }
+            if ($sitenom && $lgfr->getInfoSite($sitenom) === FALSE) {
+              $lgfr->createSite($sitenom);
+              $lgfr->editSite($sitenom, $sitenom, $site->lat, $site->lon, $site->alt);
+            }
+            $id = $lgfr->addVol($sitenom, $fpt->date->format("d/m/Y"), $fpt->date->format("H:i:s"), $duree, "", "");
           }
           if (!$id) {
               echo "Probleme de mise à jour de la trace avec l'igc. Supprimer le dernier vol et réessayer";
