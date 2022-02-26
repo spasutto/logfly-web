@@ -77,6 +77,14 @@
     right: 0;
     overflow: hidden;
   }
+  .vz {
+    position:absolute;
+    right:0;
+    top:0;
+    bottom:100px;
+    width:10px;
+    z-index : 20;
+  }
   #graph {
     position:fixed;
     bottom: 0;
@@ -91,6 +99,7 @@
 
 <div id="mapcont">
   <div id="map"></div>
+  <div id="vz" class="vz"></div>
   <div id="graph"></div>
 </div>
 
@@ -107,9 +116,38 @@
     document.getElementById('formcont').style.display = 'none';
   }
 
+  Element.prototype.setGradient = function( from, to, horizontal ){
+    this.style.background = 'linear-gradient(to '+(horizontal ? 'left' : 'top')+', '+from+', '+to+' 100%)';
+  }
+  var mapelem = document.getElementById('map');
+  var vzelem = document.getElementById('vz');
+  var maxvz = 10;
+
+  function componentToHex(c) {
+    var hex = Math.round(c).toString(16);
+    return hex.length == 1 ? "0" + hex : hex;
+  }
+  function rgbToHex(r, g, b) {
+    return "#" + componentToHex(r) + componentToHex(g) + componentToHex(b);
+  }
   var graph = new GraphGPX(document.getElementById("graph"), '<?php if (defined('ELEVATIONSERVICE')) echo ELEVATIONSERVICE;?>');
   graph.addEventListener('onposchanged', function(e) {
     marker.setLatLng([e.detail.lat, e.detail.lon]).update();
+    mapelem.offsetHeight
+    let vz =  Math.min(maxvz, Math.abs(e.detail.vz));
+    let dh = mapelem.offsetHeight/2;
+    let hvz = vz * dh / maxvz;
+    let r = vz*255/maxvz;
+    let g = (maxvz-vz)*255/maxvz;
+    if (e.detail.vz > 0) {
+      vzelem.style.bottom = (100+dh) + 'px';
+      vzelem.style.top = (dh-hvz) + 'px';
+    vzelem.setGradient('white',rgbToHex(r,g,0));
+    } else {
+      vzelem.style.top = dh + 'px';
+      vzelem.style.bottom = (100+(dh-hvz)) + 'px';
+    vzelem.setGradient(rgbToHex(r,g,0), 'white');
+    }
   });
   graph.addEventListener('onclick', function(e) {
     map.setView(new L.LatLng(e.detail.lat, e.detail.lon));
@@ -124,7 +162,7 @@
   var marker = L.marker([0,0]).addTo(map);
 
   function loadGPX() {
-    var xhttp = new XMLHttpRequest();
+    let xhttp = new XMLHttpRequest();
     //xhttp.responseType = 'text';
     xhttp.responseType = 'document';
     xhttp.overrideMimeType('text/xml');
@@ -134,7 +172,7 @@
         document.getElementById('formcont').style.display = 'none';
         xml = new XMLSerializer().serializeToString(this.responseXML);
         window.fi = graph.setGPX(this.responseXML);
-        //console.log(this.response, this.responseXML);
+        //maxvz = Math.max(Math.abs(fi.maxvz), Math.abs(fi.minvz))
         new L.GPX(xml, {async: true,
           marker_options: {
             startIconUrl: '',
