@@ -62,6 +62,9 @@ class LogflyReader
   {
     $sql = "DELETE FROM Vol WHERE V_ID=".$id.";";
     $ret = $this->db->query($sql);
+    $igc_file = dirname(__FILE__) . DIRECTORY_SEPARATOR . FOLDER_TL . DIRECTORY_SEPARATOR . $id  .".igc";
+    if (file_exists($igc_file.".bak")) @unlink($igc_file.".bak");
+    if (file_exists($igc_file)) @rename($igc_file, $igc_file.".bak");
   }
 
   function existeVol($id)

@@ -42,58 +42,50 @@ class TrackLogManager
         }
       } catch (Exception $e) {}
       $fpt->date->setTimeZone(new DateTimeZone($zone));
-      $cmpt = 0;
-      do {
-        $cmpt++;
-        $destname = dirname(__FILE__) . DIRECTORY_SEPARATOR . self::FOLDER_TL . DIRECTORY_SEPARATOR . $fpt->date->format("Y-m-d").'-UPL-'.str_pad($cmpt, 2, '0', STR_PAD_LEFT).".igc";
-      }
-      while (is_file($destname));
-      //echo "<pre>$tmpfname\n$destname\n</pre>";
-      if (!move_uploaded_file($tmpfname, $destname)) {
-        echo "impossible d'uploader le fichier IGC";
-      } else {
 
-        try
-        {
-          $lgfr = new LogflyReader();
-          $duree = 0;
-          if (isset($tfreader->duration))
-            $duree = $tfreader->duration;
-          if (!$id) {
-            $osite = $lgfr->getSite($fpt->latitude, $fpt->longitude);
-            if (!$osite)
-              $osite = TrackLogManager::getSite($fpt->latitude, $fpt->longitude);
-            $dist = 0;
-            $sitenom = NULL;
-            $site = NULL;
-            if ($osite) {
-              $dist = $osite['dist'];
-              $site = $osite['site'];
-              $sitenom = $osite['nom'];
-            }
-            if ($sitenom && $lgfr->getInfoSite($sitenom) === FALSE) {
-              $lgfr->createSite($sitenom);
-              $lgfr->editSite($sitenom, $sitenom, $site->lat, $site->lon, $site->alt);
-            }
-            $id = $lgfr->addVol($sitenom, $fpt->date->format("d/m/Y"), $fpt->date->format("H:i:s"), $duree, "", "");
+      try
+      {
+        $lgfr = new LogflyReader();
+        $duree = 0;
+        if (isset($tfreader->duration))
+          $duree = $tfreader->duration;
+        if (!$id) {
+          $osite = $lgfr->getSite($fpt->latitude, $fpt->longitude);
+          if (!$osite)
+            $osite = TrackLogManager::getSite($fpt->latitude, $fpt->longitude);
+          $dist = 0;
+          $sitenom = NULL;
+          $site = NULL;
+          if ($osite) {
+            $dist = $osite['dist'];
+            $site = $osite['site'];
+            $sitenom = $osite['nom'];
           }
-          if (!$id) {
-              echo "Probleme de mise à jour de la trace avec l'igc. Supprimer le dernier vol et réessayer";
-              return FALSE;
-          } else {
-            $igc = file_get_contents($destname);
-            if (!$lgfr->setIGC($id, $igc)) {
-              echo "Probleme de mise à jour de la trace avec l'igc. Supprimer le dernier vol et réessayer";
-              return FALSE;
-            }
-            return $id;
+          if ($sitenom && $lgfr->getInfoSite($sitenom) === FALSE) {
+            $lgfr->createSite($sitenom);
+            $lgfr->editSite($sitenom, $sitenom, $site->lat, $site->lon, $site->alt);
           }
+          $id = $lgfr->addVol($sitenom, $fpt->date->format("d/m/Y"), $fpt->date->format("H:i:s"), $duree, "", "");
         }
-        catch(Exception $e)
-        {
-          echo "error!!! : ".$e->getMessage();
-          return FALSE;
+        if (!$id) {
+            echo "Probleme de mise à jour de la trace avec l'igc. Supprimer le dernier vol et réessayer";
+            return FALSE;
+        } else {
+          //$igc = file_get_contents($destname);
+          //if (!$lgfr->setIGC($id, $igc)) {
+          $destname = dirname(__FILE__) . DIRECTORY_SEPARATOR . self::FOLDER_TL . DIRECTORY_SEPARATOR . $id .".igc";
+          if (file_exists($destname)) @unlink($destname);
+          if (!move_uploaded_file($tmpfname, $destname)) {
+            echo "Probleme de mise à jour de la trace avec l'igc. Supprimer le dernier vol et réessayer";
+            return FALSE;
+          }
+          return $id;
         }
+      }
+      catch(Exception $e)
+      {
+        echo "error!!! : ".$e->getMessage();
+        return FALSE;
       }
     }
   }

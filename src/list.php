@@ -137,7 +137,7 @@ function editvol(id) {
   let url = 'edit.php';
   if (id > 0)
     url += '?id='+parseInt(id);
-  var MyWindow=window.open(url,'MyWindow','width=600,height=480');
+  var MyWindow=window.open(url,'EditVol','width=600,height=480');
 }
 function parse_query_string(query) {
   if (query.trim().length <= 0 || query.indexOf("=") == -1) return {};
@@ -232,7 +232,7 @@ window.onload = function() {
   echo "<h1><a href=\"".$_SERVER["SCRIPT_NAME"]."\" style=\"text-decoration:none;\">Carnet de vol".$titrevoile." (".$vols->nbvols." vol".($vols->nbvols>1?"s":"").", ".Utils::timeFromSeconds($vols->tempstotalvol, 1)."".$titredate.")</a> : <a href=\"download.php\" title=\"télécharger la base logfly\"><img src=\"download.svg\" width=\"32px\"></a><a href=\"?dl\"><img src=\"csv.svg\" width=\"32px\" title=\"télécharger un fichier csv\"></a>";
   echo "&nbsp;<a href=\"#\" onClick=\"MyWindow=window.open('stats.php','MyWindow','width=900,height=380'); return false;\" title=\"Statistiques de vol\"><img src=\"stats.svg\" width=\"32px\"></a>";
   echo "&nbsp;<a href=\"#\" onClick=\"MyWindow=window.open('map.php','MyWindow','width=900,height=380'); return false;\" title=\"Carte des sites de vol\"><img src=\"map.svg\" width=\"32px\"></a>";
-  echo "&nbsp;<a href=\"#\" onClick=\"MyWindow=window.open('upload.php','MyWindow','width=900,height=380'); return false;\" title=\"Uploader un fichier IGC pour créer/mettre à jour un vol\"><img src=\"upload.svg\" width=\"32px\"></a>";
+  echo "&nbsp;<a href=\"#\" onClick=\"MyWindow=window.open('upload.php','Upload','width=900,height=380'); return false;\" title=\"Uploader un fichier IGC pour créer/mettre à jour un vol\"><img src=\"upload.svg\" width=\"32px\"></a>";
   echo "&nbsp;<a href=\"#\" onClick=\"editvol(); return false;\" title=\"editer le carnet de vol\"><img src=\"edit.svg\" width=\"32px\"></a>";
   echo "&nbsp;<a href=\"#\" style=\"position: relative;\" onClick=\"MyWindow=window.open('editsite.php','MyWindowSite','width=600,height=380'); return false;\" title=\"editer un site\"><span class=\"editsitetexte\">site</span><img src=\"edit.svg\" style=\"position: absolute;\" width=\"32px\"></a>";
   echo "</h1>";
