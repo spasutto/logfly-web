@@ -196,10 +196,13 @@ class GraphGPX {
     this.ctx2.fillText(curpt.alt + ' m AMSL', posx, posy+=10);
     if (typeof curpt.gndalt == 'number')
       this.ctx2.fillText(Math.round(curpt.alt-curpt.gndalt)+' m AGL', posx, posy+=10);
+    this.ctx2.fillStyle = "#af00af";
     this.ctx2.fillText(curpt.vz + ' m/s', posx, posy+=10);
+    this.ctx2.fillStyle = "#22af00";
     this.ctx2.fillText(curpt.vx + ' km/h', posx, posy+=10);
     let t = new Date(Date.UTC(1970, 0, 1));
     t.setUTCSeconds((curpt.time.getTime() - this.start.getTime()) / 1000);
+    this.ctx2.fillStyle = "#5f5f5f";
     this.ctx2.fillText(curpt.time.toLocaleString('fr-FR'/*, { timeZone: 'UTC' }*/).substr(-8, 5) + " ("+t.toLocaleString('fr-FR', { timeZone: 'UTC' }).substr(-8, 5)+")", posx, posy+=10);
     let event = new CustomEvent('onposchanged', {"detail": curpt});
     this.elem.dispatchEvent(event);
@@ -312,7 +315,7 @@ class GraphGPX {
 
     // vx
     if (this.showvx) {
-      this.ctx.strokeStyle = "#00afaf";
+      this.ctx.strokeStyle = "#22af00";
       x = 0;
       y = getYVx(this.fi.pts[0].vx);
       this.ctx.beginPath();
@@ -382,7 +385,7 @@ class GraphGPX {
     // legende vx
     if (this.showvx) {
       this.ctx.strokeStyle = "#8f8f8f";
-      this.ctx.fillStyle = "#00afaf";
+      this.ctx.fillStyle = "#22af00";
       this.ctx.lineWidth = 1;
       this.ctx.beginPath();
       this.ctx.moveTo(minscale, 0);
@@ -414,7 +417,7 @@ class GraphGPX {
     const VZMIN = -30;
     let xpts = gpx.getElementsByTagName("trkpt");
     this.resetInfos();
-    let i = 0, j = 0, k = 0, alt = 0, lat = 0, lon = 0, latvx = 0, lonvx = 0, vz = 0, vx = 0, tdiff = 0, vzm = [];
+    let i = 0, j = 0, k = 0, alt = 0, lat = 0, lon = 0, latvx = 0, lonvx = 0, vz = 0, vx = 0, tdiff = 0, vzm = [], vxm = [];
     let time, timevx;
     for (i=0; i<xpts.length; i++) {
       alt = parseFloat(xpts[i].getElementsByTagName("ele")[0].textContent);
@@ -450,16 +453,16 @@ class GraphGPX {
         }
         vz = vzm.reduce((a, b) => a + b, 0) / vzm.length;
         this.fi.pts[i].vz = Math.round(vz * 10) / 10;
-        tdiff = (time.getTime() - timevx.getTime()) / 1000;
-        if (tdiff >= 2) {
-          vx = this.distance(lat, lon, latvx, lonvx) / tdiff;
-          timevx = time;
-          latvx = lat;
-          lonvx = lon;
+
+        vx = 3.6 * this.distance(lat, lon, this.fi.pts[i - 1].lat, this.fi.pts[i - 1].lon) / tdiff;
+        if (vxm.length < 15) {
+          vxm.push(vx);
         } else {
-          vx = this.fi.pts[i - 1].vx;
+          if (k > 0 && k % 15 == 0) k = 0;
+          vxm[k++] = vx;
         }
-        this.fi.pts[i].vx = Math.round(3.6*vx);
+        vx = Math.round(vxm.reduce((a, b) => a + b, 0) / vxm.length);
+        this.fi.pts[i].vx = vx;
       }
       if (alt < this.fi.minalt) this.fi.minalt = alt;
       if (alt > this.fi.maxalt) this.fi.maxalt = alt;
