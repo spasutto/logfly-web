@@ -190,6 +190,8 @@
           `alt. min : ${Math.round(fi.minalt)}m`,
           `vz max : ${Math.round(fi.maxvz*10)/10}m/s`,
           `vz min : ${Math.round(fi.minvz*10)/10}m/s`,
+          `vx max : ${Math.round(fi.maxvx)}km/h`,
+          //`vx min : ${Math.round(fi.minvx)}km/h`,
         ];
         divTraceInfos.innerHTML = stats.join("<BR>").replaceAll(" ", "&nbsp;");
         divTraceInfos.style.display = 'block';

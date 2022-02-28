@@ -1,7 +1,7 @@
 
 class GraphGPX {
 
-  constructor(elem, elevationservice, showvz) {
+  constructor(elem, elevationservice, showvz, showvx) {
     this.resetInfos();
     this.elem = elem;
     if (typeof elevationservice == 'string' && elevationservice.trim().length > 0) {
@@ -9,6 +9,7 @@ class GraphGPX {
     }
     this.elevcalls = 0;
     this.showvz = showvz === true;
+    this.showvx = showvx === true;
     this.delaytouch = 0;
     this.createCanvas();
   }
@@ -21,8 +22,16 @@ class GraphGPX {
     return this.showvz === true;
   }
 
+  set showVx(showvx) {
+    this.showvx = showvx === true;
+    this.paint();
+  }
+  get showVx() {
+    return this.showvx === true;
+  }
+
   resetInfos() {
-    this.fi = { 'pts': [], maxalt: -1000, minalt: 100000, maxvz:-1000, minvz:100000, start: new Date };
+    this.fi = { 'pts': [], maxalt: -1000, minalt: 100000, maxvz:-1000, minvz:100000, maxvx:-1000, minvx:100000, start: new Date };
   }
 
   createCanvas() {
@@ -89,6 +98,23 @@ class GraphGPX {
     elem2.appendChild(document.createTextNode('afficher vz'));
     elem.appendChild(elem2);
     this.elem.appendChild(elem);
+
+    elem2 = document.createElement("input");
+    elem2.setAttribute('type', 'checkbox');
+    elem2.id = 'grphshowvx';
+    if (this.showvx) {
+      elem2.checked = true;
+    }
+    elem2.onclick = function (evt) {
+      this.showVx = evt.currentTarget.checked;
+    }.bind(this);
+    elem.appendChild(elem2);
+    elem2 = document.createElement("label");
+    elem2.setAttribute('for', 'grphshowvx');
+    elem2.appendChild(document.createTextNode('afficher vx'));
+    elem.appendChild(elem2);
+    this.elem.appendChild(elem);
+
     this.paint();
   }
 
@@ -171,6 +197,7 @@ class GraphGPX {
     if (typeof curpt.gndalt == 'number')
       this.ctx2.fillText(Math.round(curpt.alt-curpt.gndalt)+' m AGL', posx, posy+=10);
     this.ctx2.fillText(curpt.vz + ' m/s', posx, posy+=10);
+    this.ctx2.fillText(curpt.vx + ' km/h', posx, posy+=10);
     let t = new Date(Date.UTC(1970, 0, 1));
     t.setUTCSeconds((curpt.time.getTime() - this.start.getTime()) / 1000);
     this.ctx2.fillText(curpt.time.toLocaleString('fr-FR'/*, { timeZone: 'UTC' }*/).substr(-8, 5) + " ("+t.toLocaleString('fr-FR', { timeZone: 'UTC' }).substr(-8, 5)+")", posx, posy+=10);
@@ -196,10 +223,13 @@ class GraphGPX {
     //console.log(this.fi.minalt, this.fi.maxalt, minaltg, maxaltg, this.fi.pts[0]);
     let altdiff = maxaltg - minaltg;//this.fi.maxalt-this.fi.minalt;
     altdiff *= 1.05;
+    let maxvx = Math.ceil(Math.min(100, this.fi.maxvx));
     let coefh = this.canvas.height / altdiff;
     let coefhvz = this.canvas.height / (this.fi.maxvz-this.fi.minvz);
+    let coefhvx = this.canvas.height / (maxvx-this.fi.minvx);
     let getY = function (alt) { return this.canvas.height - Math.round(coefh * (alt - this.fi.minalt)); }.bind(this);
     let getYVz = function (vz) { return this.canvas.height - Math.round(coefhvz * (vz - this.fi.minvz)); }.bind(this);
+    let getYVx = function (vx) { return this.canvas.height - Math.round(coefhvx * (vx - this.fi.minvx)); }.bind(this);
     this.incx = this.canvas.width / this.fi.pts.length;
     this.incr = 1;
     if (this.incx < 1) {
@@ -280,6 +310,23 @@ class GraphGPX {
       this.ctx.stroke();
     }
 
+    // vx
+    if (this.showvx) {
+      this.ctx.strokeStyle = "#00afaf";
+      x = 0;
+      y = getYVx(this.fi.pts[0].vx);
+      this.ctx.beginPath();
+      this.ctx.moveTo(x, y);
+      for (t = 0; t < this.fi.pts.length; t += this.incr) {
+        y = getYVx(this.fi.pts[t].vx);
+        if (y >= 0 && y < this.canvas.height) {
+          this.ctx.lineTo(x, y);
+        }
+        x += this.incx;
+      }
+      this.ctx.stroke();
+    }
+
     this.ctx.strokeStyle = "#5f5f5f";
     this.ctx.lineWidth = 2;
     // legende alt
@@ -300,14 +347,15 @@ class GraphGPX {
       this.ctx.fillText(t, 5, y);
     }
 
+    let minscale = 33;
     // legende vz
     if (this.showvz) {
       this.ctx.strokeStyle = "#8f8f8f";
       this.ctx.fillStyle = "#af00af";
       this.ctx.lineWidth = 1;
       this.ctx.beginPath();
-      this.ctx.moveTo(33, 0);
-      this.ctx.lineTo(33, this.canvas.height);
+      this.ctx.moveTo(minscale, 0);
+      this.ctx.lineTo(minscale, this.canvas.height);
       this.ctx.lineTo(this.canvas.width - 1, this.canvas.height);
       this.ctx.stroke();
       //this.ctx.fillStyle = "#0f0f0f";
@@ -317,16 +365,40 @@ class GraphGPX {
         y = getYVz(t);
         if (y <= 0 || y > this.canvas.height) continue;
         this.ctx.beginPath();
-        this.ctx.moveTo(33, y - 3);
-        this.ctx.lineTo(37, y - 3);
+        this.ctx.moveTo(minscale, y - 3);
+        this.ctx.lineTo(minscale+4, y - 3);
         this.ctx.stroke();
         if (t == 0) {
           this.ctx.beginPath();
-          this.ctx.moveTo(33, y - 3);
+          this.ctx.moveTo(minscale, y - 3);
           this.ctx.lineTo(this.canvas.width, y - 3);
           this.ctx.stroke();
         }
-        this.ctx.fillText(t, 38, y);
+        this.ctx.fillText(t, minscale+5, y);
+      }
+      minscale += 20;
+    }
+
+    // legende vx
+    if (this.showvx) {
+      this.ctx.strokeStyle = "#8f8f8f";
+      this.ctx.fillStyle = "#00afaf";
+      this.ctx.lineWidth = 1;
+      this.ctx.beginPath();
+      this.ctx.moveTo(minscale, 0);
+      this.ctx.lineTo(minscale, this.canvas.height);
+      this.ctx.lineTo(this.canvas.width - 1, this.canvas.height);
+      this.ctx.stroke();
+      //this.ctx.fillStyle = "#0f0f0f";
+      let minvx = Math.floor(this.fi.minvx);
+      for (t = minvx; t <= maxvx; t+=10) {
+        y = getYVx(t);
+        if (y <= 0 || y > this.canvas.height) continue;
+        this.ctx.beginPath();
+        this.ctx.moveTo(minscale, y - 3);
+        this.ctx.lineTo(minscale+4, y - 3);
+        this.ctx.stroke();
+        this.ctx.fillText(t, minscale+5, y);
       }
     }
   }
@@ -342,21 +414,26 @@ class GraphGPX {
     const VZMIN = -30;
     let xpts = gpx.getElementsByTagName("trkpt");
     this.resetInfos();
-    let i = 0, j = 0, k = 0, alt = 0, lat = 0, lon = 0, vz = 0, tdiff = 0, vzm = [];
-    let time;
+    let i = 0, j = 0, k = 0, alt = 0, lat = 0, lon = 0, latvx = 0, lonvx = 0, vz = 0, vx = 0, tdiff = 0, vzm = [];
+    let time, timevx;
     for (i=0; i<xpts.length; i++) {
       alt = parseFloat(xpts[i].getElementsByTagName("ele")[0].textContent);
       time = new Date(xpts[i].getElementsByTagName("time")[0].textContent);
+      lat = parseFloat(xpts[i].getAttribute('lat'));
+      lon = parseFloat(xpts[i].getAttribute('lon'));
       this.fi.pts.push(
         {
-          'lat': parseFloat(xpts[i].getAttribute('lat')),
-          'lon': parseFloat(xpts[i].getAttribute('lon')),
+          'lat': lat,
+          'lon': lon,
           'alt': alt,
           'time': time,
           'vz': 0,
+          'vx': 0,
         });
       if (i == 0) {
-        this.start = time;
+        this.start = timevx = time;
+        latvx = lat;
+        lonvx = lon;
       } else {
         tdiff = (time.getTime() - this.fi.pts[i - 1].time.getTime()) / 1000;
         vz = (alt - this.fi.pts[i - 1].alt) / tdiff;
@@ -373,17 +450,31 @@ class GraphGPX {
         }
         vz = vzm.reduce((a, b) => a + b, 0) / vzm.length;
         this.fi.pts[i].vz = Math.round(vz * 10) / 10;
+        tdiff = (time.getTime() - timevx.getTime()) / 1000;
+        if (tdiff >= 2) {
+          vx = this.distance(lat, lon, latvx, lonvx) / tdiff;
+          timevx = time;
+          latvx = lat;
+          lonvx = lon;
+        } else {
+          vx = this.fi.pts[i - 1].vx;
+        }
+        this.fi.pts[i].vx = Math.round(3.6*vx);
       }
       if (alt < this.fi.minalt) this.fi.minalt = alt;
       if (alt > this.fi.maxalt) this.fi.maxalt = alt;
       if (vz < this.fi.minvz) this.fi.minvz = vz;
       if (vz > this.fi.maxvz) this.fi.maxvz = vz;
+      if (vx < this.fi.minvx) this.fi.minvx = vx;
+      if (vx > this.fi.maxvx) this.fi.maxvx = vx;
     }
     // TODO : faire mieux (évaluer vz?)
     this.fi.minalt = Math.max(0, this.fi.minalt);
     this.fi.maxalt = Math.min(10000, this.fi.maxalt);
     this.fi.minvz = Math.max(-15, this.fi.minvz);
     this.fi.maxvz = Math.min(15, this.fi.maxvz);
+    this.fi.minvx = Math.max(0, this.fi.minvx);
+    this.fi.maxvx = Math.min(200, this.fi.maxvx);
     if (typeof this.elevationservice === 'string') {
       let curelev = 0;
       let locations = [];
@@ -427,5 +518,31 @@ class GraphGPX {
     xhttp.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');
     xhttp.send(JSON.stringify(data));
     this.elevcalls++;
+  }
+
+  /**
+   * Calculates the great-circle distance between two points, with
+   * the Haversine formula.
+   * @param float latitudeFrom Latitude of start point in [deg decimal]
+   * @param float longitudeFrom Longitude of start point in [deg decimal]
+   * @param float latitudeTo Latitude of target point in [deg decimal]
+   * @param float longitudeTo Longitude of target point in [deg decimal]
+   * @param float earthRadius Mean earth radius in [m]
+   * @return float Distance between points in [m] (same as earthRadius)
+   */
+   distance(latitudeFrom, longitudeFrom, latitudeTo, longitudeTo, earthRadius = 6371000) {
+    const deg2rad = deg => (deg * Math.PI) / 180.0;
+    // convert from degrees to radians
+    let latFrom = deg2rad(latitudeFrom);
+    let lonFrom = deg2rad(longitudeFrom);
+    let latTo = deg2rad(latitudeTo);
+    let lonTo = deg2rad(longitudeTo);
+
+    let latDelta = latTo - latFrom;
+    let lonDelta = lonTo - lonFrom;
+
+    let angle = 2 * Math.asin(Math.sqrt(Math.pow(Math.sin(latDelta / 2), 2) +
+    Math.cos(latFrom) * Math.cos(latTo) * Math.pow(Math.sin(lonDelta / 2), 2)));
+    return angle * earthRadius;
   }
 }
