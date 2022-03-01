@@ -345,8 +345,10 @@ class LogflyReader
     $row = $ret->fetchArray();
     $vols->tempstotalvol = $numRows = $row['sum'];
 
-    $ret = $this->db->query(str_replace("%COLUMNS%","V_ID,V_Date,V_Duree,V_sDuree,V_Site,S_Latitude,S_Longitude,V_Engin,(V_IGC IS NOT NULL AND TRIM(V_IGC) != '') AS V_IGC",$sql.$sqllimit));
-    $vols->datemin = new DateTime("99999/12/31 00:00:00");
+    $columns = "V_ID,V_Date,V_Duree,V_sDuree,V_Site,S_Latitude,S_Longitude,V_Engin,(V_IGC IS NOT NULL AND TRIM(V_IGC) != '') AS V_IGC";
+    if ($id > 0)
+      $columns = $columns.",V_Commentaire";
+    $ret = $this->db->query(str_replace("%COLUMNS%",$columns,$sql.$sqllimit));    $vols->datemin = new DateTime("99999/12/31 00:00:00");
     $vols->datemax = new DateTime("1950/01/01 00:00:00");
     while($row = $ret->fetchArray(SQLITE3_ASSOC))
     {
@@ -358,6 +360,8 @@ class LogflyReader
       $vol->site = $row['V_Site'];
       $vol->latdeco = $row['S_Latitude'];//$row['V_LatDeco'];
       $vol->londeco = $row['S_Longitude'];//$row['V_LongDeco'];
+      if ($id > 0)
+        $vol->commentaire = $row['V_Commentaire'];
       $vol->voile = $row['V_Engin'];
       $vol->igc = $row['V_IGC'];
 

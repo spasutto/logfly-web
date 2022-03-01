@@ -201,7 +201,6 @@ function loadComment(id) {
     var xhttp = new XMLHttpRequest();
       xhttp.responseType = 'text';
       xhttp.onreadystatechange = function() {
-        console.log(this.readyState, this.status);
         if (this.readyState == 4) {
           if (this.status == 401) {
             hidefn();
@@ -236,7 +235,7 @@ function affichComment(id) {
   }
 }
 window.onload = function() {
-    const lignes = document.querySelectorAll('tr');
+    const lignes = document.querySelectorAll('tr.lignevol');
     lignes.forEach(function(ligne) {
         ligne.addEventListener('dblclick', function (e) {
           e.preventDefault();
@@ -313,7 +312,7 @@ window.onload = function() {
   echo "</TR>";*/
   foreach ($vols->vols as $vol)
   {
-    echo "<TR>";
+    echo "<TR class=\"lignevol\">";
     echo "<TD><a id=\"v".$vol->id."\" href=\"#v".$vol->id."\">". $vol->id."</a></TD>";
     $nom_parametredate = "datemin";
     $texte_parametredate = "depuis";
