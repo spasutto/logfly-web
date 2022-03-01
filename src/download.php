@@ -10,5 +10,10 @@
 		echo "error!!! : ".$e->getMessage();
 		exit(0);
 	}
-	$lgfr->downloadDB();
+
+  if (isset($_GET['csv'])) {
+    $lgfr->downloadCSV(FALSE);
+  } else {
+    $lgfr->downloadDB();
+  }
 ?>

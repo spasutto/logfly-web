@@ -262,7 +262,7 @@ class LogflyReader
 
   function getIGC($id)
   {
-    $sql = "SELECT V_IGC FROM VOL WHERE V_ID=".$id;
+    $sql = "SELECT V_IGC FROM VOL WHERE V_ID=".intval($id);
     $ret = $this->db->query($sql);
     $row = $ret->fetchArray();
     $igc = $row['V_IGC'];
@@ -280,10 +280,17 @@ class LogflyReader
     $sql = "UPDATE VOL set V_IGC='".$igc."' WHERE V_ID=".$id;
     $ret = $this->db->query($sql);
     return $ret != FALSE;*/
-    $sql = "UPDATE VOL set V_IGC=NULL WHERE V_ID=".$id;
+    $sql = "UPDATE VOL set V_IGC=NULL WHERE V_ID=".intval($id);
     $ret = $this->db->query($sql);
     $igc_file = dirname(__FILE__) . DIRECTORY_SEPARATOR . FOLDER_TL . DIRECTORY_SEPARATOR . $id  .".igc";
     return file_put_contents($igc_file, $igc);
+  }
+
+  function getComment($id) {
+    $sql = "SELECT V_Commentaire FROM VOL WHERE V_ID=".intval($id);
+    $ret = $this->db->query($sql);
+    $row = $ret->fetchArray();
+    return $row['V_Commentaire'];
   }
 
   function getRecords($id=null, $tritemps = FALSE, $maxres = null, $offset = null, $datemin=null, $datemax=null, $voile=null, $site=null)
@@ -338,7 +345,7 @@ class LogflyReader
     $row = $ret->fetchArray();
     $vols->tempstotalvol = $numRows = $row['sum'];
 
-    $ret = $this->db->query(str_replace("%COLUMNS%","V_ID,V_Date,V_Duree,V_sDuree,V_Site,S_Latitude,S_Longitude,V_Commentaire,V_Engin,(V_IGC IS NOT NULL AND TRIM(V_IGC) != '') AS V_IGC",$sql.$sqllimit));
+    $ret = $this->db->query(str_replace("%COLUMNS%","V_ID,V_Date,V_Duree,V_sDuree,V_Site,S_Latitude,S_Longitude,V_Engin,(V_IGC IS NOT NULL AND TRIM(V_IGC) != '') AS V_IGC",$sql.$sqllimit));
     $vols->datemin = new DateTime("99999/12/31 00:00:00");
     $vols->datemax = new DateTime("1950/01/01 00:00:00");
     while($row = $ret->fetchArray(SQLITE3_ASSOC))
@@ -351,7 +358,6 @@ class LogflyReader
       $vol->site = $row['V_Site'];
       $vol->latdeco = $row['S_Latitude'];//$row['V_LatDeco'];
       $vol->londeco = $row['S_Longitude'];//$row['V_LongDeco'];
-      $vol->commentaire = $row['V_Commentaire'];
       $vol->voile = $row['V_Engin'];
       $vol->igc = $row['V_IGC'];
 

@@ -3,3 +3,5 @@ src/Tracklogs/*
 src/config.php
 src/elevation/SRTM/*.tif
 src/elevation/HGT/*.hgt
+.htaccess
+.htpasswd
