@@ -56,9 +56,9 @@ class GraphGPX {
     this.canvas2.addEventListener('click', this.click.bind(this));
     this.canvas2.addEventListener('wheel', this.wheel.bind(this));
     if ('ontouchstart' in document.documentElement) {
-      this.canvas2.addEventListener("touchstart", this.touchevts, true);
-      this.canvas2.addEventListener("touchmove", this.touchevts, true);
-      this.canvas2.addEventListener("touchend", this.touchevts, true);
+      this.canvas2.addEventListener("touchstart", this.touchevts.bind(this), true);
+      this.canvas2.addEventListener("touchmove", this.touchevts.bind(this), true);
+      this.canvas2.addEventListener("touchend", this.touchevts.bind(this), true);
     }
 
     elem = document.createElement("button");
@@ -67,10 +67,7 @@ class GraphGPX {
     elem.style.right = '5px';
     elem.style.fontWeight = 'bolder';
     elem.appendChild(document.createTextNode('\u2699'));
-    elem.onclick = function () {
-      let pp = document.getElementById('grphcfig');
-      pp.style.display = pp.style.display == 'block' ? 'none' : 'block';
-    };
+    elem.onclick = this.opencfg;
     this.elem.appendChild(elem);
 
     elem = document.createElement("div");
@@ -129,6 +126,7 @@ class GraphGPX {
   }
 
   touchevts(e) {
+    this.opencfg(true);
     let theTouch = e.changedTouches[0];
     let mouseEv;
 
@@ -157,6 +155,7 @@ class GraphGPX {
   }
 
   click(e) {
+    this.opencfg(true);
     if (!Array.isArray(this.fi.pts) || this.fi.pts.length <= 0)
       return;
     let rect = this.elem.getBoundingClientRect(),
@@ -206,6 +205,14 @@ class GraphGPX {
     this.ctx2.fillText(curpt.time.toLocaleString('fr-FR'/*, { timeZone: 'UTC' }*/).substr(-8, 5) + " ("+t.toLocaleString('fr-FR', { timeZone: 'UTC' }).substr(-8, 5)+")", posx, posy+=10);
     let event = new CustomEvent('onposchanged', {"detail": curpt});
     this.elem.dispatchEvent(event);
+  }
+
+  opencfg(closecfg) {
+    let pp = document.getElementById('grphcfig');
+    if (typeof closecfg != 'boolean') {
+      closecfg = pp.style.display == 'block';
+    }
+    pp.style.display = closecfg ? 'none' : 'block';
   }
 
   paint() {
