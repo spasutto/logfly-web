@@ -65,7 +65,7 @@ function url_with_parameter($paramname, $paramvalue, $paramtoremove = null) {
 <head>
   <meta charset="UTF-8">
   <title>Carnet de vol</title>
-  <meta name="viewport" content="initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="viewport" content="initial-scale=0.75, maximum-scale=1.0, user-scalable=no" />
 <style type="text/css">
 body {
   line-height:22px;
