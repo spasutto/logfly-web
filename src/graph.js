@@ -511,6 +511,7 @@ class GraphGPX {
     var xhttp = new XMLHttpRequest();
     let data = { "locations": locations, "doInfills": false, "interpolate": false };
     xhttp.responseType = 'text';
+    let minusalt = 0;
     xhttp.onreadystatechange = function() {
       if (xhttp.readyState == 4 && xhttp.status == 200) {
         if (!xhttp.responseText) return;
@@ -521,9 +522,13 @@ class GraphGPX {
             this.fi.pts[i].gndalt = alts[j++];
             if (this.fi.pts[i].alt == 0)
               this.fi.pts[i].alt = this.fi.pts[i].gndalt;
+            else if (i == 0 && this.fi.pts[i].alt != this.fi.pts[i].gndalt)
+              minusalt = this.fi.pts[i].alt - this.fi.pts[i].gndalt;
           }
         }
         catch (e) { console.log("error \"" + e + "\" while eval " + xhttp.responseText); }
+        if (minusalt != 0)
+          this.fi.pts.forEach(function (pt) { pt.alt -= minusalt; });
         this.fi.maxalt = this.arrayMax(this.fi.pts, 'alt');
         this.fi.minalt = this.arrayMin(this.fi.pts, 'alt');
         this.fi.minalt = Math.max(0, this.fi.minalt);
