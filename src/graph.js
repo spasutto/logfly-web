@@ -1,9 +1,10 @@
 
 class GraphGPX {
 
-  constructor(elem, elevationservice, showvz, showvx) {
+  constructor(elem, elevationservice, disablescrollzoom, showvz, showvx) {
     this.resetInfos();
     this.elem = elem;
+    this.disablescrollzoom = disablescrollzoom == true;
     if (typeof elevationservice == 'string' && elevationservice.trim().length > 0) {
       this.elevationservice = elevationservice;
     }
@@ -54,7 +55,8 @@ class GraphGPX {
     this.ctx2 = this.canvas2.getContext('2d');
     this.canvas2.addEventListener('mousemove', this.mousemove.bind(this));
     this.canvas2.addEventListener('click', this.click.bind(this));
-    this.canvas2.addEventListener('wheel', this.wheel.bind(this));
+    if (!this.disablescrollzoom)
+      this.canvas2.addEventListener('wheel', this.wheel.bind(this));
     if ('ontouchstart' in document.documentElement) {
       this.canvas2.addEventListener("touchstart", this.touchevts.bind(this), true);
       this.canvas2.addEventListener("touchmove", this.touchevts.bind(this), true);

@@ -130,7 +130,9 @@
   function rgbToHex(r, g, b) {
     return "#" + componentToHex(r) + componentToHex(g) + componentToHex(b);
   }
-  var graph = new GraphGPX(document.getElementById("graph"), '<?php if (defined('ELEVATIONSERVICE')) echo ELEVATIONSERVICE;?>');
+
+  var disablescroll = <?php echo isset($_GET['disablescroll']) && $_GET['disablescroll']=='1'?'true':'false'; ?>;
+  var graph = new GraphGPX(document.getElementById("graph"), '<?php if (defined('ELEVATIONSERVICE')) echo ELEVATIONSERVICE;?>', disablescroll);
   graph.addEventListener('onposchanged', function(e) {
     marker.setLatLng([e.detail.lat, e.detail.lon]).update();
     mapelem.offsetHeight
@@ -157,8 +159,6 @@
     let zoom = map.getZoom() + (e.detail>0?-1:1);
     map.setView(center, zoom);
   });
-
-  var disablescroll = <?php echo isset($_GET['disablescroll']) && $_GET['disablescroll']=='1'?'true':'false'; ?>;
   var map = loadCarto("<?php if (defined('CLEGEOPORTAIL')) echo CLEGEOPORTAIL;?>", disablescroll);
   var marker = L.marker([0,0]).addTo(map);
 

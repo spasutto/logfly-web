@@ -208,16 +208,15 @@ function loadComment(id) {
         if (this.readyState == 4) {
           if (this.status < 200 || this.status > 299 || typeof this.response != 'string') {
             zonecomm.innerHTML = "";
-            ligne.style.display = 'none';
-            btncomm.style.textDecoration = "";
-            btncomm.title="afficher le commentaire";
+            if (!btncomm.previousElementSibling.innerHTML) {
+              ligne.style.display = 'none';
+              btncomm.style.textDecoration = "";
+              btncomm.title="afficher le commentaire";
+            }
           } else {
             zonecomm.innerHTML = this.response;
-            if (btncomm.previousElementSibling.innerHTML) {
-              zonecarto.innerHTML += "<iframe src=\"trace.php?id="+id+"&disablescroll=1\" width=\"100%\" height=\"400px\"></iframe>";
-              if (this.response.trim().length <= 0) {
-                zonecomm.innerHTML = '';
-              }
+            if (btncomm.previousElementSibling.innerHTML && this.response.trim().length <= 0) {
+              zonecomm.innerHTML = '';
             }
           }
         }
@@ -230,13 +229,17 @@ function loadComment(id) {
 }
 function affichComment(id) {
   let ligne = document.getElementById('comm'+id).parentElement;
+  let zonecarto = document.getElementById('zonecarto'+id);
   let zonecomm = document.getElementById('zonecomm'+id);
   let btncomm = document.getElementById('btncomm'+id);
-  if (zonecomm.innerHTML == "") {
-    loadComment(id);
-    zonecomm.innerHTML = "<b>Chargement...</b>";
-  }
   if (ligne.style.display != 'table-row') {
+    if (zonecomm.innerHTML == "") {
+      loadComment(id);
+      zonecomm.innerHTML = "<b>Chargement...</b>";
+    }
+    if (zonecarto.innerHTML == "" && btncomm.previousElementSibling.innerHTML) {
+      zonecarto.innerHTML += "<iframe src=\"trace.php?id="+id+"&disablescroll=1\" width=\"100%\" height=\"400px\"></iframe>";
+    }
     ligne.style.display = 'table-row';
     btncomm.style.textDecoration = "line-through";
     btncomm.title="masquer le commentaire";
