@@ -3,7 +3,7 @@ function loadCarto(clegeoportail, disablescrollzoom) {
   let options = {};
   if (disablescrollzoom) {
     options.scrollWheelZoom = false;
-    options.dragging = false;
+    options.dragging = !isTouchDevice();
     options.touchzoom = true;
   }
   var map = L.map('map', options).setView([45.182471 , 5.725589], 13);
@@ -106,4 +106,9 @@ function loadCarto(clegeoportail, disablescrollzoom) {
   L.control.traceinfos({ position: 'topright' }).addTo(map);
 
   return map;
+}
+function isTouchDevice() {
+  return (('ontouchstart' in window) ||
+     (navigator.maxTouchPoints > 0) ||
+     (navigator.msMaxTouchPoints > 0));
 }

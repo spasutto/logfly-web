@@ -101,6 +101,9 @@
   .centre {
     text-align: center;
   }
+  .souligne {
+    text-decoration: underline;
+  }
 </style>
 
 </head>
@@ -140,7 +143,7 @@
     return "#" + componentToHex(r) + componentToHex(g) + componentToHex(b);
   }
 
-  var disablescroll = <?php echo isset($_GET['disablescroll']) && $_GET['disablescroll']=='1'?'true':'false'; ?>;
+  var disablescroll = <?php echo isset($_GET['disablescroll'])?'true':'false'; ?>;
   var graph = new GraphGPX(document.getElementById("graph"), '<?php if (defined('ELEVATIONSERVICE')) echo ELEVATIONSERVICE;?>', disablescroll);
   graph.addEventListener('onposchanged', function(e) {
     marker.setLatLng([e.detail.lat, e.detail.lon]).update();
@@ -196,16 +199,16 @@
         btndl.style.display = 'block';
         let divTraceInfos = document.getElementById('divTraceInfos');
         let stats = [
-          `alt. max : ${Math.round(fi.maxalt)}m`,
-          `alt. min : ${Math.round(fi.minalt)}m`,
-          `vz max : ${Math.round(fi.maxvz*10)/10}m/s`,
-          `vz min : ${Math.round(fi.minvz*10)/10}m/s`,
-          `vx max : ${Math.round(fi.maxvx)}km/h`,
-          //`vx min : ${Math.round(fi.minvx)}km/h`,
+          ['alt max', `${Math.round(fi.maxalt)}m`],
+          ['alt min', `${Math.round(fi.minalt)}m`],
+          ['vz max', `${Math.round(fi.maxvz*10)/10}m/s`],
+          ['vz min', `${Math.round(fi.minvz*10)/10}m/s`],
+          ['vx max', `${Math.round(fi.maxvx)}km/h`],
+          //['vx min', `${Math.round(fi.minvx)}km/h`],
         ];
         let date = fi.pts[0].time;
-        divTraceInfos.innerHTML = '<p class="gras centre">'+('0'+date.getDate()).slice(-2)+"/"+('0'+(date.getMonth()+1)).slice(-2)+"/"+date.getFullYear()+'</p>'+
-        stats.join("<BR>").replaceAll(" ", "&nbsp;");
+        divTraceInfos.innerHTML = '<p class="gras centre souligne">'+('0'+date.getDate()).slice(-2)+"/"+('0'+(date.getMonth()+1)).slice(-2)+"/"+date.getFullYear()+'</p>'+
+        stats.map(function(t) {return "<p><span class=\"gras\">"+t[0]+"</span>&nbsp;:&nbsp;"+t[1]+"</p>";}).join('');
         divTraceInfos.style.display = 'block';
       }
     };

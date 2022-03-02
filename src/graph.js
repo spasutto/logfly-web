@@ -278,7 +278,8 @@ class GraphGPX {
       this.ctx.moveTo(0, y);
       for (t = 0; t < this.fi.pts.length; t += this.incr) {
         y = getY(this.fi.pts[t].gndalt);
-        if (y >= 0 && y < this.canvas.height) {
+        y = Math.min(this.canvas.height, y);
+        if (y >= 0) {
           this.ctx.lineTo(x, y);
         }
         x += this.incx;
@@ -299,7 +300,8 @@ class GraphGPX {
     this.ctx.moveTo(x, y);
     for (t = 0; t < this.fi.pts.length; t += this.incr) {
       y = getY(this.fi.pts[t].alt);
-      if (y >= 0 && y < this.canvas.height) {
+      y = Math.min(this.canvas.height, y);
+      if (y >= 0) {
         this.ctx.lineTo(x, y);
       }
       x += this.incx;
@@ -315,7 +317,8 @@ class GraphGPX {
       this.ctx.moveTo(x, y);
       for (t = 0; t < this.fi.pts.length; t += this.incr) {
         y = getYVz(this.fi.pts[t].vz);
-        if (y >= 0 && y < this.canvas.height) {
+        y = Math.min(this.canvas.height, y);
+        if (y >= 0) {
           this.ctx.lineTo(x, y);
         }
         x += this.incx;
@@ -332,7 +335,8 @@ class GraphGPX {
       this.ctx.moveTo(x, y);
       for (t = 0; t < this.fi.pts.length; t += this.incr) {
         y = getYVx(this.fi.pts[t].vx);
-        if (y >= 0 && y < this.canvas.height) {
+        y = Math.min(this.canvas.height, y);
+        if (y >= 0) {
           this.ctx.lineTo(x, y);
         }
         x += this.incx;
