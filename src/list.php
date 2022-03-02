@@ -209,7 +209,8 @@ function loadComment(id) {
           if (this.status < 200 || this.status > 299 || typeof this.response != 'string') {
             zonecomm.innerHTML = "";
             ligne.style.display = 'none';
-            btncomm.firstChild.style.transform = "";
+            btncomm.style.textDecoration = "";
+            btncomm.title="afficher le commentaire";
           } else {
             zonecomm.innerHTML = this.response;
             if (btncomm.previousElementSibling.innerHTML) {
@@ -237,10 +238,12 @@ function affichComment(id) {
   }
   if (ligne.style.display != 'table-row') {
     ligne.style.display = 'table-row';
-    btncomm.firstChild.style.transform = "rotate(90deg)";
+    btncomm.style.textDecoration = "line-through";
+    btncomm.title="masquer le commentaire";
   } else {
     ligne.style.display = 'none';
-    btncomm.firstChild.style.transform = "";
+    btncomm.style.textDecoration = "";
+    btncomm.title="afficher le commentaire";
   }
 }
 window.onload = function() {
@@ -345,7 +348,7 @@ window.onload = function() {
     }
     echo "</TD>";
     if ($vol->commentaire || $vol->igc)
-      echo "<TD class=\"btncomm\" id=\"btncomm".$vol->id."\" title=\"afficher le commentaire\" onclick=\"affichComment(".$vol->id.");\"><svg viewbox=\"0 0 6 6\" height=\"18px\" width=\"18px\" style=\"transform-origin: center;\" xmlns=\"http://www.w3.org/2000/svg\"><g><path d=\"M1 1 l0 4 l3 -2 l-3 -2 Z\" fill-rule=\"nonzero\" stroke=\"black\"/></g></svg></TD>";
+      echo "<TD class=\"btncomm\" id=\"btncomm".$vol->id."\" title=\"afficher le commentaire\" onclick=\"affichComment(".$vol->id.");\" style=\"font-family:Verdana;font-style:italic;font-size:10;\">abc</TD>";
     else
       echo "<TD></TD>";
     echo "<TR class=\"lignecomm none\"><TD class=\"hidden\">".$vol->id."</TD><TD id=\"comm".$vol->id."\" colspan=\"7\" class=\"desc\"><div id=\"zonecomm".$vol->id."\"></div><div id=\"zonecarto".$vol->id."\"></div></TD></TR>";
