@@ -344,7 +344,10 @@ window.onload = function() {
       echo "<a href=\"#\" onClick=\"MyWindow=window.open('trace.php?id=".$vol->id."','MyWindow','width=900,height=380'); return false;\" title=\"voir la trace GPS de ce vol\"><img src=\"map.svg\" width=\"18px\"></a>";
     }
     echo "</TD>";
-    echo "<TD class=\"btncomm\" id=\"btncomm".$vol->id."\" title=\"afficher le commentaire\" onclick=\"affichComment(".$vol->id.");\"><svg viewbox=\"0 0 6 6\" height=\"18px\" width=\"18px\" style=\"transform-origin: center;\" xmlns=\"http://www.w3.org/2000/svg\"><g><path d=\"M1 1 l0 4 l3 -2 l-3 -2 Z\" fill-rule=\"nonzero\" stroke=\"black\"/></g></svg></TD>";
+    if ($vol->commentaire || $vol->igc)
+      echo "<TD class=\"btncomm\" id=\"btncomm".$vol->id."\" title=\"afficher le commentaire\" onclick=\"affichComment(".$vol->id.");\"><svg viewbox=\"0 0 6 6\" height=\"18px\" width=\"18px\" style=\"transform-origin: center;\" xmlns=\"http://www.w3.org/2000/svg\"><g><path d=\"M1 1 l0 4 l3 -2 l-3 -2 Z\" fill-rule=\"nonzero\" stroke=\"black\"/></g></svg></TD>";
+    else
+      echo "<TD></TD>";
     echo "<TR class=\"lignecomm none\"><TD class=\"hidden\">".$vol->id."</TD><TD id=\"comm".$vol->id."\" colspan=\"7\" class=\"desc\"><div id=\"zonecomm".$vol->id."\"></div><div id=\"zonecarto".$vol->id."\"></div></TD></TR>";
     echo "</TR>";
   }
