@@ -152,6 +152,7 @@ class GraphGPX {
   wheel(e) {
     let event = new CustomEvent('onwheel', {"detail": e.deltaY});
     this.elem.dispatchEvent(event);
+    e.preventDefault();
   }
 
   click(e) {

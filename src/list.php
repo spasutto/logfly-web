@@ -87,8 +87,11 @@ td {
 td.desc {
   text-align: left;
 }
-.hidden {
+.none {
   display: none;
+}
+.hidden {
+  visibility: hidden;
 }
 .ppt_info{
   border: solid 1px #afafaf;
@@ -194,21 +197,26 @@ function onchangevoilesite(nom, voile) {
   window.location = rooturl;
 }
 function loadComment(id) {
-  let ligne = document.getElementById('comm'+id);
+  let ligne = document.getElementById('comm'+id).parentElement;
+  let zonecomm = document.getElementById('zonecomm'+id);
+  let zonecarto = document.getElementById('zonecarto'+id);
   let btncomm = document.getElementById('btncomm'+id);
-  let hidefn = function() { ligne.firstChild.innerHTML = ""; ligne.style.display = 'none'; btncomm.firstChild.style.transform = "rotate(0deg)";};
   try {
     var xhttp = new XMLHttpRequest();
       xhttp.responseType = 'text';
       xhttp.onreadystatechange = function() {
         if (this.readyState == 4) {
-          if (this.status == 401) {
-            hidefn();
-          } else if (this.status == 200) {
-            if (typeof this.response != 'string') {
-              hidefn();
-            } else {
-              ligne.firstChild.innerHTML = this.response;
+          if (this.status < 200 || this.status > 299 || typeof this.response != 'string') {
+            zonecomm.innerHTML = "";
+            ligne.style.display = 'none';
+            btncomm.firstChild.style.transform = "";
+          } else {
+            zonecomm.innerHTML = this.response;
+            if (btncomm.previousElementSibling.innerHTML) {
+              zonecarto.innerHTML += "<iframe src=\"trace.php?id="+id+"&disablescroll=1\" width=\"100%\" height=\"400px\"></iframe>";
+              if (this.response.trim().length <= 0) {
+                zonecomm.innerHTML = '';
+              }
             }
           }
         }
@@ -216,30 +224,31 @@ function loadComment(id) {
       xhttp.open("GET", "comment.php?id="+id, true);
       xhttp.send();
   } catch (e) {
-    ligne.firstChild.innerHTML = e;
+    zonecomm.innerHTML = e;
   }
 }
 function affichComment(id) {
-  let ligne = document.getElementById('comm'+id);
+  let ligne = document.getElementById('comm'+id).parentElement;
+  let zonecomm = document.getElementById('zonecomm'+id);
   let btncomm = document.getElementById('btncomm'+id);
-  if (ligne.firstChild.innerHTML == "") {
+  if (zonecomm.innerHTML == "") {
     loadComment(id);
-    ligne.firstChild.innerHTML = "<b>Chargement...</b>";
+    zonecomm.innerHTML = "<b>Chargement...</b>";
   }
   if (ligne.style.display != 'table-row') {
     ligne.style.display = 'table-row';
     btncomm.firstChild.style.transform = "rotate(90deg)";
   } else {
     ligne.style.display = 'none';
-    btncomm.firstChild.style.transform = "rotate(0deg)";
+    btncomm.firstChild.style.transform = "";
   }
 }
 window.onload = function() {
-    const lignes = document.querySelectorAll('tr.lignevol');
+    const lignes = document.querySelectorAll('tr.lignevol,tr.lignecomm');
     lignes.forEach(function(ligne) {
         ligne.addEventListener('dblclick', function (e) {
           e.preventDefault();
-          editvol(e.target.closest("tr").querySelector("td").innerText);
+          editvol(parseInt(e.target.closest("tr").querySelector("td").textContent));
         });
     });
 };
@@ -336,7 +345,7 @@ window.onload = function() {
     }
     echo "</TD>";
     echo "<TD class=\"btncomm\" id=\"btncomm".$vol->id."\" title=\"afficher le commentaire\" onclick=\"affichComment(".$vol->id.");\"><svg viewbox=\"0 0 6 6\" height=\"18px\" width=\"18px\" style=\"transform-origin: center;\" xmlns=\"http://www.w3.org/2000/svg\"><g><path d=\"M1 1 l0 4 l3 -2 l-3 -2 Z\" fill-rule=\"nonzero\" stroke=\"black\"/></g></svg></TD>";
-    echo "<TR id=\"comm".$vol->id."\" class=\"hidden\"><TD colspan=\"8\" class=\"desc\"></TD></TR>";
+    echo "<TR class=\"lignecomm none\"><TD class=\"hidden\">".$vol->id."</TD><TD id=\"comm".$vol->id."\" colspan=\"7\" class=\"desc\"><div id=\"zonecomm".$vol->id."\"></div><div id=\"zonecarto".$vol->id."\"></div></TD></TR>";
     echo "</TR>";
   }
   echo "<TABLE>";

@@ -158,7 +158,8 @@
     map.setView(center, zoom);
   });
 
-  var map = loadCarto("<?php if (defined('CLEGEOPORTAIL')) echo CLEGEOPORTAIL;?>");
+  var disablescroll = <?php echo isset($_GET['disablescroll']) && $_GET['disablescroll']=='1'?'true':'false'; ?>;
+  var map = loadCarto("<?php if (defined('CLEGEOPORTAIL')) echo CLEGEOPORTAIL;?>", disablescroll);
   var marker = L.marker([0,0]).addTo(map);
 
   function loadGPX() {

@@ -8,11 +8,7 @@
     try
     {
       $lgfr = new LogflyReader();
-      $textevol = $lgfr->getComment($id);
-      if (strlen(trim($textevol)) <= 0)
-        $textevol = "&nbsp;";
-      else
-        $textevol = htmlspecialchars($textevol);
+      $textevol = htmlspecialchars($lgfr->getComment($id));
       $textevol = preg_replace("/(\w+:\/\/[^\s]+)/","<a href=\"$1\">$1</a>",$textevol);
       $textevol = str_replace("\n", "<BR>", $textevol);
       echo $textevol;

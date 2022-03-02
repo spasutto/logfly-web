@@ -1,6 +1,12 @@
-function loadCarto(clegeoportail) {
+function loadCarto(clegeoportail, disablescrollzoom) {
   let useign = typeof clegeoportail == "string" && clegeoportail.trim().length > 0;
-  var map = L.map('map').setView([45.182471 , 5.725589], 13);
+  let options = {};
+  if (disablescrollzoom) {
+    options.scrollWheelZoom = false;
+    options.dragging = false;
+    options.touchzoom = true;
+  }
+  var map = L.map('map', options).setView([45.182471 , 5.725589], 13);
   var mapbox = L.tileLayer('https://api.mapbox.com/styles/v1/{id}/tiles/{z}/{x}/{y}?access_token=pk.eyJ1IjoibWFwYm94IiwiYSI6ImNpejY4NXVycTA2emYycXBndHRqcmZ3N3gifQ.rJcFIG214AriISLbB6B5aw', {
     maxZoom: 18,
     attribution: 'Map data &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, ' +
