@@ -16,7 +16,7 @@ De même, pour pouvoir utiliser la détermination du fuseau horaire IGC via [tim
 # sécurité
 Pour protéger en écriture le carnet de vol on peut placer un fichier ".htaccess" à la racine du répertoire LogFly et y mettre le contenu suivant :
 ```ApacheConf
-<FilesMatch "^(admin|edit|upload).*\.php$">
+<FilesMatch "^(admin|edit|upload|download|comment).*\.php|.*\.db$">
 AuthUserFile /le/chemin/absolu/vers/le/fichier/de/mots/de/passes/.htpasswd
 AuthName "prive"
 AuthType Basic
@@ -26,7 +26,7 @@ Options +Indexes
 ```
 (Bien penser à changer le chemin vers le fichier htpasswd! Pour plus d'informations sur le fichier htpasswd se renseigner sur la marche à suivre sur google, exemple : https://stackoverflow.com/a/5229803)
 
-Ainsi les fichiers edit.php, upload.php et editsite.php seront protégés par un mot de passe.
+Ainsi les fichiers permettant de modifier ou récupérer la base LogFly seront protégés par un mot de passe.
 
 # Gestion de la topographie (DEM)
 Le visualisateur de trace supporte la topographie au format TIF ou HGT. Pour cela il faut télécharger les fichiers DEM et les mettre dans le dossier correspondant (.tif dans elevation/SRTM et .hgt dans elevation/HGT). Ensuite bien penser à renommer le fichier _config.php en config.php.
