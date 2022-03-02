@@ -147,6 +147,7 @@ a:hover {
 </style>
 
 <script>
+var showComment = true;
 function editvol(id) {
   let url = 'edit.php';
   if (id > 0)
@@ -208,6 +209,7 @@ function loadComment(id) {
         if (this.readyState == 4) {
           if (this.status < 200 || this.status > 299 || typeof this.response != 'string') {
             zonecomm.innerHTML = "";
+            showComment = false; // au 1er échec on arrête de popuper l'utilisateur
             if (!btncomm.previousElementSibling.innerHTML) {
               ligne.style.display = 'none';
               btncomm.style.textDecoration = "";
@@ -233,7 +235,7 @@ function affichComment(id) {
   let zonecomm = document.getElementById('zonecomm'+id);
   let btncomm = document.getElementById('btncomm'+id);
   if (ligne.style.display != 'table-row') {
-    if (zonecomm.innerHTML == "") {
+    if (showComment && zonecomm.innerHTML == "") {
       loadComment(id);
       zonecomm.innerHTML = "<b>Chargement...</b>";
     }
