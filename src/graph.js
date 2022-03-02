@@ -519,9 +519,15 @@ class GraphGPX {
           let j = 0;
           for (let i = index; i < index+count; i++) {
             this.fi.pts[i].gndalt = alts[j++];
+            if (this.fi.pts[i].alt == 0)
+              this.fi.pts[i].alt = this.fi.pts[i].gndalt;
           }
         }
         catch (e) { console.log("error \"" + e + "\" while eval " + xhttp.responseText); }
+        this.fi.maxalt = this.arrayMax(this.fi.pts, 'alt');
+        this.fi.minalt = this.arrayMin(this.fi.pts, 'alt');
+        this.fi.minalt = Math.max(0, this.fi.minalt);
+        this.fi.maxalt = Math.min(10000, this.fi.maxalt);
         this.elevcalls--;
         if (this.elevcalls <= 0)
           this.paint();
@@ -531,6 +537,26 @@ class GraphGPX {
     xhttp.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');
     xhttp.send(JSON.stringify(data));
     this.elevcalls++;
+  }
+
+  arrayMin(arr, prop) {
+    var len = arr.length, min = Infinity;
+    while (len--) {
+      if (arr[len][prop] < min) {
+        min = arr[len][prop];
+      }
+    }
+    return min;
+  }
+
+  arrayMax(arr, prop) {
+    var len = arr.length, max = -Infinity;
+    while (len--) {
+      if (arr[len][prop] > max) {
+        max = arr[len][prop];
+      }
+    }
+    return max;
   }
 
   /**

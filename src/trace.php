@@ -64,6 +64,9 @@
     height: 100%;
     width: 100%;
   }
+  p {
+    margin: 0;
+  }
   #formcont {
     position:fixed;
     left:0;top:0;right:0;bottom:0;
@@ -91,6 +94,12 @@
     left: 0;
     right: 0;
     height: 100px;
+  }
+  .gras {
+    font-weight: bolder;
+  }
+  .centre {
+    text-align: center;
   }
 </style>
 
@@ -194,7 +203,9 @@
           `vx max : ${Math.round(fi.maxvx)}km/h`,
           //`vx min : ${Math.round(fi.minvx)}km/h`,
         ];
-        divTraceInfos.innerHTML = stats.join("<BR>").replaceAll(" ", "&nbsp;");
+        let date = fi.pts[0].time;
+        divTraceInfos.innerHTML = '<p class="gras centre">'+('0'+date.getDate()).slice(-2)+"/"+('0'+(date.getMonth()+1)).slice(-2)+"/"+date.getFullYear()+'</p>'+
+        stats.join("<BR>").replaceAll(" ", "&nbsp;");
         divTraceInfos.style.display = 'block';
       }
     };
