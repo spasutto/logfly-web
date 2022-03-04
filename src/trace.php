@@ -145,6 +145,25 @@
 
   var disablescroll = <?php echo isset($_GET['disablescroll'])?'true':'false'; ?>;
   var graph = new GraphGPX(document.getElementById("graph"), '<?php if (defined('ELEVATIONSERVICE')) echo ELEVATIONSERVICE;?>', disablescroll);
+  graph.addEventListener('ondataloaded', function(e) {
+    window.fi = e.detail;
+    let divTraceInfos = document.getElementById('divTraceInfos');
+    let t = new Date(Date.UTC(1970, 0, 1));
+    t.setUTCSeconds((fi.pts[fi.pts.length-1].time.getTime() - fi.pts[0].time.getTime()) / 1000);
+    let stats = [
+      ['durée', `${t.toLocaleString('fr-FR', { timeZone: 'UTC' }).substr(-8, 5)}`],
+      ['alt max', `${Math.round(fi.maxalt)}m`],
+      ['alt min', `${Math.round(fi.minalt)}m`],
+      ['vz max', `${Math.round(fi.maxvz*10)/10}m/s`],
+      ['vz min', `${Math.round(fi.minvz*10)/10}m/s`],
+      ['vx max', `${Math.round(fi.maxvx)}km/h`],
+      //['vx min', `${Math.round(fi.minvx)}km/h`],
+    ];
+    let date = fi.pts[0].time;
+    divTraceInfos.innerHTML = '<p class="gras centre souligne">'+('0'+date.getDate()).slice(-2)+"/"+('0'+(date.getMonth()+1)).slice(-2)+"/"+date.getFullYear()+'</p>'+
+    stats.map(function(t) {return "<p><span class=\"gras\">"+t[0]+"</span>&nbsp;:&nbsp;"+t[1]+"</p>";}).join('');
+    divTraceInfos.style.display = 'block';
+  });
   graph.addEventListener('onposchanged', function(e) {
     marker.setLatLng([e.detail.lat, e.detail.lon]).update();
     mapelem.offsetHeight
@@ -184,7 +203,7 @@
         if (!this.response) return;
         document.getElementById('formcont').style.display = 'none';
         xml = new XMLSerializer().serializeToString(this.responseXML);
-        window.fi = graph.setGPX(this.responseXML);
+        graph.setGPX(this.responseXML);
         //maxvz = Math.max(Math.abs(fi.maxvz), Math.abs(fi.minvz))
         new L.GPX(xml, {async: true,
           marker_options: {
@@ -197,22 +216,6 @@
         let btndl = document.getElementById('btnDlTrace');
         btndl.onclick = function() {window.location = "<?php echo strtok($_SERVER['REQUEST_URI'], '?');?>?id="+id+"&igc&dl";};
         btndl.style.display = 'block';
-        let divTraceInfos = document.getElementById('divTraceInfos');
-        let t = new Date(Date.UTC(1970, 0, 1));
-        t.setUTCSeconds((fi.pts[fi.pts.length-1].time.getTime() - fi.pts[0].time.getTime()) / 1000);
-        let stats = [
-          ['durée', `${t.toLocaleString('fr-FR', { timeZone: 'UTC' }).substr(-8, 5)}`],
-          ['alt max', `${Math.round(fi.maxalt)}m`],
-          ['alt min', `${Math.round(fi.minalt)}m`],
-          ['vz max', `${Math.round(fi.maxvz*10)/10}m/s`],
-          ['vz min', `${Math.round(fi.minvz*10)/10}m/s`],
-          ['vx max', `${Math.round(fi.maxvx)}km/h`],
-          //['vx min', `${Math.round(fi.minvx)}km/h`],
-        ];
-        let date = fi.pts[0].time;
-        divTraceInfos.innerHTML = '<p class="gras centre souligne">'+('0'+date.getDate()).slice(-2)+"/"+('0'+(date.getMonth()+1)).slice(-2)+"/"+date.getFullYear()+'</p>'+
-        stats.map(function(t) {return "<p><span class=\"gras\">"+t[0]+"</span>&nbsp;:&nbsp;"+t[1]+"</p>";}).join('');
-        divTraceInfos.style.display = 'block';
       }
     };
     let data = null;

@@ -455,10 +455,10 @@ class GraphGPX {
         tdiff = (time.getTime() - this.fi.pts[i - 1].time.getTime()) / 1000;
         vz = (alt - this.fi.pts[i - 1].alt) / tdiff;
         // si VZ > max alors on réévalue alt avec VZ -antérieur- ne fonctionne pas, on prends vz = 0 et l'altitude du point précédent
-        if (vz > VZMAX || vz < VZMIN) {
+        /*if (vz > VZMAX || vz < VZMIN) {
           vz = 0;//Math.max(VZMIN, Math.min(VZMAX, vz));//this.fi.pts[i - 1].vz
           this.fi.pts[i].alt = alt = this.fi.pts[i - 1].alt;//vz * tdiff + this.fi.pts[i - 1].alt;
-        }
+        }*/
         if (vzm.length < 25) {
           vzm.push(vz);
         } else {
@@ -507,6 +507,8 @@ class GraphGPX {
       if (curelev < this.fi.pts.length)
         this.getElevation(locations, curelev, this.fi.pts.length - curelev);
     }
+    let event = new CustomEvent('ondataloaded', {"detail": this.fi});
+    this.elem.dispatchEvent(event);
     this.paint();
     return this.fi;
   }
@@ -538,8 +540,11 @@ class GraphGPX {
         this.fi.minalt = Math.max(0, this.fi.minalt);
         this.fi.maxalt = Math.min(10000, this.fi.maxalt);
         this.elevcalls--;
-        if (this.elevcalls <= 0)
+        if (this.elevcalls <= 0) {
           this.paint();
+          let event = new CustomEvent('ondataloaded', {"detail": this.fi});
+          this.elem.dispatchEvent(event);
+        }
       }
     }.bind(this);
     xhttp.open("POST", this.elevationservice, true);
