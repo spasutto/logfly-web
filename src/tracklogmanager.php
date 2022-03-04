@@ -49,7 +49,6 @@ class TrackLogManager
         $duree = 0;
         if (isset($tfreader->duration))
           $duree = $tfreader->duration;
-        if (!$id) {
           $osite = $lgfr->getSite($fpt->latitude, $fpt->longitude);
           if (!$osite)
             $osite = TrackLogManager::getSite($fpt->latitude, $fpt->longitude);
@@ -65,7 +64,11 @@ class TrackLogManager
             $lgfr->createSite($sitenom);
             $lgfr->editSite($sitenom, $sitenom, $site->lat, $site->lon, $site->alt);
           }
+        if (!$id) {
           $id = $lgfr->addVol($sitenom, $fpt->date->format("d/m/Y"), $fpt->date->format("H:i:s"), $duree, "", "");
+        } else {
+          $vol = $lgfr->getRecords($id);
+          $lgfr->updateVol($id, $sitenom, $fpt->date->format("d/m/Y"), $fpt->date->format("H:i:s"), $duree, $vol->voile, $vol->commentaire);
         }
         if (!$id) {
             echo "Probleme de mise à jour de la trace avec l'igc. Supprimer le dernier vol et réessayer";

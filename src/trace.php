@@ -198,7 +198,10 @@
         btndl.onclick = function() {window.location = "<?php echo strtok($_SERVER['REQUEST_URI'], '?');?>?id="+id+"&igc&dl";};
         btndl.style.display = 'block';
         let divTraceInfos = document.getElementById('divTraceInfos');
+        let t = new Date(Date.UTC(1970, 0, 1));
+        t.setUTCSeconds((fi.pts[fi.pts.length-1].time.getTime() - fi.pts[0].time.getTime()) / 1000);
         let stats = [
+          ['durée', `${t.toLocaleString('fr-FR', { timeZone: 'UTC' }).substr(-8, 5)}`],
           ['alt max', `${Math.round(fi.maxalt)}m`],
           ['alt min', `${Math.round(fi.minalt)}m`],
           ['vz max', `${Math.round(fi.maxvz*10)/10}m/s`],
