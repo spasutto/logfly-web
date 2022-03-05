@@ -455,10 +455,10 @@ class GraphGPX {
         tdiff = (time.getTime() - this.fi.pts[i - 1].time.getTime()) / 1000;
         vz = (alt - this.fi.pts[i - 1].alt) / tdiff;
         // si VZ > max alors on réévalue alt avec VZ -antérieur- ne fonctionne pas, on prends vz = 0 et l'altitude du point précédent
-        /*if (vz > VZMAX || vz < VZMIN) {
+        if (vz > VZMAX || vz < VZMIN) {
           vz = 0;//Math.max(VZMIN, Math.min(VZMAX, vz));//this.fi.pts[i - 1].vz
-          this.fi.pts[i].alt = alt = this.fi.pts[i - 1].alt;//vz * tdiff + this.fi.pts[i - 1].alt;
-        }*/
+          //this.fi.pts[i].alt = alt = this.fi.pts[i - 1].alt;//vz * tdiff + this.fi.pts[i - 1].alt;
+        }
         if (vzm.length < 25) {
           vzm.push(vz);
         } else {
@@ -528,9 +528,9 @@ class GraphGPX {
             this.fi.pts[i].gndalt = alts[j++];
             if (this.fi.pts[i].alt == 0)
               this.fi.pts[i].alt = this.fi.pts[i].gndalt;
-            else if (i == 0 && this.fi.pts[i].alt != this.fi.pts[i].gndalt)
-              minusalt = this.fi.pts[i].alt - this.fi.pts[i].gndalt;
           }
+          if (typeof this.fi.pts[this.fi.pts.length-1].gndalt == 'number')
+            minusalt = this.fi.pts[this.fi.pts.length-1].alt - this.fi.pts[this.fi.pts.length-1].gndalt;
         }
         catch (e) { console.log("error \"" + e + "\" while eval " + xhttp.responseText); }
         if (minusalt != 0)

@@ -28,20 +28,23 @@ class ElevationService
       //plutôt que intval http://stackoverflow.com/questions/6619377/how-to-get-whole-and-decimal-part-of-a-number
       $offsetx = intval((($lon - $this->ilon)) * $this->tilesize);
       $offsety = intval((1-($lat - $this->ilat)) * $this->tilesize);
+      if ($offsety >= $this->tilesize) $offsety = $this->tilesize - 2;
       $offset = 2*($offsety*$this->tilesize + $offsetx);
       fseek($this->fp, intval($offset));
       $alti = fread($this->fp, 2);
       //fclose($this->fp);
+      // DEBUG:
+      //echo $offsetx."/".$offsety."= @".$lat."/".$lon." @".intval($offset)."/".filesize($this->dem_path.$this->curfname)." in ".$this->curfname." : ".($alti != false?(ord($alti[0])<<8)+ord($alti[1])." m":"err")."\n";
       return (ord($alti[0])<<8)+ord($alti[1]);
     }
 
     function getHgtFile($lat, $lon)
     {
       $filename = $this->getFileName($lat, $lon);
-      if (!is_file($this->dem_path.$filename))
-        return -1;
       if ($this->curfname == $filename)
         return 1;
+      if (!is_file($this->dem_path.$filename))
+        return -1;
       $this->curfname = $filename;
       @fclose($this->fp);
       $this->fp = fopen($this->dem_path.$filename, 'r');
