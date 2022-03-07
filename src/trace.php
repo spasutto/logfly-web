@@ -22,7 +22,7 @@
           header('Content-Disposition: attachment; filename="flightlog.igc"');
         echo $igc;
       }
-      else {
+      else if (strlen(trim($igc))>0) {
         $gpx = TrackfileLoader::toGPX($igc, "igc");
         //header('Content-Type: application/json; charset=utf-8');
         //echo json_encode(array('GPX' => $gpx));
@@ -104,6 +104,15 @@
   .souligne {
     text-decoration: underline;
   }
+  #iinfos {
+    display: none;
+    margin : 5px;
+    font-weight: bolder;
+    font-size : 15pt;
+  }
+  #divTraceInfos {
+    border-radius: 5px;
+  }
 </style>
 
 </head>
@@ -147,6 +156,7 @@
   var graph = new GraphGPX(document.getElementById("graph"), '<?php if (defined('ELEVATIONSERVICE')) echo ELEVATIONSERVICE;?>', disablescroll);
   graph.addEventListener('ondataloaded', function(e) {
     window.fi = e.detail;
+    let binfos = true;
     let divTraceInfos = document.getElementById('divTraceInfos');
     let t = new Date(Date.UTC(1970, 0, 1));
     t.setUTCSeconds((fi.pts[fi.pts.length-1].time.getTime() - fi.pts[0].time.getTime()) / 1000);
@@ -160,9 +170,14 @@
       //['vx min', `${Math.round(fi.minvx)}km/h`],
     ];
     let date = fi.pts[0].time;
-    divTraceInfos.innerHTML = '<p class="gras centre souligne">'+('0'+date.getDate()).slice(-2)+"/"+('0'+(date.getMonth()+1)).slice(-2)+"/"+date.getFullYear()+'</p>'+
-    stats.map(function(t) {return "<p><span class=\"gras\">"+t[0]+"</span>&nbsp;:&nbsp;"+t[1]+"</p>";}).join('');
+    divTraceInfos.innerHTML = '<div id="ctinfos"><p class="gras centre souligne">'+('0'+date.getDate()).slice(-2)+"/"+('0'+(date.getMonth()+1)).slice(-2)+"/"+date.getFullYear()+'</p>'+
+    stats.map(function(t) {return "<p><span class=\"gras\">"+t[0]+"</span>&nbsp;:&nbsp;"+t[1]+"</p>";}).join('') + '</div><p id="iinfos">&#9432;</p>';
     divTraceInfos.style.display = 'block';
+    divTraceInfos.onclick = function() {
+      document.getElementById('ctinfos').style.display = binfos ? 'none':'block';
+      document.getElementById('iinfos').style.display = !binfos ? 'none':'block';
+      binfos = !binfos;
+    };
   });
   graph.addEventListener('onposchanged', function(e) {
     marker.setLatLng([e.detail.lat, e.detail.lon]).update();

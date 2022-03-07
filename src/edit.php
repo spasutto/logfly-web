@@ -39,8 +39,8 @@ if ($id > 0)
     echo "OK";
     exit(0);
   }
-  else if (isset($_POST['deligc']) && $_POST['deligc'] == '1') {
-    (new LogflyReader())->setIGC($id, "");
+  else if (isset($_POST['deligc'])) {
+    (new LogflyReader())->setIGC($id);
   }
   else if (isset($_REQUEST["vol"])) {
     $vol  = (new LogflyReader())->getRecords($id);
@@ -125,12 +125,12 @@ exit(0);
         loadVol(id);
     calcheures();
     calcdate();
-    
+
     let dureeheures = document.getElementsByName("dureeheures")[0];
     let duree = document.getElementsByName("duree")[0];
     let heure = document.getElementsByName("heure")[0];
     let date = document.getElementsByName("date")[0];
-    
+
     dureeheures.onkeypress  = replaceDot;
     heure.onkeypress = replaceDot;
 
@@ -216,7 +216,7 @@ exit(0);
     xhttp.open("GET", "<?php echo strtok($_SERVER["REQUEST_URI"], '?');?>?vol&id="+id, true);
     xhttp.send();
   }
-  
+
   function saveVol()
   {
     var params = new Object();
@@ -227,6 +227,8 @@ exit(0);
     params.voile = document.getElementsByName("voile")[0].value;
     params.commentaire = document.getElementsByName("commentaire")[0].value;
     params.site = document.getElementsByName("site")[0].value;
+    if (document.getElementsByName("deligc")[0].checked)
+      params.deligc = 1;
     // Turn the data object into an array of URL-encoded key/value pairs.
     let urlEncodedData = "";
     for( name in params ) {
@@ -263,7 +265,7 @@ exit(0);
       option.selected = true;
     list.add(option);
   }
-  
+
   function createSelection(field, start, end) {
     if( field.createTextRange ) {
       var selRange = field.createTextRange();
@@ -287,22 +289,22 @@ exit(0);
   function replaceDot(evt) {
     var val = this.value;
     evt = evt || window.event;
-    
+
     // Ensure we only handle printable keys, excluding enter and space
     var charCode = typeof evt.which == "number" ? evt.which : evt.keyCode;
     if (charCode && charCode > 32) {
       var keyChar = String.fromCharCode(charCode);
-      
+
       // Transform typed character
       var mappedChar = transformTypedChar(keyChar);
-      
+
       var start, end;
       if (typeof this.selectionStart == "number" && typeof this.selectionEnd == "number") {
         // Non-IE browsers and IE 9
         start = this.selectionStart;
         end = this.selectionEnd;
         this.value = val.slice(0, start) + mappedChar + val.slice(end);
-        
+
         // Move the caret
         this.selectionStart = this.selectionEnd = start + 1;
       } else if (document.selection && document.selection.createRange) {
@@ -315,17 +317,17 @@ exit(0);
         precedingRange.setEndPoint("EndToStart", textInputRange);
         start = precedingRange.text.length;
         end = start + selectionRange.text.length;
-        
+
         this.value = val.slice(0, start) + mappedChar + val.slice(end);
         start++;
-        
+
         // Move the caret
         textInputRange = this.createTextRange();
         textInputRange.collapse(true);
         textInputRange.move("character", start - (this.value.slice(0, start).split("\r\n").length - 1));
         textInputRange.select();
       }
-      
+
       return false;
     }
   }
@@ -439,7 +441,7 @@ exit(0);
     }
     return isNaN(secs)?0:secs;
   }
-  
+
   if (!String.prototype.trim) {
     String.prototype.trim = function () {
       return this.replace(/^[\s\uFEFF\xA0]+|[\s\uFEFF\xA0]+$/g, '');

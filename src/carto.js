@@ -95,6 +95,8 @@ function loadCarto(clegeoportail, disablescrollzoom) {
       divinf.style.backgroundColor = '#99ff00af';
       divinf.style.padding = '2px';
       divinf.style.display = 'none';
+      divinf.style.cursor = 'pointer';
+      divinf.title = 'Informations sur la trace';
 
       return divinf;
     },

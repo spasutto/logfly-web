@@ -274,7 +274,7 @@ class LogflyReader
     return $igc;
   }
 
-  function setIGC($id, $igc)
+  function setIGC($id, $igc = null)
   {
     /*$igc = str_replace("'", "''", $igc);
     $sql = "UPDATE VOL set V_IGC='".$igc."' WHERE V_ID=".$id;
@@ -283,7 +283,10 @@ class LogflyReader
     $sql = "UPDATE VOL set V_IGC=NULL WHERE V_ID=".intval($id);
     $ret = $this->db->query($sql);
     $igc_file = dirname(__FILE__) . DIRECTORY_SEPARATOR . FOLDER_TL . DIRECTORY_SEPARATOR . $id  .".igc";
-    return file_put_contents($igc_file, $igc);
+    if ($igc != null)
+      return file_put_contents($igc_file, $igc);
+    else
+      return unlink($igc_file);
   }
 
   function getComment($id) {
