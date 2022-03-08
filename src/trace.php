@@ -52,6 +52,8 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" integrity="sha512-xodZBNTC5n17Xt2atTPuE1HxjVMSvLVW9ocqUKLsCC5CXdbqCmblAshOMAS6/keqq/sMZMZ19scR4PsZChSR7A==" crossorigin=""/>
     <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js" integrity="sha512-XQoYMqMTK8LvdxXYG3nZ448hOEQiglfqkJs1NOQV44cWnUrBc8PkAOcXy20w0vlaXaVUearIOBhiXZ5V3ynxwA==" crossorigin=""></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet-gpx/1.7.0/gpx.min.js"></script>
+    <script src='leaflet-fullscreen/Leaflet.fullscreen.js'></script>
+    <link href='leaflet-fullscreen/leaflet.fullscreen.css' rel='stylesheet' />
     <script src="carto.js"></script>
     <script src="graph.js"></script>
 
@@ -205,7 +207,7 @@
     let zoom = map.getZoom() + (e.detail>0?-1:1);
     map.setView(center, zoom);
   });
-  var map = loadCarto("<?php if (defined('CLEGEOPORTAIL')) echo CLEGEOPORTAIL;?>", disablescroll);
+  var map = loadCarto("<?php if (defined('CLEGEOPORTAIL')) echo CLEGEOPORTAIL;?>", disablescroll, document.getElementById('mapcont'));
   var marker = L.marker([0,0]).addTo(map);
 
   function loadGPX() {

@@ -1,4 +1,4 @@
-function loadCarto(clegeoportail, disablescrollzoom) {
+function loadCarto(clegeoportail, disablescrollzoom, rootelem) {
   let useign = typeof clegeoportail == "string" && clegeoportail.trim().length > 0;
   let options = {};
   if (disablescrollzoom) {
@@ -65,6 +65,11 @@ function loadCarto(clegeoportail, disablescrollzoom) {
   baseMaps["MapBox"] = mapbox;
   baseMaps["Carte Topo"] = opentopomap;
   L.control.layers(baseMaps).addTo(map);
+
+  if (typeof L.Control.Fullscreen == 'function') {
+    let options = {'element' : rootelem};
+    map.addControl(new L.Control.Fullscreen(options));
+  }
 
   L.Control.DlIGC = L.Control.extend({
     onAdd: function(map) {

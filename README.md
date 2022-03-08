@@ -40,6 +40,7 @@ Par défaut le service utilisera la topographie sous format HGT, pour le changer
 # Credits
  - visualisation GPX sur leaflet : https://github.com/mpetazzoni/leaflet-gpx
  - couche de gestion de la topographie SRTM : https://github.com/bobosola/PHP-SRTM
+ - bouton fullscreen modifié de https://github.com/Leaflet/Leaflet.fullscreen
 
 # Historique
 13/10/2020		V0.1
