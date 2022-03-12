@@ -343,7 +343,7 @@ window.onload = function() {
     $datefin = clone $vol->date;
     $datefin = $datefin->add(new DateInterval("PT".$vol->duree."S"));
     echo "<TD><span title=\"heure de décollage\">&#8613;&nbsp;". $vol->date->format('H:i')."</span><p class=\"small\" title=\"heure de posé\">&#8615;&nbsp;".$datefin->format('H:i')."</p></TD>";
-    echo "<TD>". Utils::timeFromSeconds($vol->duree, 2)."</TD>";
+    echo "<TD>". Utils::timeFromSeconds($vol->duree > 900 ? round($vol->duree/60)*60 : $vol->duree, 2)."</TD>";
     //echo "<TD>". $vol->sduree."</TD>";
     echo "<TD><a href=\"".url_with_parameter("site", $vol->site, "offset")."\" title=\"filtrer les vols pour ce site\">".$vol->site."</a>&nbsp;<a href=\"https://maps.google.com/?q=".$vol->latdeco.",".$vol->londeco."\" target=\"_Blank\" class=\"lien_gmaps\" title=\"google maps\">&#9936;</a></TD>";
     echo "<TD><a href=\"".url_with_parameter("voile", $vol->voile, "offset")."\" title=\"filtrer les vols pour cette voile\">".$vol->voile."</a></TD>";

@@ -41,6 +41,6 @@ Par défaut le service utilisera la topographie sous format HGT, pour le changer
  - visualisation GPX sur leaflet : https://github.com/mpetazzoni/leaflet-gpx
  - couche de gestion de la topographie SRTM : https://github.com/bobosola/PHP-SRTM
  - bouton fullscreen modifié de https://github.com/Leaflet/Leaflet.fullscreen
-
+ - calcul du score https://github.com/mmomtchev/igc-xc-score/
 # Historique
 13/10/2020		V0.1
