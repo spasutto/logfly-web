@@ -56,6 +56,7 @@
     <link href='leaflet-fullscreen/leaflet.fullscreen.css' rel='stylesheet' />
     <script src="carto.js"></script>
     <script src="graph.js"></script>
+    <script src="igc-xc-score.js"></script>
 
 <style>
   body {
@@ -127,11 +128,31 @@
 </div>
 
 <div id="formcont">
+<h1>Calcul de vol</h1>
+<label for="file-selector">Sélectionnez un fichier IGC : </label>
+<input type="file" id="file-selector" accept=".igc"><HR>
+<label for="formigc">Ou placez directement le contenu du fichier IGC : </label>
 <form id="formigc" method="post" action="<?php echo strtok($_SERVER['REQUEST_URI'], '?');?>" onsubmit="loadGPX();return false;">
-<input type="submit" style="height:100%; width:20%">
-<textarea type="text" size="50" id="igccont" style="width:95%;height:95vh"></textarea>
+<div style="max-width: 640px">
+  <textarea type="text" id="igccont" style="width:100%;height:80px"></textarea><BR>
+  <input type="submit" id="frmsub" style="display:none;float: right;" value="calculer">
+</div>
 </form>
 </div>
+
+<script>
+  const fileSelector = document.getElementById('file-selector');
+  fileSelector.addEventListener('change', (event) => {
+    const fileList = event.target.files;
+    const reader = new FileReader();
+    reader.addEventListener('load', (event) => {
+      document.getElementById('igccont').value = reader.result;
+      loadGPX();
+      document.getElementById('formcont').style.display = 'none';
+    });
+    reader.readAsText(fileList[0]);
+  });
+</script>
 
 <script>
   var id = new URL(window.location.href).searchParams.get("id");
@@ -155,6 +176,8 @@
   }
 
   var disablescroll = <?php echo isset($_GET['disablescroll'])?'true':'false'; ?>;
+  var map = loadCarto("<?php if (defined('CLEGEOPORTAIL')) echo CLEGEOPORTAIL;?>", disablescroll, document.getElementById('mapcont'));
+  var marker = L.marker([0,0]).addTo(map);
   var graph = new GraphGPX(document.getElementById("graph"), '<?php if (defined('ELEVATIONSERVICE')) echo ELEVATIONSERVICE;?>', disablescroll);
   var flstats = [];
   graph.addEventListener('ondataloaded', function(e) {
@@ -181,7 +204,7 @@
       date = ('0'+date.getDate()).slice(-2)+"/"+('0'+(date.getMonth()+1)).slice(-2)+"/"+date.getFullYear();
     }
     divTraceInfos.innerHTML = '<div id="ctinfos"><p class="gras centre souligne">'+date+'</p>'+
-    flstats.map(function(info) {return "<p>"+(info[0].length<=0?"&nbsp;":"<span class=\"gras\">"+info[0]+"</span>&nbsp;:&nbsp;"+info[1])+"</p>";}).join('') + '</div><p id="iinfos">&#9432;</p>';
+    flstats.map(function(info) {return "<p>"+(info[0].length<=0?"<HR>":"<span class=\"gras\">"+info[0]+"</span>&nbsp;:&nbsp;"+info[1])+"</p>";}).join('') + '</div><p id="iinfos">&#9432;</p>';
     divTraceInfos.style.display = 'block';
     divTraceInfos.onclick = function() {
       document.getElementById('ctinfos').style.display = binfos ? 'none':'block';
@@ -215,9 +238,6 @@
     let zoom = map.getZoom() + (e.detail>0?-1:1);
     map.setView(center, zoom);
   });
-  var map = loadCarto("<?php if (defined('CLEGEOPORTAIL')) echo CLEGEOPORTAIL;?>", disablescroll, document.getElementById('mapcont'));
-  var marker = L.marker([0,0]).addTo(map);
-
   function loadGPX() {
     let xhttp = new XMLHttpRequest();
     //xhttp.responseType = 'text';
@@ -246,10 +266,57 @@
     let data = null;
     let url = "<?php echo strtok($_SERVER['REQUEST_URI'], '?');?>?";
     if (id>0) url += "id="+id+"&";
-    else data = "igccont="+escape(document.getElementById('igccont').value);
+    else
+    {
+      let igccontent = document.getElementById('igccont').value;
+      data = "igccont="+escape(igccontent);
+      calcFlightScore(igccontent);
+    }
     xhttp.open("POST", url+"gpx", true);
     xhttp.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');
     xhttp.send(data);
+  }
+  function displayFlightScore(flightscore) {
+    flstats.push(['','']);
+    if (typeof flightscore.scoreInfo == 'object') {
+      flstats.push(['distance', `${Math.round(flightscore.scoreInfo.distance*100)/100}km`]);
+      flstats.push(['type', `${flightscore.opt.scoring.name}`]);
+      if (Array.isArray(flightscore.scoreInfo.tp)) {
+        let tps = flightscore.scoreInfo.tp;
+        let pointList = [];
+        for (let i=0; i<tps.length; i++) {
+          L.marker([tps[i].y, tps[i].x]).addTo(map).bindPopup("TP#"+(i+1));
+          pointList.push([tps[i].y, tps[i].x]);
+        }
+        pointList.push([tps[0].y, tps[0].x]);
+        new L.Polyline(pointList, {
+          color: 'red',
+          weight: 2,
+          opacity: 0.5,
+          smoothFactor: 1
+        }).addTo(map);
+      }
+      if (flightscore.scoreInfo.cp) {
+        L.marker([flightscore.scoreInfo.cp.in.y, flightscore.scoreInfo.cp.in.x]).addTo(map).bindPopup("départ");
+        L.marker([flightscore.scoreInfo.cp.out.y, flightscore.scoreInfo.cp.out.x]).addTo(map).bindPopup("arrivée");
+      } else if (flightscore.scoreInfo.ep) {
+        L.marker([flightscore.scoreInfo.ep.start.y, flightscore.scoreInfo.ep.start.x]).addTo(map).bindPopup("départ");
+        L.marker([flightscore.scoreInfo.ep.finish.y, flightscore.scoreInfo.ep.finish.x]).addTo(map).bindPopup("arrivée");
+      }
+    }
+    flstats.push(['score', `${Math.round(flightscore.score*10)/10}pts`]);
+    updateTraceInfos();
+  }
+  function calcFlightScore(igccontent) {
+    try {
+      IGCScore.score(igccontent, (score) => {
+        if (score && typeof score.value == 'object') {
+          score = score.value;
+        }
+        if (score && typeof score.opt == 'object' && typeof score.opt.flight == 'object') delete score.opt.flight;
+        displayFlightScore(score);
+      });
+    } catch(e) {finish();}
   }
   function loadFlightScore() {
     let xhttp = new XMLHttpRequest();
@@ -258,37 +325,7 @@
       if (this.readyState == 4 && this.status == 200) {
         try {
           if (typeof this.response == 'object') {
-            let flightscore = this.response;
-            flstats.push(['','']);
-            if (typeof flightscore.scoreInfo == 'object') {
-              flstats.push(['distance', `${Math.round(flightscore.scoreInfo.distance*100)/100}km`]);
-              flstats.push(['type', `${flightscore.opt.scoring.name}`]);
-              if (Array.isArray(flightscore.scoreInfo.tp)) {
-                let tps = flightscore.scoreInfo.tp;
-                let pointList = [];
-                for (let i=0; i<tps.length; i++) {
-                  L.marker([tps[i].y, tps[i].x]).addTo(map).bindPopup("TP#"+(i+1));
-                  pointList.push([tps[i].y, tps[i].x]);
-                }
-                pointList.push([tps[0].y, tps[0].x]);
-                new L.Polyline(pointList, {
-                  color: 'red',
-                  weight: 3,
-                  opacity: 0.5,
-                  smoothFactor: 1
-                }).addTo(map);
-              }
-              if (flightscore.scoreInfo.cp) {
-                L.marker([flightscore.scoreInfo.cp.in.y, flightscore.scoreInfo.cp.in.x]).addTo(map).bindPopup("départ");
-                L.marker([flightscore.scoreInfo.cp.out.y, flightscore.scoreInfo.cp.out.x]).addTo(map).bindPopup("arrivée");
-              } else if (flightscore.scoreInfo.ep) {
-                L.marker([flightscore.scoreInfo.ep.start.y, flightscore.scoreInfo.ep.start.x]).addTo(map).bindPopup("départ");
-                L.marker([flightscore.scoreInfo.ep.finish.y, flightscore.scoreInfo.ep.finish.x]).addTo(map).bindPopup("arrivée");
-              }
-            }
-            flstats.push(['score', `${Math.round(flightscore.score*10)/10}pts`]);
-            updateTraceInfos();
-            console.log(flightscore);
+            displayFlightScore(this.response);
           }
         } catch(e) {}
       }
@@ -300,10 +337,10 @@
     loadGPX();
 
   window.onload = function() {
+    document.getElementById('frmsub').style.display = 'block';
     if (id>0)
       loadFlightScore();
   };
-
 </script>
 
 
