@@ -195,23 +195,6 @@
     );
     updateTraceInfos();
   });
-  function updateTraceInfos() {
-    let divTraceInfos = document.getElementById('divTraceInfos');
-    let binfos = true;
-    let date = "?";
-    if (typeof fi == 'object' && Array.isArray(fi.pts) && fi.pts.length > 0) {
-      date = fi.pts[0].time;
-      date = ('0'+date.getDate()).slice(-2)+"/"+('0'+(date.getMonth()+1)).slice(-2)+"/"+date.getFullYear();
-    }
-    divTraceInfos.innerHTML = '<div id="ctinfos"><p class="gras centre souligne">'+date+'</p>'+
-    flstats.map(function(info) {return "<p>"+(info[0].length<=0?"<HR>":"<span class=\"gras\">"+info[0]+"</span>&nbsp;:&nbsp;"+info[1])+"</p>";}).join('') + '</div><p id="iinfos">&#9432;</p>';
-    divTraceInfos.style.display = 'block';
-    divTraceInfos.onclick = function() {
-      document.getElementById('ctinfos').style.display = binfos ? 'none':'block';
-      document.getElementById('iinfos').style.display = !binfos ? 'none':'block';
-      binfos = !binfos;
-    };
-  }
   graph.addEventListener('onposchanged', function(e) {
     marker.bindPopup(e.detail.time.toLocaleString('fr-FR', { timeZone: 'UTC' }).substr(-8, 5)).setLatLng([e.detail.lat, e.detail.lon]).update();
     mapelem.offsetHeight
@@ -238,6 +221,24 @@
     let zoom = map.getZoom() + (e.detail>0?-1:1);
     map.setView(center, zoom);
   });
+
+  function updateTraceInfos() {
+    let divTraceInfos = document.getElementById('divTraceInfos');
+    let binfos = true;
+    let date = "?";
+    if (typeof fi == 'object' && Array.isArray(fi.pts) && fi.pts.length > 0) {
+      date = fi.pts[0].time;
+      date = ('0'+date.getDate()).slice(-2)+"/"+('0'+(date.getMonth()+1)).slice(-2)+"/"+date.getFullYear();
+    }
+    divTraceInfos.innerHTML = '<div id="ctinfos"><p class="gras centre souligne">'+date+'</p>'+
+    flstats.map(function(info) {return "<p>"+(info[0].length<=0?"<HR>":"<span class=\"gras\">"+info[0]+"</span>&nbsp;:&nbsp;"+info[1])+"</p>";}).join('') + '</div><p id="iinfos">&#9432;</p>';
+    divTraceInfos.style.display = 'block';
+    divTraceInfos.onclick = function() {
+      document.getElementById('ctinfos').style.display = binfos ? 'none':'block';
+      document.getElementById('iinfos').style.display = !binfos ? 'none':'block';
+      binfos = !binfos;
+    };
+  }
   function loadGPX() {
     let xhttp = new XMLHttpRequest();
     //xhttp.responseType = 'text';
@@ -285,7 +286,7 @@
         let tps = flightscore.scoreInfo.tp;
         let pointList = [];
         for (let i=0; i<tps.length; i++) {
-          L.marker([tps[i].y, tps[i].x]).addTo(map).bindPopup("TP#"+(i+1));
+          L.marker([tps[i].y, tps[i].x], {icon: turnpointIcon}).addTo(map).bindPopup("TP#"+(i+1));
           pointList.push([tps[i].y, tps[i].x]);
         }
         pointList.push([tps[0].y, tps[0].x]);
@@ -297,11 +298,11 @@
         }).addTo(map);
       }
       if (flightscore.scoreInfo.cp) {
-        L.marker([flightscore.scoreInfo.cp.in.y, flightscore.scoreInfo.cp.in.x]).addTo(map).bindPopup("départ");
-        L.marker([flightscore.scoreInfo.cp.out.y, flightscore.scoreInfo.cp.out.x]).addTo(map).bindPopup("arrivée");
+        L.marker([flightscore.scoreInfo.cp.in.y, flightscore.scoreInfo.cp.in.x], {icon: startIcon}).addTo(map).bindPopup("départ");
+        L.marker([flightscore.scoreInfo.cp.out.y, flightscore.scoreInfo.cp.out.x], {icon: finishIcon}).addTo(map).bindPopup("arrivée");
       } else if (flightscore.scoreInfo.ep) {
-        L.marker([flightscore.scoreInfo.ep.start.y, flightscore.scoreInfo.ep.start.x]).addTo(map).bindPopup("départ");
-        L.marker([flightscore.scoreInfo.ep.finish.y, flightscore.scoreInfo.ep.finish.x]).addTo(map).bindPopup("arrivée");
+        L.marker([flightscore.scoreInfo.ep.start.y, flightscore.scoreInfo.ep.start.x], {icon: startIcon}).addTo(map).bindPopup("départ");
+        L.marker([flightscore.scoreInfo.ep.finish.y, flightscore.scoreInfo.ep.finish.x], {icon: finishIcon}).addTo(map).bindPopup("arrivée");
       }
     }
     flstats.push(['score', `${Math.round(flightscore.score*10)/10}pts`]);

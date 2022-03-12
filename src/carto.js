@@ -1,3 +1,5 @@
+var startIcon = null, finishIcon = null, turnpointIcon = null;
+
 function loadCarto(clegeoportail, disablescrollzoom, rootelem) {
   let useign = typeof clegeoportail == "string" && clegeoportail.trim().length > 0;
   let options = {};
@@ -111,6 +113,16 @@ function loadCarto(clegeoportail, disablescrollzoom, rootelem) {
     return new L.Control.TraceInfos(opts);
   }
   L.control.traceinfos({ position: 'topright' }).addTo(map);
+
+  var LeafIcon = L.Icon.extend({
+    options: {
+      iconAnchor:   [12, 40], // point of the icon which will correspond to marker's location
+      popupAnchor:  [1,-33] // point from which the popup should open relative to the iconAnchor
+    }
+  });
+  startIcon = new LeafIcon({ iconUrl: 'marker-start.png' });
+  finishIcon = new LeafIcon({ iconUrl: 'marker-finish.png' });
+  turnpointIcon = new LeafIcon({ iconUrl: 'marker-tp.png', iconAnchor: [4, 38], popupAnchor:  [10, -30] });
 
   return map;
 }
