@@ -156,13 +156,12 @@
 
   var disablescroll = <?php echo isset($_GET['disablescroll'])?'true':'false'; ?>;
   var graph = new GraphGPX(document.getElementById("graph"), '<?php if (defined('ELEVATIONSERVICE')) echo ELEVATIONSERVICE;?>', disablescroll);
+  var flstats = [];
   graph.addEventListener('ondataloaded', function(e) {
     window.fi = e.detail;
-    let binfos = true;
-    let divTraceInfos = document.getElementById('divTraceInfos');
     let t = new Date(Date.UTC(1970, 0, 1));
     t.setUTCSeconds((fi.pts[fi.pts.length-1].time.getTime() - fi.pts[0].time.getTime()) / 1000);
-    let stats = [
+    flstats.unshift(
       ['durée', `${t.toLocaleString('fr-FR', { timeZone: 'UTC' }).substr(-8, 5)}`],
       ['alt max', `${Math.round(fi.maxalt)}m`],
       ['alt min', `${Math.round(fi.minalt)}m`],
@@ -170,19 +169,28 @@
       ['vz min', `${Math.round(fi.minvz*10)/10}m/s`],
       ['vx max', `${Math.round(fi.maxvx)}km/h`],
       //['vx min', `${Math.round(fi.minvx)}km/h`],
-    ];
-    let date = fi.pts[0].time;
-    divTraceInfos.innerHTML = '<div id="ctinfos"><p class="gras centre souligne">'+('0'+date.getDate()).slice(-2)+"/"+('0'+(date.getMonth()+1)).slice(-2)+"/"+date.getFullYear()+'</p>'+
-    stats.map(function(t) {return "<p><span class=\"gras\">"+t[0]+"</span>&nbsp;:&nbsp;"+t[1]+"</p>";}).join('') + '</div><p id="iinfos">&#9432;</p>';
+    );
+    updateTraceInfos();
+  });
+  function updateTraceInfos() {
+    let divTraceInfos = document.getElementById('divTraceInfos');
+    let binfos = true;
+    let date = "?";
+    if (typeof fi == 'object' && Array.isArray(fi.pts) && fi.pts.length > 0) {
+      date = fi.pts[0].time;
+      date = ('0'+date.getDate()).slice(-2)+"/"+('0'+(date.getMonth()+1)).slice(-2)+"/"+date.getFullYear();
+    }
+    divTraceInfos.innerHTML = '<div id="ctinfos"><p class="gras centre souligne">'+date+'</p>'+
+    flstats.map(function(info) {return "<p>"+(info[0].length<=0?"&nbsp;":"<span class=\"gras\">"+info[0]+"</span>&nbsp;:&nbsp;"+info[1])+"</p>";}).join('') + '</div><p id="iinfos">&#9432;</p>';
     divTraceInfos.style.display = 'block';
     divTraceInfos.onclick = function() {
       document.getElementById('ctinfos').style.display = binfos ? 'none':'block';
       document.getElementById('iinfos').style.display = !binfos ? 'none':'block';
       binfos = !binfos;
     };
-  });
+  }
   graph.addEventListener('onposchanged', function(e) {
-    marker.setLatLng([e.detail.lat, e.detail.lon]).update();
+    marker.bindPopup(e.detail.time.toLocaleString('fr-FR', { timeZone: 'UTC' }).substr(-8, 5)).setLatLng([e.detail.lat, e.detail.lon]).update();
     mapelem.offsetHeight
     let vz =  Math.min(maxvz, Math.abs(e.detail.vz));
     let dh = mapelem.offsetHeight/2;
@@ -243,8 +251,53 @@
     xhttp.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');
     xhttp.send(data);
   }
+  function loadFlightScore() {
+    let xhttp = new XMLHttpRequest();
+    xhttp.responseType = 'json';
+    xhttp.onreadystatechange = function() {
+      if (this.readyState == 4 && this.status == 200) {
+        try {
+          if (typeof this.response == 'object') {
+            let flightscore = this.response;
+            flstats.push(['','']);
+            if (typeof flightscore.scoreInfo == 'object') {
+              flstats.push(['distance', `${Math.round(flightscore.scoreInfo.distance*100)/100}km`]);
+              flstats.push(['type', `${flightscore.opt.scoring.name}`]);
+              if (Array.isArray(flightscore.scoreInfo.tp)) {
+                let tps = flightscore.scoreInfo.tp;
+                let pointList = [];
+                for (let i=0; i<tps.length; i++) {
+                  L.marker([tps[i].y, tps[i].x]).addTo(map).bindPopup("TP#"+(i+1));
+                  pointList.push([tps[i].y, tps[i].x]);
+                }
+                pointList.push([tps[0].y, tps[0].x]);
+                new L.Polyline(pointList, {
+                  color: 'red',
+                  weight: 3,
+                  opacity: 0.5,
+                  smoothFactor: 1
+                }).addTo(map);
+              }
+              L.marker([flightscore.scoreInfo.cp.in.y, flightscore.scoreInfo.cp.in.x]).addTo(map).bindPopup("départ");
+              L.marker([flightscore.scoreInfo.cp.out.y, flightscore.scoreInfo.cp.out.x]).addTo(map).bindPopup("arrivée");
+            }
+            flstats.push(['score', `${Math.round(flightscore.score*10)/10}pts`]);
+            updateTraceInfos();
+            console.log(flightscore);
+          }
+        } catch(e) {}
+      }
+    };
+    xhttp.open("GET", "Tracklogs/"+id+".json", true);
+    xhttp.send();
+  }
   if (id>0)
     loadGPX();
+
+  window.onload = function() {
+    if (id>0)
+      loadFlightScore();
+  };
 
 </script>
 

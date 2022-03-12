@@ -1,4 +1,21 @@
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<?php
+if (isset($_POST['flightscore']) && isset($_GET['id']) && preg_match('/^\d+$/', $_GET['id'])) {
+  $id = intval($_GET['id']);
+  //echo $_POST['flightscore'];
+  require("tracklogmanager.php");
+  $mgr = new TrackLogManager();
+  echo $mgr->putFlightScore($id, $_POST['flightscore']) ? "OK":"KO";
+  exit(0);
+}
+?><!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Upload de vol</title>
+  <script src="igc-xc-score.js"></script>
+</head>
+<body>
 <?php
 $url = "http".(!empty($_SERVER['HTTPS'])?"s":"")."://".$_SERVER['SERVER_NAME'].$_SERVER['REQUEST_URI'];
 if (!isset($_FILES['userfile']['tmp_name'])) {
@@ -72,26 +89,56 @@ if (!isset($_FILES['userfile']['tmp_name'])) {
     $mgr = new TrackLogManager();
     $ext = $_FILES['userfile']['name'];
     $ext = substr(trim(strtolower($ext)), -3);
-    $id = $mgr->uploadIGC($_FILES['userfile']['tmp_name'], $ext, $id);
+    $id = $mgr->uploadIGC($_FILES['userfile']['tmp_name'], $ext, $id, $igcfname);
     if ($id) {
 ?>
 <script>
-id = <?php echo $id;?>;
-alert('vol no ' + id + ' <?php echo $newvol?"ajouté":"mis à jour";?>');
-if (window.opener !== window && !window.menubar.visible) {
-  window.opener.location.reload();
-  // TODO ouvrir popup d'edit
-  setTimeout(function(){
-    if (typeof window.opener.editvol == 'function') {
-      window.opener.editvol(id);
-    }
-  }, 500);
-} else {
-  window.location = 'edit.php?id=' + id;
+function finish() {
+  if (window.opener !== window && !window.menubar.visible) {
+    window.opener.location.reload();
+    // TODO ouvrir popup d'edit
+    setTimeout(function(){
+      if (typeof window.opener.editvol == 'function') {
+        window.opener.editvol(id);
+      }
+    }, 500);
+  } else {
+    window.location = 'edit.php?id=' + id;
+  }
 }
+function postFlightScore(id, score) {
+  var xhttp = new XMLHttpRequest();
+  xhttp.responseType = 'text';
+  xhttp.onreadystatechange = function() {
+    if (this.readyState == 4 && this.status == 200) {
+      finish();
+    }
+  };
+  data = "flightscore="+escape(JSON.stringify(score));
+  xhttp.open("POST", "<?php echo strtok($_SERVER['REQUEST_URI'], '?');?>?id="+id, true);
+  xhttp.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');
+  xhttp.send(data);
+}
+window.onload = function(){
+  id = <?php echo $id;?>;
+  igccontent = `<?php echo file_get_contents($igcfname); ?>`;
+  try {
+    IGCScore.score(igccontent, (score) => {
+      if (score && typeof score.value == 'object') {
+        score = score.value;
+      }
+      if (score && typeof score.opt == 'object' && typeof score.opt.flight == 'object') delete score.opt.flight;
+      postFlightScore(id, score);
+    });
+  } catch(e) {finish();}
+  alert('vol no ' + id + ' <?php echo $newvol?"ajouté":"mis à jour";?>');
+};
 </script>
+ne pas fermer cette fenêtre, scoring en cours...
 <?php
     }
   }
 }
 ?>
+</body>
+</html>

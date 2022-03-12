@@ -27,7 +27,7 @@ class TrackLogManager
     return ["nom"=> $site->nom, "site"=> $site, "dist"=>$dist];
   }
 
-  public function uploadIGC($tmpfname, $ext, $id = null) {
+  public function uploadIGC($tmpfname, $ext, $id = null, &$destname) {
     $tfreader = TrackfileLoader::load($tmpfname, $ext);
     if (!$tfreader || !($fpt = $tfreader->getFirstRecord())) {
       echo "bad IGC file!!!";
@@ -152,6 +152,11 @@ class TrackLogManager
 
   private function cmpigc($a, $b) {
     return $a['diff']-$b['diff'];
+  }
+
+  public function putFlightScore($id, $flightscore) {
+    $path = dirname(__FILE__) . DIRECTORY_SEPARATOR . self::FOLDER_TL . DIRECTORY_SEPARATOR . $id . ".json";
+    return @file_put_contents($path, $flightscore);
   }
 }
 ?>

@@ -260,13 +260,17 @@ class LogflyReader
     return ["nom"=> $site->nom, "site"=> $site, "dist"=>$dist];
   }
 
-  function getIGC($id)
+  function getIGC($id, $fromdb=false)
   {
-    $sql = "SELECT V_IGC FROM VOL WHERE V_ID=".intval($id);
-    $ret = $this->db->query($sql);
-    $row = $ret->fetchArray();
-    $igc = $row['V_IGC'];
-    if (strlen(trim($igc)) <= 0) {
+    if ($fromdb)
+    {
+      $sql = "SELECT V_IGC FROM VOL WHERE V_ID=".intval($id);
+      $ret = $this->db->query($sql);
+      $row = $ret->fetchArray();
+      $igc = $row['V_IGC'];
+    }
+    else
+    {
       $igc_file = dirname(__FILE__) . DIRECTORY_SEPARATOR . FOLDER_TL . DIRECTORY_SEPARATOR . $id  .".igc";
       if (file_exists($igc_file))
         $igc = file_get_contents($igc_file);
@@ -274,19 +278,32 @@ class LogflyReader
     return $igc;
   }
 
-  function setIGC($id, $igc = null)
+  function setIGC($id, $igc = null, $fromdb=false)
   {
-    /*$igc = str_replace("'", "''", $igc);
-    $sql = "UPDATE VOL set V_IGC='".$igc."' WHERE V_ID=".$id;
-    $ret = $this->db->query($sql);
-    return $ret != FALSE;*/
-    $sql = "UPDATE VOL set V_IGC=NULL WHERE V_ID=".intval($id);
-    $ret = $this->db->query($sql);
-    $igc_file = dirname(__FILE__) . DIRECTORY_SEPARATOR . FOLDER_TL . DIRECTORY_SEPARATOR . $id  .".igc";
-    if ($igc != null)
-      return file_put_contents($igc_file, $igc);
+    if ($fromdb)
+    {
+      if ($igc)
+      {
+        $igc = str_replace("'", "''", $igc);
+        $sql = "UPDATE VOL set V_IGC='".$igc."' WHERE V_ID=".$id;
+      }
+      else
+      {
+        $sql = "UPDATE VOL set V_IGC=NULL WHERE V_ID=".intval($id);
+      }
+      $ret = $this->db->query($sql);
+      return $ret != FALSE;
+    }
     else
-      return unlink($igc_file);
+    {
+      $sql = "UPDATE VOL set V_IGC=NULL WHERE V_ID=".intval($id);
+      $ret = $this->db->query($sql);
+      $igc_file = dirname(__FILE__) . DIRECTORY_SEPARATOR . FOLDER_TL . DIRECTORY_SEPARATOR . $id  .".igc";
+      if ($igc != null)
+        return file_put_contents($igc_file, $igc);
+      else
+        return unlink($igc_file);
+    }
   }
 
   function getComment($id) {

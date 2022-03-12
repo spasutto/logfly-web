@@ -506,9 +506,10 @@ class GraphGPX {
       }
       if (curelev < this.fi.pts.length)
         this.getElevation(locations, curelev, this.fi.pts.length - curelev);
+    } else {
+      let event = new CustomEvent('ondataloaded', { "detail": this.fi });
+      this.elem.dispatchEvent(event);
     }
-    let event = new CustomEvent('ondataloaded', {"detail": this.fi});
-    this.elem.dispatchEvent(event);
     this.paint();
     return this.fi;
   }
