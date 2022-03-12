@@ -278,8 +278,13 @@
                   smoothFactor: 1
                 }).addTo(map);
               }
-              L.marker([flightscore.scoreInfo.cp.in.y, flightscore.scoreInfo.cp.in.x]).addTo(map).bindPopup("départ");
-              L.marker([flightscore.scoreInfo.cp.out.y, flightscore.scoreInfo.cp.out.x]).addTo(map).bindPopup("arrivée");
+              if (flightscore.scoreInfo.cp) {
+                L.marker([flightscore.scoreInfo.cp.in.y, flightscore.scoreInfo.cp.in.x]).addTo(map).bindPopup("départ");
+                L.marker([flightscore.scoreInfo.cp.out.y, flightscore.scoreInfo.cp.out.x]).addTo(map).bindPopup("arrivée");
+              } else if (flightscore.scoreInfo.ep) {
+                L.marker([flightscore.scoreInfo.ep.start.y, flightscore.scoreInfo.ep.start.x]).addTo(map).bindPopup("départ");
+                L.marker([flightscore.scoreInfo.ep.finish.y, flightscore.scoreInfo.ep.finish.x]).addTo(map).bindPopup("arrivée");
+              }
             }
             flstats.push(['score', `${Math.round(flightscore.score*10)/10}pts`]);
             updateTraceInfos();

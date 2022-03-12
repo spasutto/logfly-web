@@ -240,7 +240,7 @@ function affichComment(id) {
       zonecomm.innerHTML = "<b>Chargement...</b>";
     }
     if (zonecarto.innerHTML == "" && btncomm.previousElementSibling.innerHTML) {
-      zonecarto.innerHTML += "<iframe src=\"trace.php?id="+id+"&disablescroll=1\" width=\"100%\" height=\"400px\"></iframe>";
+      zonecarto.innerHTML += "<iframe src=\"trace.php?id="+id+"&disablescroll=1\" width=\"100%\" height=\"450px\"></iframe>";
     }
     ligne.style.display = 'table-row';
     btncomm.style.textDecoration = "line-through";
@@ -353,7 +353,7 @@ window.onload = function() {
     }
     echo "</TD>";
     if ($vol->commentaire || $vol->igc)
-      echo "<TD class=\"btncomm\" id=\"btncomm".$vol->id."\" title=\"afficher le commentaire\" onclick=\"affichComment(".$vol->id.");\" style=\"font-family:Verdana;font-style:italic;font-size:10;\">abc</TD>";
+      echo "<TD class=\"btncomm\" id=\"btncomm".$vol->id."\" title=\"afficher le commentaire/la trace\" onclick=\"affichComment(".$vol->id.");\" style=\"font-family:Verdana;font-style:italic;font-size:10;\">abc</TD>";
     else
       echo "<TD></TD>";
     echo "<TR class=\"lignecomm none\"><TD class=\"hidden\">".$vol->id."</TD><TD id=\"comm".$vol->id."\" colspan=\"7\" class=\"desc\"><div id=\"zonecomm".$vol->id."\"></div><div id=\"zonecarto".$vol->id."\"></div></TD></TR>";
