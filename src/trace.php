@@ -257,7 +257,7 @@
             endIconUrl: '',
             shadowUrl: ''
           }}).on('loaded', function(e) {
-            map.fitBounds(e.target.getBounds());
+            map.fitBounds(e.target.getBounds(), {padding: [35,35]});
           }).addTo(map);
         let btndl = document.getElementById('btnDlTrace');
         btndl.onclick = function() {window.location = "<?php echo strtok($_SERVER['REQUEST_URI'], '?');?>?id="+id+"&igc&dl";};

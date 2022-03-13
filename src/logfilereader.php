@@ -260,6 +260,14 @@ class LogflyReader
     return ["nom"=> $site->nom, "site"=> $site, "dist"=>$dist];
   }
 
+  function getFlightsInfos($id)
+  {
+    $fi_file = dirname(__FILE__) . DIRECTORY_SEPARATOR . FOLDER_TL . DIRECTORY_SEPARATOR . $id  .".json";
+    if (file_exists($fi_file))
+      return file_get_contents($fi_file);
+    return "";
+  }
+
   function getIGC($id, $fromdb=false)
   {
     if ($fromdb)
@@ -441,10 +449,8 @@ class LogflyReader
     //header('Content-Type: text');
     header('Content-Type: application/octet-stream');header('Content-Disposition: attachment; filename="carnet'.($stats?"_stats":"").'.csv');
     echo chr(255) . chr(254);
-    $this->echoUTF16("No".$CSVSEP."date".$CSVSEP."voile".$CSVSEP."site".$CSVSEP."duree (en secondes)".$CSVSEP."duree");
-    if ($stats)
-      $this->echoUTF16($CSVSEP."temps de vol total (en secondes)");
-    else
+    $this->echoUTF16("No".$CSVSEP."date".$CSVSEP."voile".$CSVSEP."site".$CSVSEP."duree (en secondes)".$CSVSEP."duree".$CSVSEP."temps de vol total (en secondes)".$CSVSEP."score".$CSVSEP."distance".$CSVSEP."type de parcours");
+    if (!$stats)
       $this->echoUTF16($CSVSEP."commentaire");
     $this->echoUTF16("\n");
     foreach ($vols->vols as $vol)
@@ -456,11 +462,21 @@ class LogflyReader
       $this->echoUTF16($vol->site.$CSVSEP);
       $this->echoUTF16($vol->duree.$CSVSEP);
       $this->echoUTF16(Utils::timeFromSeconds($vol->duree, TRUE).$CSVSEP);
-      if ($stats)
-        $this->echoUTF16($tempvol);
+      $this->echoUTF16($tempvol.$CSVSEP);
+      $fi = json_decode($this->getFlightsInfos($vol->id));
+      if ($fi)
+      {
+        $this->echoUTF16(str_replace(".", ",", strval($fi->{'scoreInfo'}->{'score'})).$CSVSEP);
+        $this->echoUTF16(str_replace(".", ",", strval($fi->{'scoreInfo'}->{'distance'})).$CSVSEP);
+        $this->echoUTF16($fi->{'opt'}->{'scoring'}->{'name'}.$CSVSEP);
+      }
       else
       {
-        $textevol = $vol->commentaire;
+        $this->echoUTF16($CSVSEP.$CSVSEP.$CSVSEP);
+      }
+      if (!$stats)
+      {
+        $textevol = $vol->commentaire?$this->getComment($vol->id):"";
         if (preg_match('/[\n'.$CSVSEP.']/', $textevol))
         {
           $textevol = str_replace($CSVSEP, " ", $textevol);
