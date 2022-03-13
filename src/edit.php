@@ -461,8 +461,9 @@ exit(0);
               score = score.value;
             }
             if (score && typeof score.opt == 'object' && typeof score.opt.flight == 'object') delete score.opt.flight;
-            if (confirm ("Le score calculé est de " + score.score + " points pour "+score.scoreInfo.distance+"km, mettre à jour?")) {
-              postFlightScore(id, score, (msg) => {alert(msg == "OK"?"Fait!":"Il semble qu'il y'ai eu un problème : " + msg);});
+            if (confirm ("Le score calculé est de " + Math.round(score.score*10)/10 + " points pour "+Math.round(score.scoreInfo.distance*10)/10+"km, mettre à jour?")) {
+              message("enregistrement...");
+              postFlightScore(id, score, (msg) => {message("");alert(msg == "OK"?"Fait!":"Il semble qu'il y'ai eu un problème : " + msg);});
             }
           });
         } catch(e) {alert(e);}
