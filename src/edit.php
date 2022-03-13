@@ -53,6 +53,10 @@ if ($id > 0)
       exit(0);
     }
   }
+  else if (isset($_REQUEST["igc"])) {
+    echo (new LogflyReader())->getIGC($id);
+    exit(0);
+  }
 }
 
 /*if (isset($_REQUEST["uvol"])) {
@@ -87,10 +91,23 @@ exit(0);
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
   <title>Edition d'un vol</title>
+  <script src="igc-xc-score.js"></script>
 
   <style>
   .fullwidth {
   width: 100%;
+  }
+  #infobox {
+    position: absolute;
+    background-color: #98D8E8E0;
+    width: 100%;
+    top: 0px;
+    left: 0px;
+    margin: 0px;
+    padding: 0px;
+    vertical-align: middle;
+    text-align: center;
+    border: solid 1px #81B9E1;
   }
   </style>
 </head>
@@ -110,24 +127,28 @@ exit(0);
 
 <script type="text/javascript">
   var id = <?php echo $id>0?$id:-1; ?>;
+  var save = false;
   cursite = "";
   if (window.opener !== window && !window.menubar.visible)
   {
     window.onunload = refreshParent;
     function refreshParent() {
-      window.opener.location.reload();
+      if (save)
+        window.opener.location.reload();
     }
   }
   window.onload = function()
   {
-      loadData();
-      if (id > 0)
-        loadVol(id);
+    loadData();
+    if (id > 0) {
+      loadVol(id);
+      document.getElementById('calcbut').style.display = 'initial';
+    }
     calcheures();
     calcdate();
 
     let dureeheures = document.getElementsByName("dureeheures")[0];
-    let duree = document.getElementsByName("duree")[0];
+    //let duree = document.getElementsByName("duree")[0];
     let heure = document.getElementsByName("heure")[0];
     let date = document.getElementsByName("date")[0];
 
@@ -135,7 +156,7 @@ exit(0);
     heure.onkeypress = replaceDot;
 
     dureeheures.addEventListener("focus", function() { this.select(); });
-    duree.addEventListener("focus", function() { this.select(); });
+    //duree.addEventListener("focus", function() { this.select(); });
     heure.addEventListener("focus", function() { this.select(); });
     date.addEventListener("focus", function() { createSelection(this, 0, 2); });
   };
@@ -154,13 +175,13 @@ exit(0);
   }
 
   function loadVols() {
-    var xhttp = new XMLHttpRequest();
+    let xhttp = new XMLHttpRequest();
     xhttp.responseType = 'json';
-    message("loading...");
+    message("chargement...");
     xhttp.onreadystatechange = function() {
       if (this.readyState == 4 && this.status == 200) {
         if (!this.response) return;
-        var list = document.getElementsByName('vol')[0];
+        let list = document.getElementsByName('vol')[0];
         clearList(list);
         for (let i=0; i<this.response.length; i++)
           addOption(list, this.response[i].id+" ("+this.response[i].date+") " + this.response[i].site, this.response[i].id);
@@ -174,13 +195,13 @@ exit(0);
   }
 
   function loadSites() {
-    var xhttp = new XMLHttpRequest();
+    let xhttp = new XMLHttpRequest();
     xhttp.responseType = 'json';
-    message("loading...");
+    message("chargement...");
     xhttp.onreadystatechange = function() {
       if (this.readyState == 4 && this.status == 200) {
         if (!this.response) return;
-        var list = document.getElementsByName('site')[0];
+        let list = document.getElementsByName('site')[0];
         clearList(list);
         for (let i=0; i<this.response.length; i++)
           addOption(list, this.response[i].site, this.response[i].site);
@@ -194,17 +215,18 @@ exit(0);
   }
 
   function loadVol(id) {
-    var xhttp = new XMLHttpRequest();
+    let xhttp = new XMLHttpRequest();
     xhttp.responseType = 'json';
-    message("loading...");
+    message("chargement...");
     xhttp.onreadystatechange = function() {
       if (this.readyState == 4 && this.status == 200) {
         if (!this.response) return;
         message("");
         document.getElementsByName("date")[0].value = this.response.date;
         document.getElementsByName("heure")[0].value = this.response.heure;
-        document.getElementsByName("duree")[0].value = this.response.duree;
-        document.getElementsByName("dureeheures")[0].value = this.response.sduree;
+        document.getElementsByName("duree")[0].innerText = this.response.duree;
+        document.getElementsByName("dureeheures")[0].value = this.response.duree.toString().toHHMMSS();//this.response.sduree;
+        document.getElementsByName("dureeHMS")[0].innerText = this.response.duree.toString().toHMS();//this.response.sduree;
         document.getElementsByName("voile")[0].value = this.response.voile;
         document.getElementsByName("commentaire")[0].value = this.response.commentaire;
         cursite = this.response.site;
@@ -219,11 +241,11 @@ exit(0);
 
   function saveVol()
   {
-    var params = new Object();
+    let params = new Object();
     params.id = document.getElementsByName("vol")[0].value;
     params.date = document.getElementsByName("date")[0].value;
     params.heure = document.getElementsByName("heure")[0].value;
-    params.duree = document.getElementsByName("duree")[0].value;
+    params.duree = document.getElementsByName("duree")[0].innerText;
     params.voile = document.getElementsByName("voile")[0].value;
     params.commentaire = document.getElementsByName("commentaire")[0].value;
     params.site = document.getElementsByName("site")[0].value;
@@ -234,8 +256,8 @@ exit(0);
     for( name in params ) {
      urlEncodedData += encodeURIComponent(name)+'='+encodeURIComponent(params[name])+'&';
     }
-    var xhttp = new XMLHttpRequest();
-    message("loading...");
+    let xhttp = new XMLHttpRequest();
+    message("chargement...");
     xhttp.onreadystatechange = function() {
       if (this.readyState == 4 && this.status == 200) {
         message("");
@@ -253,12 +275,13 @@ exit(0);
     };
     xhttp.open("POST", "<?php echo strtok($_SERVER["REQUEST_URI"], '?');?>?uvol&id="+id, true);
     xhttp.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');
+    save = true;
     xhttp.send(urlEncodedData);
   }
 
   function addOption(list, nom, value, selected)
   {
-    var option = document.createElement("option");
+    let option = document.createElement("option");
     option.text = nom;
     option.value = value;
     if (selected)
@@ -268,7 +291,7 @@ exit(0);
 
   function createSelection(field, start, end) {
     if( field.createTextRange ) {
-      var selRange = field.createTextRange();
+      let selRange = field.createTextRange();
       selRange.collapse(true);
       selRange.moveStart('character', start);
       selRange.moveEnd('character', end);
@@ -287,18 +310,18 @@ exit(0);
     return charStr == "." ? ":" : charStr;
   }
   function replaceDot(evt) {
-    var val = this.value;
+    let val = this.value;
     evt = evt || window.event;
 
     // Ensure we only handle printable keys, excluding enter and space
-    var charCode = typeof evt.which == "number" ? evt.which : evt.keyCode;
+    let charCode = typeof evt.which == "number" ? evt.which : evt.keyCode;
     if (charCode && charCode > 32) {
-      var keyChar = String.fromCharCode(charCode);
+      let keyChar = String.fromCharCode(charCode);
 
       // Transform typed character
-      var mappedChar = transformTypedChar(keyChar);
+      let mappedChar = transformTypedChar(keyChar);
 
-      var start, end;
+      let start, end;
       if (typeof this.selectionStart == "number" && typeof this.selectionEnd == "number") {
         // Non-IE browsers and IE 9
         start = this.selectionStart;
@@ -309,10 +332,10 @@ exit(0);
         this.selectionStart = this.selectionEnd = start + 1;
       } else if (document.selection && document.selection.createRange) {
         // For IE up to version 8
-        var selectionRange = document.selection.createRange();
-        var textInputRange = this.createTextRange();
-        var precedingRange = this.createTextRange();
-        var bookmark = selectionRange.getBookmark();
+        let selectionRange = document.selection.createRange();
+        let textInputRange = this.createTextRange();
+        let precedingRange = this.createTextRange();
+        let bookmark = selectionRange.getBookmark();
         textInputRange.moveToBookmark(bookmark);
         precedingRange.setEndPoint("EndToStart", textInputRange);
         start = precedingRange.text.length;
@@ -339,7 +362,7 @@ exit(0);
 
   function onSiteChange(val)
   {
-    var champautresite = document.getElementsByName("autresite")[0];
+    let champautresite = document.getElementsByName("autresite")[0];
     if (val == -1)
       champautresite.style.display = 'inline-block';
     else
@@ -351,23 +374,26 @@ exit(0);
     id = val;
     if (val > 0)
       loadVol(val);
+    document.getElementById('calcbut').style.display = (val > 0)?'initial':'none';
   }
 
   function calcheures()
   {
-    let temps = document.getElementsByName("duree")[0].value;
+    let temps = document.getElementsByName("duree")[0].innerText;
     document.getElementsByName("dureeheures")[0].value = temps.toHHMMSS();
   }
 
   function calcsecondes()
   {
     let temps = document.getElementsByName("dureeheures")[0].value;
-    document.getElementsByName("duree")[0].value = temps.toS();
+    let dureesecs = temps.toS();
+    document.getElementsByName("duree")[0].innerText = dureesecs;
+    document.getElementsByName("dureeHMS")[0].innerText = dureesecs.toString().toHMS();
   }
 
   function calcdate()
   {
-    var days = ['Dimanche', 'Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi'];
+    let days = ['Dimanche', 'Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi'];
     let dateParts = document.getElementsByName("date")[0].value.split("/");
     let dateVol = new Date(+dateParts[2], dateParts[1] - 1, +dateParts[0]);
     let jrDate = (dateVol.getDay() < 7)?days[dateVol.getDay()]:'?';
@@ -389,8 +415,8 @@ exit(0);
   {
     if (confirm("Êtes-vous sûr?"))
     {
-      var xhttp = new XMLHttpRequest();
-      message("loading...");
+      let xhttp = new XMLHttpRequest();
+      message("chargement...");
       xhttp.onreadystatechange = function() {
         if (this.readyState == 4 && this.status == 200) {
           if (this.responseText != "OK")
@@ -409,14 +435,67 @@ exit(0);
     }
     //window.location = "?del&id=" + document.getElementsByName("id")[0].value;
   }
+  function postFlightScore(id, score, onfinish) {
+    let xhttp = new XMLHttpRequest();
+    xhttp.responseType = 'text';
+    xhttp.onreadystatechange = function() {
+      if (this.readyState == 4 && this.status == 200) {
+        onfinish(this.responseText);
+      }
+    };
+    data = "flightscore="+escape(JSON.stringify(score));
+    xhttp.open("POST", "upload.php?id="+id, true);
+    xhttp.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');
+    xhttp.send(data);
+  }
+  function calcFlightScore() {
+    let xhttp = new XMLHttpRequest();
+    message("chargement...");
+    xhttp.onreadystatechange = function() {
+      if (this.readyState == 4 && this.status == 200) {
+        message("calcul...");
+        try {
+          IGCScore.score(this.responseText, (score) => {
+            message("");
+            if (score && typeof score.value == 'object') {
+              score = score.value;
+            }
+            if (score && typeof score.opt == 'object' && typeof score.opt.flight == 'object') delete score.opt.flight;
+            if (confirm ("Le score calculé est de " + score.score + " points pour "+score.scoreInfo.distance+"km, mettre à jour?")) {
+              postFlightScore(id, score, (msg) => {alert(msg == "OK"?"Fait!":"Il semble qu'il y'ai eu un problème : " + msg);});
+            }
+          });
+        } catch(e) {alert(e);}
+      }
+    };
+    xhttp.open("GET", "<?php echo strtok($_SERVER["REQUEST_URI"], '?');?>?igc&id="+id, true);
+    xhttp.send();
+  }
 
-  String.prototype.toHHMMSS = function () {
-    var sec_num = parseInt(this, 10); // don't forget the second param
+  String.prototype.toHMS = function () {
+    let sec_num = parseInt(this, 10);
     if (isNaN(sec_num))
       sec_num = 0;
-    var hours   = Math.floor(sec_num / 3600);
-    var minutes = Math.floor((sec_num - (hours * 3600)) / 60);
-    var seconds = sec_num - (hours * 3600) - (minutes * 60);
+    let hours   = Math.floor(sec_num / 3600);
+    let minutes = Math.floor((sec_num - (hours * 3600)) / 60);
+    let seconds = sec_num - (hours * 3600) - (minutes * 60);
+    let strRet = "";
+    if (hours != 0)
+      strRet += hours+"h";
+    if (minutes != 0)
+      strRet += minutes+"mn";
+    if (seconds != 0)
+      strRet += seconds+"s";
+    return strRet;
+  }
+
+  String.prototype.toHHMMSS = function () {
+    let sec_num = parseInt(this, 10);
+    if (isNaN(sec_num))
+      sec_num = 0;
+    let hours   = Math.floor(sec_num / 3600);
+    let minutes = Math.floor((sec_num - (hours * 3600)) / 60);
+    let seconds = sec_num - (hours * 3600) - (minutes * 60);
 
     if (hours   < 10) {hours   = "0"+hours;}
     if (minutes < 10) {minutes = "0"+minutes;}
@@ -425,18 +504,19 @@ exit(0);
   }
 
   String.prototype.toS = function () {
-    var secs = 0;
-    var temps = this.replace(/[^0-9:]/g, '').substr(0,8).split(':').filter(function (e){return (e||"").trim().length>0;});
+    let secs = 0;
+    //let temps = this.replace(/[^0-9:]/g, '').substr(0,8).split(':').filter(function (e){return (e||"").trim().length>0;});
+    let temps = this.replace(/[^0-9:]/g, '').split(':').filter(function (e){return (e||"").trim().length>0;});
     switch (temps.length)
     {
       case 3:
-        secs += parseInt(temps[2].substr(-2));
+        secs += parseInt(temps[2]);
       case 2:
-        secs += 60 * parseInt(temps[1].substr(-2));
-        secs += 3600 * parseInt(temps[0].substr(-2));
+        secs += 60 * parseInt(temps[1]);
+        secs += 3600 * parseInt(temps[0]);
         break;
       case 1:
-        secs += 60 * parseInt(temps[0].substr(-2));
+        secs += 60 * parseInt(temps[0]);
         break;
     }
     return isNaN(secs)?0:secs;
@@ -448,7 +528,7 @@ exit(0);
     };
   }
 </script>
-<h3 name="infobox"></h3>
+<h3 id="infobox" name="infobox"></h3>
 vol à editer/créer : <select name="vol" onchange="onVolChange(this.value);">
   <option value="-1" selected>Chargement...</option>
 <?php
@@ -471,13 +551,16 @@ if ($id && !isset($_GET["del"]))
 </select>
 </p>
   <input type="hidden" name="id" value="<?php echo $id;?>">
- <p>Date : <input type="text" name="date" value="<?php echo date('d/m/Y');?>" onKeyUp="calcdate();"/>&nbsp;&nbsp;<span name="jrsem"></span></p>
- <p>Heure : <input type="text" name="heure" value="<?php echo date('H:i:s');?>"/></p>
- <p>Durée (secondes) : <input type="text" name="duree" value="0" onKeyUp="calcheures();"/>&nbsp;soit&nbsp;<input type="text" name="dureeheures" onKeyUp="calcsecondes()"/></p>
+ <p>Date : <input type="text" name="date" value="<?php echo date('d/m/Y');?>" onKeyUp="calcdate();"/>&nbsp;&nbsp;<span name="jrsem"></span>
+ Heure : <input type="text" name="heure" value="<?php echo date('H:i:s');?>"/></p>
+ <p>Durée : <input type="text" name="dureeheures" onKeyUp="calcsecondes()"/>(<span name="dureeHMS"></span>)&nbsp;soit&nbsp;<span name="duree">0</span>&nbsp;secondes</p>
  <p>Voile : <input type="text" name="voile" /></p>
  <p>Commentaire : <textarea name="commentaire" class="fullwidth" rows="10"></textarea></p>
- <p><input type="checkbox" name="deligc" value="1"> supprimer le fichier IGC</p>
- <p><input type="button" value="OK" onclick="saveVol()"></p>
+ <p>
+   <input type="checkbox" name="deligc" value="1"> supprimer le fichier IGC
+   <a id="calcbut" href="#" onclick="calcFlightScore()" style="display:none;float:right">recalculer le score</a>
+  </p>
+ <p><input type="button" value="Enregistrer" onclick="saveVol()" style="float:right;"></p>
 </form>
 
 </body>
