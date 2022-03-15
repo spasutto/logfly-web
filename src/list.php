@@ -251,19 +251,41 @@ function affichComment(id) {
     btncomm.title="afficher le commentaire";
   }
 }
+function afficheImageTrace(elem,id, hide) {
+  hide = hide === true;
+  var rect = elem.getBoundingClientRect();
+  if (hide && imgTrace.style.display == 'block')
+  {
+    imgTrace.style.display='none';
+    console.log('hide');
+  }
+  else if (!hide && imgTrace.style.display == 'none')
+  {
+    imgTrace.getElementsByTagName('img')[0].src= "image.php?id="+id;
+    imgTrace.style.display='block';
+    console.log('show');
+    imgTrace.style.top = rect.top+'px';
+    imgTrace.style.left = (rect.left-340)+'px';
+  }
+}
 window.onload = function() {
-    const lignes = document.querySelectorAll('tr.lignevol,tr.lignecomm');
-    lignes.forEach(function(ligne) {
-        ligne.addEventListener('dblclick', function (e) {
-          e.preventDefault();
-          editvol(parseInt(e.target.closest("tr").querySelector("td").textContent));
-        });
+  window.imgTrace = document.getElementById('imgTrace');
+  const lignes = document.querySelectorAll('tr.lignevol,tr.lignecomm');
+  lignes.forEach(function(ligne) {
+    ligne.addEventListener('dblclick', function (e) {
+      e.preventDefault();
+      editvol(parseInt(e.target.closest("tr").querySelector("td").textContent));
     });
+  });
 };
 </script>
 </head>
 
 <body>
+<div id="imgTrace" style="display:none;position:fixed;width:320px">
+<img src="csv.svg" style="float:right;max-width:320px;max-height:320px;">
+</div>
+
 <?php
   $vols = $lgfr->getRecords(NULL, FALSE, $resperpage, $offset, $datemin, $datemax, $voile, $site);
   $titrevoile = "";
@@ -347,9 +369,12 @@ window.onload = function() {
     //echo "<TD>". $vol->sduree."</TD>";
     echo "<TD><a href=\"".url_with_parameter("site", $vol->site, "offset")."\" title=\"filtrer les vols pour ce site\">".$vol->site."</a>&nbsp;<a href=\"https://maps.google.com/?q=".$vol->latdeco.",".$vol->londeco."\" target=\"_Blank\" class=\"lien_gmaps\" title=\"google maps\">&#9936;</a></TD>";
     echo "<TD><a href=\"".url_with_parameter("voile", $vol->voile, "offset")."\" title=\"filtrer les vols pour cette voile\">".$vol->voile."</a></TD>";
-    echo "<TD>";
+    echo "<TD";
     if ($vol->igc) {
-      echo "<a href=\"#\" onClick=\"MyWindow=window.open('trace.php?id=".$vol->id."','MyWindow','width=900,height=380'); return false;\" title=\"voir la trace GPS de ce vol\"><img src=\"map.svg\" width=\"18px\"></a>";
+      echo " onMouseOver=\"afficheImageTrace(this, ".$vol->id.")\" onmouseleave=\"afficheImageTrace(this, ".$vol->id.", true)\"><a href=\"#\" onClick=\"MyWindow=window.open('trace.php?id=".$vol->id."','MyWindow','width=900,height=380'); return false;\" title=\"voir la trace GPS de ce vol\"><img src=\"map.svg\" width=\"18px\"></a>";
+    }
+    else {
+      echo ">";
     }
     echo "</TD>";
     if ($vol->commentaire || $vol->igc)
@@ -362,6 +387,5 @@ window.onload = function() {
   echo "<TABLE>";
   echo $lnpages;
 ?>
-
 </body>
 </html>

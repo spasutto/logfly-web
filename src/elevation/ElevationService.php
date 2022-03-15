@@ -3,8 +3,7 @@
 class ElevationService
 {
     const DEM_DEFAULT_PATH = './HGT';
-    const HGT_SIZE_SMALL = 1201;
-    const HGT_SIZE_LARGE = 3601;
+    const HGT_SIZE = 3601;
     private $dem_path, $ilat, $ilon, $fp, $curfname, $tilesize;
 
     public function __construct($dempath = self::DEM_DEFAULT_PATH)
@@ -26,15 +25,14 @@ class ElevationService
         return -2;
 
       //plutôt que intval http://stackoverflow.com/questions/6619377/how-to-get-whole-and-decimal-part-of-a-number
-      $offsetx = intval((($lon - $this->ilon)) * $this->tilesize);
-      $offsety = intval((1-($lat - $this->ilat)) * $this->tilesize);
-      if ($offsety >= $this->tilesize) $offsety = $this->tilesize - 2;
-      $offset = 2*($offsety*$this->tilesize + $offsetx);
+      $offsetx = intval((($lon - $this->ilon)) * self::HGT_SIZE);
+      $offsety = intval((($this->maxlat-$lat)) * self::HGT_SIZE);
+      $offset = 2*($offsety*self::HGT_SIZE + $offsetx);
       fseek($this->fp, intval($offset));
       $alti = fread($this->fp, 2);
       //fclose($this->fp);
       // DEBUG:
-      //echo $offsetx."/".$offsety."= @".$lat."/".$lon." @".intval($offset)."/".filesize($this->dem_path.$this->curfname)." in ".$this->curfname." : ".($alti != false?(ord($alti[0])<<8)+ord($alti[1])." m":"err")."\n";
+      //echo $offsetx."/".$offsety."(".$this->maxlat.")= @".$lat."/".$lon." @".intval($offset)."/".filesize($this->dem_path.$this->curfname)." in ".$this->curfname." : ".($alti != false?(ord($alti[0])<<8)+ord($alti[1])." m":"err")."\n";
       return (ord($alti[0])<<8)+ord($alti[1]);
     }
 
@@ -48,12 +46,7 @@ class ElevationService
       $this->curfname = $filename;
       @fclose($this->fp);
       $this->fp = fopen($this->dem_path.$filename, 'r');
-      $this->tilesize = sqrt(filesize($this->dem_path.$filename)/2);
-      if ($this->tilesize != self::HGT_SIZE_SMALL && $this->tilesize != self::HGT_SIZE_LARGE)
-      {
-        fclose($this->fp);
-        return -2;
-      }
+      $this->maxlat = $this->ilat + ((self::HGT_SIZE-1)/self::HGT_SIZE);
       return 0;
     }
 
