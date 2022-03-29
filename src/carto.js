@@ -2,13 +2,18 @@ var startIcon = null, finishIcon = null, turnpointIcon = null;
 
 function loadCarto(clegeoportail, disablescrollzoom, rootelem) {
   let useign = typeof clegeoportail == "string" && clegeoportail.trim().length > 0;
+  window.usermoved = false;
+  let firstzoom = true;
   let options = {};
   if (disablescrollzoom) {
     options.scrollWheelZoom = false;
     options.dragging = !isTouchDevice();
     options.touchzoom = true;
   }
-  var map = L.map('map', options).setView([45.182471 , 5.725589], 13);
+  var map = L.map('map', options).setView([45.182471, 5.725589], 13);
+  map.on('dragstart', function (e) { window.usermoved = true; });
+  map.on('zoomend', function (e) { if (firstzoom) { firstzoom = false; return; } window.usermoved = true; });
+
   var mapbox = L.tileLayer('https://api.mapbox.com/styles/v1/{id}/tiles/{z}/{x}/{y}?access_token=pk.eyJ1IjoibWFwYm94IiwiYSI6ImNpejY4NXVycTA2emYycXBndHRqcmZ3N3gifQ.rJcFIG214AriISLbB6B5aw', {
     maxZoom: 18,
     attribution: 'Map data &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, ' +
@@ -17,8 +22,9 @@ function loadCarto(clegeoportail, disablescrollzoom, rootelem) {
     tileSize: 512,
     zoomOffset: -1
   }).addTo(map);
+  var ignphoto, carteign;
   if (useign) {
-    var ignphoto = L.tileLayer(
+    ignphoto = L.tileLayer(
         "https://wxs.ign.fr/decouverte/geoportail/wmts?" +
         "&REQUEST=GetTile&SERVICE=WMTS&VERSION=1.0.0" +
         "&STYLE=normal" +
@@ -35,7 +41,7 @@ function loadCarto(clegeoportail, disablescrollzoom, rootelem) {
       tileSize : 256 // les tuiles du Géooportail font 256x256px
       }
     ).addTo(map);
-    var carteign = L.tileLayer(
+    carteign = L.tileLayer(
         "https://wxs.ign.fr/"+clegeoportail+"/geoportail/wmts?" +
         "&REQUEST=GetTile&SERVICE=WMTS&VERSION=1.0.0" +
         "&STYLE=normal" +
@@ -90,7 +96,7 @@ function loadCarto(clegeoportail, disablescrollzoom, rootelem) {
   });
   L.control.dligc = function(opts) {
     return new L.Control.DlIGC(opts);
-  }
+  };
   L.control.dligc({ position: 'topright' }).addTo(map);
 
   L.Control.TraceInfos = L.Control.extend({
@@ -111,7 +117,7 @@ function loadCarto(clegeoportail, disablescrollzoom, rootelem) {
   });
   L.control.traceinfos = function(opts) {
     return new L.Control.TraceInfos(opts);
-  }
+  };
   L.control.traceinfos({ position: 'topright' }).addTo(map);
 
   var LeafIcon = L.Icon.extend({

@@ -131,10 +131,9 @@ window.onload = function(){
       postFlightScore(id, score);
     });
   } catch(e) {finish();}
-  alert('vol no ' + id + ' <?php echo $newvol?"ajouté":"mis à jour";?>');
+  document.body.innerHTML = 'Vol no ' + id + ' <?php echo $newvol?"ajouté":"mis à jour";?><BR>Ne pas fermer cette fenêtre, scoring en cours...';
 };
 </script>
-ne pas fermer cette fenêtre, scoring en cours...
 <?php
     }
   }

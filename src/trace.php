@@ -47,8 +47,6 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <link rel="shortcut icon" type="image/x-icon" href="docs/images/favicon.ico" />
-
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" integrity="sha512-xodZBNTC5n17Xt2atTPuE1HxjVMSvLVW9ocqUKLsCC5CXdbqCmblAshOMAS6/keqq/sMZMZ19scR4PsZChSR7A==" crossorigin=""/>
     <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js" integrity="sha512-XQoYMqMTK8LvdxXYG3nZ448hOEQiglfqkJs1NOQV44cWnUrBc8PkAOcXy20w0vlaXaVUearIOBhiXZ5V3ynxwA==" crossorigin=""></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet-gpx/1.7.0/gpx.min.js"></script>
@@ -212,6 +210,9 @@
       vzelem.style.bottom = (100+(dh-hvz)) + 'px';
     vzelem.setGradient(rgbToHex(r,g,0), 'white');
     }
+    if (!map.getBounds().contains(marker.getLatLng())) {
+      map.setView(marker.getLatLng());
+    }
   });
   graph.addEventListener('onclick', function(e) {
     map.setView(new L.LatLng(e.detail.lat, e.detail.lon));
@@ -257,7 +258,8 @@
             endIconUrl: '',
             shadowUrl: ''
           }}).on('loaded', function(e) {
-            map.fitBounds(e.target.getBounds(), {padding: [35,35]});
+            window.gpx_bounds = e.target.getBounds();
+            map.fitBounds(gpx_bounds, {padding: [35,35]});
           }).addTo(map);
         let btndl = document.getElementById('btnDlTrace');
         btndl.onclick = function() {window.location = "<?php echo strtok($_SERVER['REQUEST_URI'], '?');?>?id="+id+"&igc&dl";};
@@ -341,6 +343,11 @@
     document.getElementById('frmsub').style.display = 'block';
     if (id>0)
       loadFlightScore();
+  };
+
+  window.onresize = function(e) {
+    if (map && gpx_bounds && !usermoved)
+      map.fitBounds(gpx_bounds, {padding: [35,35]});
   };
 </script>
 
