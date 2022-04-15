@@ -137,6 +137,8 @@ echo "labels: [".implode(",", $years)."],series:[[".implode(",", $count)."]]";
                 value = "" + value + options.suffix;
               label = new Chartist.Svg('text');
               label.append(title);
+              if (typeof options.fontsize === 'string')
+                 label.attr({'font-size': options.fontsize});
               label.text(value);
               label.addClass("ct-barlabel");
               label.attr({
@@ -168,8 +170,9 @@ echo "labels: [".implode(",", $years)."],series:[[".implode(",", $count)."]]";
   new Chartist.Bar('#chartYearCount', dataCount, Object.assign(options, {plugins: [plugnb]}));
   });
 </script>
-<h2>Sites (<?php echo count($vols->sites);?> sites, par temps de vol)</h2>
+<h2>Sites (<?php echo count($vols->sites);?> sites)</h2>
 
+<h3>par temps total :</h3>
 <div class="ct-chart full" id="chartSites"></div>
 <script type="text/javascript">
 
@@ -177,13 +180,6 @@ echo "labels: [".implode(",", $years)."],series:[[".implode(",", $count)."]]";
 //echo "<pre>";print_r($lgfr->getStats());echo "</pre>";
 $sites = array_map(function($s) {return "'".str_replace("'", "\\'", $s->nom)."'";}, $vols->sites);
 $count = array_map(function($s) {return $s->tempsvol/3600;}, $vols->sites);
-$tempsparvol = "<ul>".implode("\n",array_map(function($v) {return "<li>".$v->nom." =&gt; ".Utils::timeFromSeconds(60*round(($v->tempsvol/$v->nombrevols)/60), 2)."</li>";}, $vols->sites))."</ul>";
-//$countparvols = array_map(function($s) {return ($s->tempsvol/$s->nombrevols)/3600;}, $vols->sites);
-//$maxvols = max(array_map(function($o) {return $o->tempsvol;}, $vols->sites));
-//$sumvols = array_sum(array_map(function($o) {return $o->tempsvol;}, $vols->sites));
-//$percent = round($site->tempsvol*100/$maxvols);
-//$percentsum = round($site->tempsvol*100/$sumvols);
-//echo "\t<div style=\"width: ".$percent."%;\" title=\"".$site->nombrevols." vols pour ".$sduree = Utils::timeFromSeconds($site->tempsvol, TRUE)." soit ".$percentsum."% du total des vols\">".$site->nom."</div>";
 ?>
   window.addEventListener('load', function(){
     var data = {
@@ -192,15 +188,36 @@ echo "labels: [".implode(",", $sites)."],series:[[".implode(",", $count)."]]";
 ?>
     };
 
-    new Chartist.Bar('#chartSites', data);
+    window.plughourssmall = Chartist.plugins.ctBarLabels({suffix : ' h', 'fontsize': '8pt'});
+    new Chartist.Bar('#chartSites', data, Object.assign({}, {plugins: [plughourssmall]}));
   });
 </script>
-<h3>temps par vol moyen :</h3>
-<div style="max-height:250px;overflow-y:scroll;border:solid 1px lightgray;">
+<h3>par temps de vol moyen :</h3>
+<div class="ct-chart full" id="chartSitesTpsVolMoyen"></div>
 <?php
-echo $tempsparvol;
+function sort_sites_tempsvol($a, $b)
+{
+  $a = $a->tempsvol/$a->nombrevols;
+  $b = $b->tempsvol/$b->nombrevols;
+  if ($a == $b) {
+    return 0;
+  }
+  return ($a > $b) ? -1 : 1;
+}
+usort($vols->sites, "sort_sites_tempsvol");
+$sites = array_map(function($s) {return "'".str_replace("'", "\\'", $s->nom)."'";}, $vols->sites);
+$count = array_map(function($s) {return ($s->tempsvol/$s->nombrevols)/3600;}, $vols->sites);
 ?>
-</div>
+<script type="text/javascript">
+  window.addEventListener('load', function(){
+    var data = {
+<?php
+echo "labels: [".implode(",", $sites)."],series:[[".implode(",", $count)."]]";
+?>
+    };
+    new Chartist.Bar('#chartSitesTpsVolMoyen', data, Object.assign({}, {plugins: [plughourssmall]}));
+  });
+</script>
 
 <h2>Voiles (<?php echo count($vols->voiles);?> voiles, par temps de vol)</h2>
 

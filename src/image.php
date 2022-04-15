@@ -13,7 +13,7 @@ if (!$id || $id <= 0)
 
 $TRACKLOGS = "Tracklogs".DIRECTORY_SEPARATOR;
 $fname = $TRACKLOGS.$id.".png";
-if (false && file_exists($fname))
+if (file_exists($fname))
 {
   header('Location: '.$fname);
   /*header('Content-Type: image/png');

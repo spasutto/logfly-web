@@ -165,6 +165,11 @@
   var vzelem = document.getElementById('vz');
   var maxvz = 10;
 
+  function isTouchDevice() {
+    return (('ontouchstart' in window) ||
+      (navigator.maxTouchPoints > 0) ||
+      (navigator.msMaxTouchPoints > 0));
+  }
   function componentToHex(c) {
     var hex = Math.round(c).toString(16);
     return hex.length == 1 ? "0" + hex : hex;
@@ -173,11 +178,20 @@
     return "#" + componentToHex(r) + componentToHex(g) + componentToHex(b);
   }
 
+  var istouch = isTouchDevice();
   var disablescroll = <?php echo isset($_GET['disablescroll'])?'true':'false'; ?>;
   var map = loadCarto("<?php if (defined('CLEGEOPORTAIL')) echo CLEGEOPORTAIL;?>", disablescroll, document.getElementById('mapcont'));
   var marker = L.marker([0,0]).addTo(map);
   var graph = new GraphGPX(document.getElementById("graph"), '<?php if (defined('ELEVATIONSERVICE')) echo ELEVATIONSERVICE;?>', disablescroll);
   var flstats = [];
+  var gpx_bounds = null;
+  var touchtimer = null;
+  var launchtimer = function(e) {
+    touchtimer = window.setTimeout(function(){map.setView(marker.getLatLng());}, 1000);
+  };
+  graph.addEventListener('touchstart', launchtimer);
+  graph.addEventListener('touchend', function(e) {window.clearTimeout(touchtimer);});
+  graph.addEventListener('touchmove', function(e) {window.clearTimeout(touchtimer);launchtimer();});
   graph.addEventListener('ondataloaded', function(e) {
     window.fi = e.detail;
     let t = new Date(Date.UTC(1970, 0, 1));
@@ -210,9 +224,9 @@
       vzelem.style.bottom = (100+(dh-hvz)) + 'px';
     vzelem.setGradient(rgbToHex(r,g,0), 'white');
     }
-    if (!map.getBounds().contains(marker.getLatLng())) {
+    /*if (istouch && !map.getBounds().contains(marker.getLatLng())) {
       map.setView(marker.getLatLng());
-    }
+    }*/
   });
   graph.addEventListener('onclick', function(e) {
     map.setView(new L.LatLng(e.detail.lat, e.detail.lon));
