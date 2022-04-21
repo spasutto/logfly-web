@@ -49,9 +49,9 @@
 
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" integrity="sha512-xodZBNTC5n17Xt2atTPuE1HxjVMSvLVW9ocqUKLsCC5CXdbqCmblAshOMAS6/keqq/sMZMZ19scR4PsZChSR7A==" crossorigin=""/>
     <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js" integrity="sha512-XQoYMqMTK8LvdxXYG3nZ448hOEQiglfqkJs1NOQV44cWnUrBc8PkAOcXy20w0vlaXaVUearIOBhiXZ5V3ynxwA==" crossorigin=""></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet-gpx/1.7.0/gpx.min.js"></script>
     <script src='lib/Leaflet.fullscreen.js'></script>
     <link href='lib/leaflet.fullscreen.css' rel='stylesheet' />
+    <script src='lib/leaflet.hotline.min.js'></script>
     <script src="carto.js"></script>
     <script src="graph.js"></script>
     <script src="igc-xc-score.js"></script>
@@ -111,9 +111,6 @@
     font-weight: bolder;
     font-size : 15pt;
   }
-  #divTraceInfos {
-    border-radius: 5px;
-  }
 </style>
 
 </head>
@@ -150,9 +147,7 @@
     });
     reader.readAsText(fileList[0]);
   });
-</script>
 
-<script>
   var id = new URL(window.location.href).searchParams.get("id");
   if (id > 0) {
     document.getElementById('formcont').style.display = 'none';
@@ -194,6 +189,7 @@
   graph.addEventListener('touchmove', function(e) {window.clearTimeout(touchtimer);launchtimer();});
   graph.addEventListener('ondataloaded', function(e) {
     window.fi = e.detail;
+    redrawFlight();
     let t = new Date(Date.UTC(1970, 0, 1));
     t.setUTCSeconds((fi.pts[fi.pts.length-1].time.getTime() - fi.pts[0].time.getTime()) / 1000);
     flstats.unshift(
@@ -218,11 +214,11 @@
     if (e.detail.vz > 0) {
       vzelem.style.bottom = (100+dh) + 'px';
       vzelem.style.top = (dh-hvz) + 'px';
-    vzelem.setGradient('white',rgbToHex(r,g,0));
+      vzelem.setGradient('white',rgbToHex(r,g,0));
     } else {
       vzelem.style.top = dh + 'px';
       vzelem.style.bottom = (100+(dh-hvz)) + 'px';
-    vzelem.setGradient(rgbToHex(r,g,0), 'white');
+      vzelem.setGradient(rgbToHex(r,g,0), 'white');
     }
     /*if (istouch && !map.getBounds().contains(marker.getLatLng())) {
       map.setView(marker.getLatLng());
@@ -237,6 +233,28 @@
     map.setView(center, zoom);
   });
 
+  function redrawFlight() {
+    window.dispmode = typeof window.dispmode === 'string'?window.dispmode:'alt';
+    if (dispmode == 'alt') {
+      hotlineLayer.setLatLngs(window.fi.pts.map(pt => ([pt.lat, pt.lon, pt.alt])));
+      hotlineLayer.setStyle({'min':fi.minalt, 'max':fi.maxalt});
+    } else if (dispmode == 'vz') {
+      hotlineLayer.setLatLngs(window.fi.pts.map(pt => ([pt.lat, pt.lon, pt.vz])));
+      hotlineLayer.setStyle({'min':fi.minvz, 'max':fi.maxvz});
+    } else {
+      hotlineLayer.setLatLngs(window.fi.pts.map(pt => ([pt.lat, pt.lon, 0])));
+      hotlineLayer.setStyle({'min':0, 'max':0.1});
+    }
+    /*hotlineLayer.setStyle({
+      'palette': {
+        0.0: '#0000ff',
+        0.4: '#00ff00',
+        0.7: '#ffff00',
+        1.0: '#ff0000'
+      }
+    });*/
+    hotlineLayer.redraw();
+  }
   function updateTraceInfos() {
     let divTraceInfos = document.getElementById('divTraceInfos');
     let binfos = true;
@@ -266,18 +284,32 @@
         xml = new XMLSerializer().serializeToString(this.responseXML);
         graph.setGPX(this.responseXML);
         //maxvz = Math.max(Math.abs(fi.maxvz), Math.abs(fi.minvz))
-        new L.GPX(xml, {async: true,
-          marker_options: {
-            startIconUrl: '',
-            endIconUrl: '',
-            shadowUrl: ''
-          }}).on('loaded', function(e) {
-            window.gpx_bounds = e.target.getBounds();
-            map.fitBounds(gpx_bounds, {padding: [35,35]});
-          }).addTo(map);
+        //this.responseXML.getElementsByTagName('trkpt')[0].getAttribute('lat')
+        //this.responseXML.getElementsByTagName('trkpt')[0].getElementsByTagName('ele')[0].innerHTML
+        let points = [...this.responseXML.getElementsByTagName('trkpt')].map(pt => ([parseFloat(pt.getAttribute('lat')), parseFloat(pt.getAttribute('lon')),parseFloat(pt.getElementsByTagName('ele')[0].innerHTML)]));
+        window.hotlineLayer = L.hotline(points, {
+          min: Math.min.apply(null, points.map(pt => pt[2])),
+          max: Math.max.apply(null, points.map(pt => pt[2])),
+          'palette': {
+            0.0: '#0000ff',
+            0.4: '#00ff00',
+            0.7: '#ffff00',
+            1.0: '#ff0000'
+          },
+          weight: 2,
+          outlineColor: '#000000',
+          outlineWidth: 1
+        });
+        window.gpx_bounds = hotlineLayer.getBounds();
+        map.fitBounds(gpx_bounds, {padding: [35,35]});
+        hotlineLayer.bindPopup('Thanks for clicking.<br/>Play with me!').addTo(map);
+
         let btndl = document.getElementById('btnDlTrace');
         btndl.onclick = function() {window.location = "<?php echo strtok($_SERVER['REQUEST_URI'], '?');?>?id="+id+"&igc&dl";};
         btndl.style.display = 'block';
+        let divDispMode = document.getElementById('divDispMode');
+        divDispMode.appendChild(document.getElementById('dispmodes'))
+        divDispMode.style.display = 'block';
       }
     };
     let data = null;
@@ -365,6 +397,12 @@
   };
 </script>
 
+<div id="dispmodes">
+  <p class="gras centre souligne">Couleur trace :</p>
+  <input type="radio" id="dmAlt" name="dispmodes" value="alt" onclick="window.dispmode=this.value;redrawFlight();" checked><label for="dmAlt">altitude</label><BR>
+  <input type="radio" id="dmVz" name="dispmodes" value="vz" onclick="window.dispmode=this.value;redrawFlight();"><label for="dmVz">vz</label><BR>
+  <input type="radio" id="dmNone" name="dispmodes" value="none" onclick="window.dispmode=this.value;redrawFlight();"><label for="dmNone">aucune</label>
+</div>
 
 </body>
 </html>

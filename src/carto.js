@@ -94,10 +94,7 @@ function loadCarto(clegeoportail, disablescrollzoom, rootelem) {
     },
     onRemove: function(map) {}
   });
-  L.control.dligc = function(opts) {
-    return new L.Control.DlIGC(opts);
-  };
-  L.control.dligc({ position: 'topright' }).addTo(map);
+  new L.Control.DlIGC({ position: 'topright' }).addTo(map);
 
   L.Control.TraceInfos = L.Control.extend({
     onAdd: function(map) {
@@ -105,6 +102,7 @@ function loadCarto(clegeoportail, disablescrollzoom, rootelem) {
       divinf.id = "divTraceInfos";
 
       divinf.style.border = 'solid 1px #15af22';
+      divinf.style.borderRadius = '5px';
       divinf.style.backgroundColor = '#99ff00af';
       divinf.style.padding = '2px';
       divinf.style.display = 'none';
@@ -115,10 +113,25 @@ function loadCarto(clegeoportail, disablescrollzoom, rootelem) {
     },
     onRemove: function(map) {}
   });
-  L.control.traceinfos = function(opts) {
-    return new L.Control.TraceInfos(opts);
-  };
-  L.control.traceinfos({ position: 'topright' }).addTo(map);
+  new L.Control.TraceInfos({ position: 'topright' }).addTo(map);
+
+  L.Control.DispMode = L.Control.extend({
+    onAdd: function(map) {
+      var divinf = L.DomUtil.create('div');
+      divinf.id = "divDispMode";
+
+      divinf.style.border = 'solid 1px black';
+      divinf.style.borderRadius = '5px';
+      divinf.style.backgroundColor = '#ee71fdb3';
+      divinf.style.padding = '2px';
+      divinf.style.display = 'none';
+      divinf.title = 'Mode de dessin de la trace';
+
+      return divinf;
+    },
+    onRemove: function(map) {}
+  });
+  new L.Control.DispMode({ position: 'topright' }).addTo(map);
 
   var LeafIcon = L.Icon.extend({
     options: {
