@@ -190,8 +190,9 @@
   graph.addEventListener('ondataloaded', function(e) {
     window.fi = e.detail;
     redrawFlight();
+    let s = (fi.pts[fi.pts.length-1].time.getTime() - fi.pts[0].time.getTime()) / 1000;
     let t = new Date(Date.UTC(1970, 0, 1));
-    t.setUTCSeconds((fi.pts[fi.pts.length-1].time.getTime() - fi.pts[0].time.getTime()) / 1000);
+    t.setUTCSeconds(s);
     flstats.unshift(
       ['durée', `${t.toLocaleString('fr-FR', { timeZone: 'UTC' }).substr(-8, 5)}`],
       ['alt max', `${Math.round(fi.maxalt)}m`],
@@ -301,8 +302,8 @@
           outlineWidth: 1
         });
         window.gpx_bounds = hotlineLayer.getBounds();
-        map.fitBounds(gpx_bounds, {padding: [35,35]});
-        hotlineLayer.bindPopup('Thanks for clicking.<br/>Play with me!').addTo(map);
+        map.fitBounds(gpx_bounds/*, {padding: [35,35]}*/);
+        hotlineLayer.addTo(map);
 
         let btndl = document.getElementById('btnDlTrace');
         btndl.onclick = function() {window.location = "<?php echo strtok($_SERVER['REQUEST_URI'], '?');?>?id="+id+"&igc&dl";};
@@ -326,34 +327,58 @@
     xhttp.send(data);
   }
   function displayFlightScore(flightscore) {
+    let isTriangle = function() { return (flightscore.opt.scoring.code == 'tri' || flightscore.opt.scoring.code == 'fai'); };
     flstats.push(['','']);
     if (typeof flightscore.scoreInfo == 'object') {
       flstats.push(['distance', `${Math.round(flightscore.scoreInfo.distance*100)/100}km`]);
       flstats.push(['type', `${flightscore.opt.scoring.name}`]);
       if (Array.isArray(flightscore.scoreInfo.tp)) {
+        scorepointlist = [];
         let tps = flightscore.scoreInfo.tp;
-        let pointList = [];
-        for (let i=0; i<tps.length; i++) {
-          L.marker([tps[i].y, tps[i].x], {icon: turnpointIcon}).addTo(map).bindPopup("TP#"+(i+1));
-          pointList.push([tps[i].y, tps[i].x]);
+        if (flightscore.scoreInfo.cp) {
+          let tmpmarker = L.marker([flightscore.scoreInfo.cp.in.y, flightscore.scoreInfo.cp.in.x], {icon: startIcon});
+          tmpmarker.addTo(map).bindPopup("start");
+          if (!isTriangle()) {
+            scorepointlist.push(tmpmarker);
+          }
+        } else if (flightscore.scoreInfo.ep) {
+          let tmpmarker = L.marker([flightscore.scoreInfo.ep.start.y, flightscore.scoreInfo.ep.start.x], {icon: startIcon});
+          tmpmarker.addTo(map).bindPopup("start");
+          if (!isTriangle()) {
+            scorepointlist.push(tmpmarker);
+          }
         }
-        pointList.push([tps[0].y, tps[0].x]);
-        new L.Polyline(pointList, {
+        for (let i=0; i<tps.length; i++) {
+          let markertp = L.marker([tps[i].y, tps[i].x], {icon: turnpointIcon});
+          markertp.addTo(map).bindPopup("TP#"+(i+1));
+          scorepointlist.push(markertp);
+        }
+        if (isTriangle()) {
+          scorepointlist.push(scorepointlist[scorepointlist.length-tps.length]);
+        }
+        if (flightscore.scoreInfo.cp) {
+          let tmpmarker = L.marker([flightscore.scoreInfo.cp.out.y, flightscore.scoreInfo.cp.out.x], {icon: finishIcon});
+          tmpmarker.addTo(map).bindPopup("finish");
+          if (!isTriangle()) {
+            scorepointlist.push(tmpmarker);
+          }
+        } else if (flightscore.scoreInfo.ep) {
+          let tmpmarker = L.marker([flightscore.scoreInfo.ep.finish.y, flightscore.scoreInfo.ep.finish.x], {icon: finishIcon});
+          tmpmarker.addTo(map).bindPopup("finish");
+          if (!isTriangle()) {
+            scorepointlist.push(tmpmarker);
+          }
+        }
+        scorelinepath = new L.Polyline(scorepointlist.map(pt => pt.getLatLng()), {
           color: 'red',
           weight: 2,
           opacity: 0.5,
           smoothFactor: 1
         }).addTo(map);
       }
-      if (flightscore.scoreInfo.cp) {
-        L.marker([flightscore.scoreInfo.cp.in.y, flightscore.scoreInfo.cp.in.x], {icon: startIcon}).addTo(map).bindPopup("départ");
-        L.marker([flightscore.scoreInfo.cp.out.y, flightscore.scoreInfo.cp.out.x], {icon: finishIcon}).addTo(map).bindPopup("arrivée");
-      } else if (flightscore.scoreInfo.ep) {
-        L.marker([flightscore.scoreInfo.ep.start.y, flightscore.scoreInfo.ep.start.x], {icon: startIcon}).addTo(map).bindPopup("départ");
-        L.marker([flightscore.scoreInfo.ep.finish.y, flightscore.scoreInfo.ep.finish.x], {icon: finishIcon}).addTo(map).bindPopup("arrivée");
-      }
     }
     flstats.push(['score', `${Math.round(flightscore.score*10)/10}pts`]);
+    flstats.push(['vit.', `${Math.round(36000*flightscore.scoreInfo.distance/(flightscore.opt.landing-flightscore.opt.launch))/10}km/h`]);
     updateTraceInfos();
   }
   function calcFlightScore(igccontent) {
@@ -382,18 +407,18 @@
     xhttp.open("GET", "Tracklogs/"+id+".json", true);
     xhttp.send();
   }
-  if (id>0)
+  if (id>0) {
     loadGPX();
+    loadFlightScore();
+  }
 
   window.onload = function() {
     document.getElementById('frmsub').style.display = 'block';
-    if (id>0)
-      loadFlightScore();
   };
 
   window.onresize = function(e) {
     if (map && gpx_bounds && !usermoved)
-      map.fitBounds(gpx_bounds, {padding: [35,35]});
+      map.fitBounds(gpx_bounds/*, {padding: [35,35]}*/);
   };
 </script>
 

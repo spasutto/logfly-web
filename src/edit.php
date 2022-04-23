@@ -465,7 +465,7 @@ exit(0);
               message("enregistrement...");
               postFlightScore(id, score, (msg) => {message("");alert(msg == "OK"?"Fait!":"Il semble qu'il y'ai eu un problème : " + msg);});
             }
-          });
+          }, 'FFVL');
         } catch(e) {alert(e);}
       }
     };
