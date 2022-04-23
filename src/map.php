@@ -120,7 +120,7 @@
   function filtre(site) {
     if (isInLogflyPopup()) {
       window.opener.onchangevoilesite(site, false);
-      //window.close();
+      window.close();
     }
   }
   function isInLogflyPopup() {
