@@ -193,9 +193,9 @@
     };
     let nom = frmsite.value;
     let newnom = document.getElementsByName("nom")[0].value;
-    let lat = document.getElementsByName("lat")[0].value;
-    let lon = document.getElementsByName("lon")[0].value;
-    let alt = document.getElementsByName("alt")[0].value;
+    let lat = parseFloat(document.getElementsByName("lat")[0].value.replaceAll(',', '.'));
+    let lon = parseFloat(document.getElementsByName("lon")[0].value.replaceAll(',', '.'));
+    let alt = parseFloat(document.getElementsByName("alt")[0].value.replaceAll(',', '.'));
     xhttp.open("GET", "<?php echo $_SERVER['REQUEST_URI'];?>?action="+action+"&nom="+encodeURIComponent(nom)+"&newnom="+encodeURIComponent(newnom)+"&lat="+encodeURIComponent(lat)+"&lon="+encodeURIComponent(lon)+"&alt="+encodeURIComponent(alt), true);
     xhttp.send();
     return false;
