@@ -197,6 +197,28 @@ function onchangevoilesite(nom, voile) {
     rooturl += "?" + url;
   window.location = rooturl;
 }
+function parseSmileys(text) {
+  /*document.body.innerHTML = '';
+  Array.from(Array(0xde4f-0xde00+1)).forEach((x, i) => {
+    document.body.innerHTML += String.fromCharCode(0xd83d,i+0xde00)+" : 0x"+(i+0xde00).toString(16).padStart(4,0)+"<BR>";
+  });*/
+  let smileys = [
+    [':)', 0x0a],
+    [':)', 0x0a],
+    [';)', 0x09],
+    [';-)', 0x09],
+    [':p', 0x0b],
+    [':-p', 0x0b],
+    [':D', 0x04],
+    [':-D', 0x04],
+    ['XD', 0x06],
+    ['X-D', 0x06],
+    [':(', 0x15],
+    [':-(', 0x15],
+  ];
+  smileys.forEach(s => {text = text.replaceAll(s[0], String.fromCharCode(0xd83d,s[1]+0xde00));});
+  return text;
+}
 function loadComment(id) {
   let ligne = document.getElementById('comm'+id).parentElement;
   let zonecomm = document.getElementById('zonecomm'+id);
@@ -216,7 +238,7 @@ function loadComment(id) {
               btncomm.title="afficher le commentaire";
             }
           } else {
-            zonecomm.innerHTML = this.response;
+            zonecomm.innerHTML = parseSmileys(this.response);
             if (btncomm.previousElementSibling.innerHTML && this.response.trim().length <= 0) {
               zonecomm.innerHTML = '';
             }
@@ -240,7 +262,7 @@ function affichComment(id) {
       zonecomm.innerHTML = "<b>Chargement...</b>";
     }
     if (zonecarto.innerHTML == "" && btncomm.previousElementSibling.innerHTML) {
-      zonecarto.innerHTML += "<iframe src=\"trace.php?id="+id+"&disablescroll=1\" width=\"100%\" height=\"450px\"></iframe>";
+      zonecarto.innerHTML += "<iframe src=\"trace.php?id="+id+"&disablescroll=1\" width=\"100%\" height=\"555px\"></iframe>";
     }
     ligne.style.display = 'table-row';
     btncomm.style.textDecoration = "line-through";
