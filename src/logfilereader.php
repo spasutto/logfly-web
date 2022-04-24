@@ -27,9 +27,8 @@ class InfoSite
 }
 class LogFlyDB extends SQLite3
 {
-  function __construct()
+  function __construct($dbname = LOGFLYDB)
   {
-    $dbname = LOGFLYDB;
     if (!file_exists($dbname))
       throw new Exception($dbname." not found");
     $this->open($dbname);
@@ -38,9 +37,9 @@ class LogFlyDB extends SQLite3
 class LogflyReader
 {
   protected $db = FALSE;
-  function __construct()
+  function __construct($dbname = LOGFLYDB)
   {
-    $this->db = new LogFlyDB();
+    $this->db = new LogFlyDB($dbname);
     if(!$this->db)
         throw new Exception($this->db->lastErrorMsg());
   }
@@ -435,44 +434,41 @@ class LogflyReader
     return $vols;
   }
 
-  function echoUTF16($str)
+  function toUTF16($str)
   {
-    echo mb_convert_encoding($str, 'UTF-16LE', 'UTF-8');
+    return mb_convert_encoding($str, 'UTF-16LE', 'UTF-8');
   }
 
-  function downloadCSV($stats = FALSE)
+  function getCSV($stats = FALSE)
   {
     $vols = $this->getRecords(null, TRUE);
     $tempvol = 0;
     $CSVSEP = "\t";
-
-    //header('Content-Type: text');
-    header('Content-Type: application/octet-stream');header('Content-Disposition: attachment; filename="carnet'.($stats?"_stats":"").'.csv');
-    echo chr(255) . chr(254);
-    $this->echoUTF16("No".$CSVSEP."date".$CSVSEP."voile".$CSVSEP."site".$CSVSEP."duree (en secondes)".$CSVSEP."duree".$CSVSEP."temps de vol total (en secondes)".$CSVSEP."score".$CSVSEP."distance".$CSVSEP."type de parcours");
+    $CSV = "";
+    $CSV .= ("No".$CSVSEP."date".$CSVSEP."voile".$CSVSEP."site".$CSVSEP."duree (en secondes)".$CSVSEP."duree".$CSVSEP."temps de vol total (en secondes)".$CSVSEP."score".$CSVSEP."distance".$CSVSEP."type de parcours");
     if (!$stats)
-      $this->echoUTF16($CSVSEP."commentaire");
-    $this->echoUTF16("\n");
+      $CSV .= ($CSVSEP."commentaire");
+    $CSV .= ("\n");
     foreach ($vols->vols as $vol)
     {
       $tempvol += $vol->duree;
-      $this->echoUTF16($vol->id.$CSVSEP);
-      $this->echoUTF16($vol->date->format('d/m/Y H:i:s').$CSVSEP);
-      $this->echoUTF16($vol->voile.$CSVSEP);
-      $this->echoUTF16($vol->site.$CSVSEP);
-      $this->echoUTF16($vol->duree.$CSVSEP);
-      $this->echoUTF16(Utils::timeFromSeconds($vol->duree, TRUE).$CSVSEP);
-      $this->echoUTF16($tempvol.$CSVSEP);
+      $CSV .= ($vol->id.$CSVSEP);
+      $CSV .= ($vol->date->format('d/m/Y H:i:s').$CSVSEP);
+      $CSV .= ($vol->voile.$CSVSEP);
+      $CSV .= ($vol->site.$CSVSEP);
+      $CSV .= ($vol->duree.$CSVSEP);
+      $CSV .= (Utils::timeFromSeconds($vol->duree, TRUE).$CSVSEP);
+      $CSV .= ($tempvol.$CSVSEP);
       $fi = json_decode($this->getFlightsInfos($vol->id));
       if ($fi)
       {
-        $this->echoUTF16(str_replace(".", ",", strval($fi->{'scoreInfo'}->{'score'})).$CSVSEP);
-        $this->echoUTF16(str_replace(".", ",", strval($fi->{'scoreInfo'}->{'distance'})).$CSVSEP);
-        $this->echoUTF16($fi->{'opt'}->{'scoring'}->{'name'}.$CSVSEP);
+        $CSV .= (str_replace(".", ",", strval($fi->{'scoreInfo'}->{'score'})).$CSVSEP);
+        $CSV .= (str_replace(".", ",", strval($fi->{'scoreInfo'}->{'distance'})).$CSVSEP);
+        $CSV .= ($fi->{'opt'}->{'scoring'}->{'name'}.$CSVSEP);
       }
       else
       {
-        $this->echoUTF16($CSVSEP.$CSVSEP.$CSVSEP);
+        $CSV .= ($CSVSEP.$CSVSEP.$CSVSEP);
       }
       if (!$stats)
       {
@@ -483,10 +479,19 @@ class LogflyReader
           $textevol = str_replace("\"", "\"\"", $textevol);
           $textevol = "\"".$textevol."\"";
         }
-        $this->echoUTF16($textevol);
+        $CSV .= ($textevol);
       }
-      $this->echoUTF16("\n");
+      $CSV .= ("\n");
     }
+    return $CSV;
+  }
+
+  function downloadCSV($stats = FALSE)
+  {
+    //header('Content-Type: text');
+    header('Content-Type: application/octet-stream');header('Content-Disposition: attachment; filename="carnet'.($stats?"_stats":"").'.csv');
+    echo chr(255) . chr(254);
+    echo $this->toUTF16($this->getCSV($stats));
     flush();
   }
 

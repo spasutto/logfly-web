@@ -5,3 +5,5 @@ src/elevation/SRTM/*.tif
 src/elevation/HGT/*.hgt
 .htaccess
 .htpasswd
+src/lib/google-api-php-client
+src/gdrive

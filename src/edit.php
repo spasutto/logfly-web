@@ -266,10 +266,20 @@ exit(0);
         }
         else {
             alert(params.id>0?"updated !!!":"new record ok !!! ");
-            if (window.opener) {
-                window.opener.location.reload();
-                window.close();
-            }
+<?php
+if (file_exists("gdrive/upload.php"))
+{
+    echo "\t\t\t\tdocument.getElementById('btnSave').disabled = true;\n";
+    echo "\t\t\t\twindow.location='gdrive/upload.php';\n";
+}
+else
+{
+    echo "\t\t\tif (window.opener) {\n";
+    echo "\t\t\t\twindow.opener.location.reload();\n";
+    echo "\t\t\t\twindow.close();\n";
+    echo "\t\t\t}\n";
+}
+?>
         }
       }
     };
@@ -561,7 +571,7 @@ if ($id && !isset($_GET["del"]))
    <input type="checkbox" name="deligc" value="1"> supprimer le fichier IGC
    <a id="calcbut" href="#" onclick="calcFlightScore()" style="display:none;float:right">recalculer le score</a>
   </p>
- <p><input type="button" value="Enregistrer" onclick="saveVol()" style="float:right;"></p>
+ <p><input id="btnSave" type="button" value="Enregistrer" onclick="saveVol()" style="float:right;"></p>
 </form>
 
 </body>
