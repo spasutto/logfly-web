@@ -24,12 +24,81 @@ if (isset($_GET['dl'])) {
   <script src="//cdn.jsdelivr.net/chartist.js/latest/chartist.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.1/moment.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.1/locale/fr.min.js"></script>
+  <script src="lib/chartist-plugin-legend.js"></script>
 <style>
   .ct-chart {
     /*width:700px;
     height:200px;*/
   }
+  .ct-legend {
+           position: relative;
+           z-index: 10;
+           list-style: none;
+           text-align: center;
+       }
+       .ct-legend li {
+           position: relative;
+           padding-left: 23px;
+           margin-right: 10px;
+           margin-bottom: 3px;
+           cursor: pointer;
+           display: inline-block;
+       }
+       .ct-legend li:before {
+           width: 12px;
+           height: 12px;
+           position: absolute;
+           left: 0;
+           content: '';
+           border: 3px solid transparent;
+           border-radius: 2px;
+       }
+       .ct-legend li.inactive:before {
+           background: transparent;
+       }
+       .ct-legend.ct-legend-inside {
+           position: absolute;
+           top: 0;
+           right: 0;
+       }
+       .ct-legend.ct-legend-inside li{
+           display: block;
+           margin: 0;
+       }
+       .ct-legend .ct-series-0:before {
+           background-color: #d70206;
+           border-color: #d70206;
+       }
+       .ct-legend .ct-series-1:before {
+           background-color: #f05b4f;
+           border-color: #f05b4f;
+       }
+       .ct-legend .ct-series-2:before {
+           background-color: #f4c63d;
+           border-color: #f4c63d;
+       }
+       .ct-legend .ct-series-3:before {
+           background-color: #d17905;
+           border-color: #d17905;
+       }
+       .ct-legend .ct-series-4:before {
+           background-color: #453d3f;
+           border-color: #453d3f;
+       }
 
+       .ct-chart-line-multipleseries .ct-legend .ct-series-0:before {
+           background-color: #d70206;
+           border-color: #d70206;
+       }
+
+       .ct-chart-line-multipleseries .ct-legend .ct-series-1:before {
+           background-color: #f4c63d;
+           border-color: #f4c63d;
+       }
+
+       .ct-chart-line-multipleseries .ct-legend li.inactive:before {
+           background: transparent;
+       }
   .full {
     width : 100%;
   }
@@ -79,16 +148,18 @@ if (isset($_GET['dl'])) {
   echo "<h1>Statistiques de vol (".$nbrvols." vols, ".Utils::timeFromSeconds($vols->tempstotalvol, TRUE).") :<a href=\"?dl\"><img src=\"csv.svg\" width=\"32px\" title=\"télécharger un fichier csv\"></a></h1>";
   echo "moyenne : ".round($nbrvols/$monthsdiff)." vols par mois, ".Utils::timeFromSeconds($vols->tempstotalvol/$nbrvols, TRUE)." par vol<BR>";
 
-  //echo "<pre>";print_r($vols);echo "</pre>";
+  //echo "<pre>";print_r($vols);echo "</pre>";exit(0);
+  //echo "<pre>";print_r($lgfr->getStats());echo "</pre>";exit(0);
 ?>
 <h2>Temps de vol (h)</h2>
 <div class="ct-chart" id="chartYearTime"></div>
 <h2>Nombre de vol</h2>
 <div class="ct-chart" id="chartYearCount"></div>
+<h2>Temps de vol par année (h)</h2>
+<div class="ct-chart" id="chartYearTimeByYear"></div>
 <script type="text/javascript">
 
 <?php
-//echo "<pre>";print_r($lgfr->getStats());echo "</pre>";
 $stats = $lgfr->getStats();
 $years = array_map(function($y) {return "'".$y."'";}, array_keys($stats));
 $count = array_map(function($stat) {return $stat->NombreVols;}, array_values($stats));
@@ -103,12 +174,41 @@ echo "labels: [".implode(",", $years)."],series:[[".implode(",", $time)."]]";
   };
   var dataCount = {
 <?php
-echo "labels: [".implode(",", $years)."],series:[[".implode(",", $count)."]]";
+echo "labels: dataTime.labels,series:[[".implode(",", $count)."]]";
 ?>
   };
-  
+  var dataTimeByYear = {
+<?php
+echo "labels: ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'],";
+echo "series:[";
+for ($y=0; $y<count($years); $y++) {
+  $volsy = array_filter($vols->vols, function($vol) {
+    global $years, $y;
+    return intval($vol->date->format("Y")) == intval(str_replace("'","",$years[$y]));
+  });
+  if (count($volsy) <= 0)
+  {
+    echo "[0,0,0,0,0,0,0,0,0,0,0,0,],";
+    continue;
+  }
+  echo "[";
+  for ($m=0; $m<12; $m++) {
+    $volsm = array_filter($volsy, function($vol) {
+      global $m;
+      return intval($vol->date->format("m")) == $m;
+    });
+    echo array_sum(array_map(function($vol) {
+      return $vol->duree/3600;
+    }, $volsm)).",";
+  }
+  echo "],";
+}
+echo "],legends:dataTime.labels";
+?>
+  };
+
   function isNumeric(str) {
-      if (typeof str != "string") return false // we only process strings!  
+      if (typeof str != "string") return false // we only process strings!
       return !isNaN(str) && // use type coercion to parse the _entirety_ of the string (`parseFloat` alone does not do this)...
              !isNaN(parseFloat(str)) // ...and ensure strings of whitespace fail
     }
@@ -153,7 +253,8 @@ echo "labels: [".implode(",", $years)."],series:[[".implode(",", $count)."]]";
       }
     };
   };
-  var options = {/*
+  var options = {
+    /*
     high: 10,
     low: -10,
     axisX: {
@@ -162,12 +263,15 @@ echo "labels: [".implode(",", $years)."],series:[[".implode(",", $count)."]]";
     }
     }*/
   };
-  
+
   window.plughours = Chartist.plugins.ctBarLabels({suffix : ' h'});
   window.plugnb = Chartist.plugins.ctBarLabels();
 
   new Chartist.Bar('#chartYearTime', dataTime, Object.assign(options, {plugins: [plughours]}));
   new Chartist.Bar('#chartYearCount', dataCount, Object.assign(options, {plugins: [plugnb]}));
+  new Chartist.Line('#chartYearTimeByYear', dataTimeByYear, Object.assign(options, {plugins: [plughours, Chartist.plugins.legend({
+            legendNames: dataTimeByYear.legends,
+        })]}));
   });
 </script>
 <h2>Sites (<?php echo count($vols->sites);?> sites)</h2>
