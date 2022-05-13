@@ -157,6 +157,8 @@ if (isset($_GET['dl'])) {
 <div class="ct-chart" id="chartYearCount"></div>
 <h2>Temps de vol par année (h)</h2>
 <div class="ct-chart" id="chartYearTimeByYear"></div>
+<h2>Nombre de vol par année</h2>
+<div class="ct-chart" id="chartYearCountByYear"></div>
 <script type="text/javascript">
 
 <?php
@@ -199,6 +201,35 @@ for ($y=0; $y<count($years); $y++) {
     });
     echo array_sum(array_map(function($vol) {
       return $vol->duree/3600;
+    }, $volsm)).",";
+  }
+  echo "],";
+}
+echo "],legends:dataTime.labels";
+?>
+  };
+  var dataCountByYear = {
+<?php
+echo "labels: ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'],";
+echo "series:[";
+for ($y=0; $y<count($years); $y++) {
+  $volsy = array_filter($vols->vols, function($vol) {
+    global $years, $y;
+    return intval($vol->date->format("Y")) == intval(str_replace("'","",$years[$y]));
+  });
+  if (count($volsy) <= 0)
+  {
+    echo "[0,0,0,0,0,0,0,0,0,0,0,0,],";
+    continue;
+  }
+  echo "[";
+  for ($m=0; $m<12; $m++) {
+    $volsm = array_filter($volsy, function($vol) {
+      global $m;
+      return intval($vol->date->format("m")) == $m;
+    });
+    echo array_sum(array_map(function($vol) {
+      return 1;
     }, $volsm)).",";
   }
   echo "],";
@@ -271,6 +302,9 @@ echo "],legends:dataTime.labels";
   new Chartist.Bar('#chartYearCount', dataCount, Object.assign(options, {plugins: [plugnb]}));
   new Chartist.Line('#chartYearTimeByYear', dataTimeByYear, Object.assign(options, {plugins: [plughours, Chartist.plugins.legend({
             legendNames: dataTimeByYear.legends,
+        })]}));
+  new Chartist.Line('#chartYearCountByYear', dataCountByYear, Object.assign(options, {plugins: [plugnb, Chartist.plugins.legend({
+            legendNames: dataCountByYear.legends,
         })]}));
   });
 </script>
