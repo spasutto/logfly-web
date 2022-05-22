@@ -235,7 +235,7 @@
   });
 
   function redrawFlight() {
-    window.dispmode = typeof window.dispmode === 'string'?window.dispmode:'alt';
+    window.dispmode = typeof window.dispmode === 'string'?window.dispmode:'vz';
     if (dispmode == 'alt') {
       hotlineLayer.setLatLngs(window.fi.pts.map(pt => ([pt.lat, pt.lon, pt.alt])));
       hotlineLayer.setStyle({'min':fi.minalt, 'max':fi.maxalt});
@@ -424,8 +424,8 @@
 
 <div id="dispmodes">
   <p class="gras centre souligne">Couleur trace :</p>
-  <input type="radio" id="dmAlt" name="dispmodes" value="alt" onclick="window.dispmode=this.value;redrawFlight();" checked><label for="dmAlt">altitude</label><BR>
-  <input type="radio" id="dmVz" name="dispmodes" value="vz" onclick="window.dispmode=this.value;redrawFlight();"><label for="dmVz">vz</label><BR>
+  <input type="radio" id="dmVz" name="dispmodes" value="vz" onclick="window.dispmode=this.value;redrawFlight();" checked><label for="dmVz">vz</label><BR>
+  <input type="radio" id="dmAlt" name="dispmodes" value="alt" onclick="window.dispmode=this.value;redrawFlight();"><label for="dmAlt">altitude</label><BR>
   <input type="radio" id="dmNone" name="dispmodes" value="none" onclick="window.dispmode=this.value;redrawFlight();"><label for="dmNone">aucune</label>
 </div>
 
