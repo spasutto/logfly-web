@@ -1,4 +1,11 @@
 <?php
+exit(0);
+require('tracklogmanager.php');
+$lgfr = new LogflyReader();
+$lgfr->updateVolId(413, 2000);
+$lgfr->updateVolId(414, 413);
+$lgfr->updateVolId(2000, 414);
+exit(0);
 require('tracklogmanager.php');
 header("Content-Type: text/plain");
 $lat = 44.567933333333;

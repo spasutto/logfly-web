@@ -155,8 +155,10 @@ if (isset($_GET['dl'])) {
 <div class="ct-chart" id="chartYearTime"></div>
 <h2>Nombre de vol</h2>
 <div class="ct-chart" id="chartYearCount"></div>
-<h2>Temps de vol par année (h)</h2>
+<h2>Temps de vol global par année (h)</h2>
 <div class="ct-chart" id="chartYearTimeByYear"></div>
+<h2>Temps de vol par année (h)</h2>
+<div class="ct-chart" id="chartYearTimeByYearMonth"></div>
 <h2>Nombre de vol par année</h2>
 <div class="ct-chart" id="chartYearCountByYear"></div>
 <script type="text/javascript">
@@ -180,6 +182,37 @@ echo "labels: dataTime.labels,series:[[".implode(",", $count)."]]";
 ?>
   };
   var dataTimeByYear = {
+<?php
+echo "labels: ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'],";
+echo "series:[";
+for ($y=0; $y<count($years); $y++) {
+  $curhours = 0;
+  $volsy = array_filter($vols->vols, function($vol) {
+    global $years, $y;
+    return intval($vol->date->format("Y")) == intval(str_replace("'","",$years[$y]));
+  });
+  if (count($volsy) <= 0)
+  {
+    echo "[0,0,0,0,0,0,0,0,0,0,0,0,],";
+    continue;
+  }
+  echo "[";
+  for ($m=0; $m<12; $m++) {
+    $volsm = array_filter($volsy, function($vol) {
+      global $m;
+      return intval($vol->date->format("m")) == $m;
+    });
+    $curhours+=array_sum(array_map(function($vol) {
+      return $vol->duree/3600;
+    }, $volsm));
+    echo $curhours.",";
+  }
+  echo "],";
+}
+echo "],legends:dataTime.labels";
+?>
+  };
+  var dataTimeByYearMonth = {
 <?php
 echo "labels: ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'],";
 echo "series:[";
@@ -302,6 +335,9 @@ echo "],legends:dataTime.labels";
   new Chartist.Bar('#chartYearCount', dataCount, Object.assign(options, {plugins: [plugnb]}));
   new Chartist.Line('#chartYearTimeByYear', dataTimeByYear, Object.assign(options, {plugins: [plughours, Chartist.plugins.legend({
             legendNames: dataTimeByYear.legends,
+        })]}));
+  new Chartist.Line('#chartYearTimeByYearMonth', dataTimeByYearMonth, Object.assign(options, {plugins: [plughours, Chartist.plugins.legend({
+            legendNames: dataTimeByYearMonth.legends,
         })]}));
   new Chartist.Line('#chartYearCountByYear', dataCountByYear, Object.assign(options, {plugins: [plugnb, Chartist.plugins.legend({
             legendNames: dataCountByYear.legends,

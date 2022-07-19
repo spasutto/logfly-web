@@ -41,15 +41,21 @@
       $newnom = htmlspecialchars(urldecode($_REQUEST['newnom']));
       if ($_REQUEST['action'] == 'delete')
       {
-        $ret = $lgfr->deleteSite($site);
+        $ret = $lgfr->deleteSite($newnom);
         if ($ret)
           echo "OK";
+      }
+      else if ($lgfr->getInfoSite($newnom) != FALSE)
+      {
+        $ret = $lgfr->editSite($newnom, $newnom, $_REQUEST['lat'], $_REQUEST['lon'], $_REQUEST['alt']);
+        if ($ret)
+          echo "Le site existait déjà et a été mis à jour";
       }
       else
       {
         if ($_REQUEST['action'] == 'create')
-          $ret = $lgfr->createSite($site);
-        $ret = $lgfr->editSite($site, $newnom, $_REQUEST['lat'], $_REQUEST['lon'], $_REQUEST['alt']);
+          $ret = $lgfr->createSite($newnom);
+        $ret = $lgfr->editSite($newnom, $newnom, $_REQUEST['lat'], $_REQUEST['lon'], $_REQUEST['alt']);
         if ($ret)
           echo "OK";
       }
@@ -181,11 +187,18 @@
     message("loading...");
     xhttp.onreadystatechange = function() {
       if (this.readyState == 4 && this.status == 200) {
-        if (this.responseText != "OK")
+        if (!this.responseText.startsWith("OK"))
           alert(this.responseText);
         else {
           getSiteList(newnom);
-          alert((action=='update'?'MAJ':'Suppression') + ' OK !');
+          let msg = 'création';
+          switch (action)
+          {
+              case 'update': msg = 'MAJ';break;
+              case 'delete': msg = 'Suppression';break;
+              case 'create':default: msg = 'Création';break;
+          }
+          alert(msg + ' OK !');
           window.opener.location.reload();
         }
         message("");
@@ -196,6 +209,9 @@
     let lat = parseFloat(document.getElementsByName("lat")[0].value.replaceAll(',', '.'));
     let lon = parseFloat(document.getElementsByName("lon")[0].value.replaceAll(',', '.'));
     let alt = parseFloat(document.getElementsByName("alt")[0].value.replaceAll(',', '.'));
+    lat = isNaN(lat) ? "" : lat;
+    lon = isNaN(lon) ? "" : lon;
+    alt = isNaN(alt) ? "" : alt;
     xhttp.open("GET", "<?php echo $_SERVER['REQUEST_URI'];?>?action="+action+"&nom="+encodeURIComponent(nom)+"&newnom="+encodeURIComponent(newnom)+"&lat="+encodeURIComponent(lat)+"&lon="+encodeURIComponent(lon)+"&alt="+encodeURIComponent(alt), true);
     xhttp.send();
     return false;

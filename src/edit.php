@@ -249,6 +249,9 @@ exit(0);
     params.voile = document.getElementsByName("voile")[0].value;
     params.commentaire = document.getElementsByName("commentaire")[0].value;
     params.site = document.getElementsByName("site")[0].value;
+    if (params.site == -1) {
+      params.site = document.getElementsByName("autresite")[0].value;
+    }
     if (document.getElementsByName("deligc")[0].checked)
       params.deligc = 1;
     // Turn the data object into an array of URL-encoded key/value pairs.
@@ -540,7 +543,7 @@ else
   }
 </script>
 <h3 id="infobox" name="infobox"></h3>
-vol à editer/créer : <select name="vol" onchange="onVolChange(this.value);">
+vol à editer/créer :<BR><select name="vol" onchange="onVolChange(this.value);">
   <option value="-1" selected>Chargement...</option>
 <?php
   //foreach ($lgfr->getRecords()->vols as $vol)

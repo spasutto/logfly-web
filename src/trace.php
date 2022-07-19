@@ -299,7 +299,7 @@
           },
           weight: 2,
           outlineColor: '#000000',
-          outlineWidth: 1
+          outlineWidth: 0.5
         });
         window.gpx_bounds = hotlineLayer.getBounds();
         map.fitBounds(gpx_bounds/*, {padding: [35,35]}*/);

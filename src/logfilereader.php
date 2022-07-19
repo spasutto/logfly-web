@@ -57,13 +57,22 @@ class LogflyReader
       return intval($row['ID']);
   }
 
+  function updateVolId($id, $newid)
+  {
+    $sql = "UPDATE Vol SET V_ID=".$newid." WHERE V_ID=".$id.";";
+    //echo $sql."<BR>\n";
+    $ret = $this->db->query($sql);
+  }
+
   function deleteVol($id)
   {
     $sql = "DELETE FROM Vol WHERE V_ID=".$id.";";
     $ret = $this->db->query($sql);
-    $igc_file = dirname(__FILE__) . DIRECTORY_SEPARATOR . FOLDER_TL . DIRECTORY_SEPARATOR . $id  .".igc";
-    if (file_exists($igc_file.".bak")) @unlink($igc_file.".bak");
-    if (file_exists($igc_file)) @rename($igc_file, $igc_file.".bak");
+    $filename = dirname(__FILE__) . DIRECTORY_SEPARATOR . FOLDER_TL . DIRECTORY_SEPARATOR . $id;
+    if (file_exists($filename.".igc.bak")) @unlink($filename.".igc.bak");
+    if (file_exists($filename.".igc")) @rename($filename.".igc", $filename.".igc.bak");
+    @unlink($filename.".json");
+    @unlink($filename.".png");
   }
 
   function existeVol($id)
@@ -182,7 +191,7 @@ class LogflyReader
   function deleteSite($nom)
   {
     $sql = "DELETE FROM SITE WHERE S_Nom='".str_replace("'", "''", $nom)."';";
-    echo $sql."<BR>\n";
+    //echo $sql."<BR>\n";
     $ret = $this->db->query($sql);
 
     return $ret != FALSE;
@@ -242,7 +251,8 @@ class LogflyReader
       $distmp = 0;
       for ($i=0; $i<count($sites); $i++) {
         $sitetmp = $this->getInfoSite($sites[$i]);
-        $distmp = distance($sitetmp->latitude, $sitetmp->longitude, $lat, $lon);
+        if (is_float($sitetmp->latitude) && is_float($sitetmp->longitude))
+          $distmp = distance($sitetmp->latitude, $sitetmp->longitude, $lat, $lon);
         if ($distmp<$dist) {
           $dist = $distmp;
           $site = new \StdClass();
