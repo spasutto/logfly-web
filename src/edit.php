@@ -59,6 +59,17 @@ if ($id > 0)
   }
 }
 
+$lat = false;
+if (isset($_GET['lat']) && preg_match('/^\d+\.?\d*$/', $_GET['lat']))
+  $lat = floatval($_GET['lat']);
+else if (isset($_POST['lat']) && preg_match('/^\d+\.?\d*$/', $_POST['lat']))
+  $lat = floatval($_POST['lat']);
+$lon = false;
+if (isset($_GET['lon']) && preg_match('/^\d+\.?\d*$/', $_GET['lon']))
+  $lon = floatval($_GET['lon']);
+else if (isset($_POST['lon']) && preg_match('/^\d+\.?\d*$/', $_POST['lon']))
+  $lon = floatval($_POST['lon']);
+
 /*if (isset($_REQUEST["uvol"])) {
     print_r($_POST);
     exit(0);
@@ -77,9 +88,9 @@ else
   return;
 }
 if (!$id)
-  $ret = @(new LogflyReader())->addVol($site, $_POST['date'], $_POST['heure'], $_POST['duree'], $_POST['voile'], htmlspecialchars($_POST['commentaire']));
+  $ret = @(new LogflyReader())->addVol($site, $_POST['date'], $_POST['heure'], $_POST['duree'], $_POST['voile'], htmlspecialchars($_POST['commentaire']), $lat, $lon);
 else
-  $ret = @(new LogflyReader())->updateVol($id, $site, $_POST['date'], $_POST['heure'], $_POST['duree'], $_POST['voile'], htmlspecialchars($_POST['commentaire']));
+  $ret = @(new LogflyReader())->updateVol($id, $site, $_POST['date'], $_POST['heure'], $_POST['duree'], $_POST['voile'], htmlspecialchars($_POST['commentaire']), $lat, $lon);
 echo $ret?"OK":"KO";
 exit(0);
 }
@@ -230,7 +241,14 @@ exit(0);
         document.getElementsByName("voile")[0].value = this.response.voile;
         document.getElementsByName("commentaire")[0].value = this.response.commentaire;
         cursite = this.response.site;
-        document.getElementsByName("site")[0].value = this.response.site;
+        if (this.response.site.trim().length > 0)
+            document.getElementsByName("site")[0].value = this.response.site;
+        else
+            document.getElementsByName("site")[0].selectedIndex  = 0;
+        if (this.response.latdeco && this.response.londeco) {
+            document.getElementsByName("lat")[0].value = this.response.latdeco;
+            document.getElementsByName("lon")[0].value = this.response.londeco;
+        }
         onSiteChange(document.getElementsByName("site")[0].value);
         document.getElementsByName("vol")[0].value = id;
       }
@@ -241,6 +259,8 @@ exit(0);
 
   function saveVol()
   {
+    if (!onsubmitVol())
+      return false;
     let params = new Object();
     params.id = document.getElementsByName("vol")[0].value;
     params.date = document.getElementsByName("date")[0].value;
@@ -249,7 +269,9 @@ exit(0);
     params.voile = document.getElementsByName("voile")[0].value;
     params.commentaire = document.getElementsByName("commentaire")[0].value;
     params.site = document.getElementsByName("site")[0].value;
-    if (params.site == -1) {
+    params.lat = document.getElementsByName("lat")[0].value;
+    params.lon = document.getElementsByName("lon")[0].value;
+    if (params.site == -1 || params.site.toString().trim().length <= 0) {
       params.site = document.getElementsByName("autresite")[0].value;
     }
     if (document.getElementsByName("deligc")[0].checked)
@@ -422,6 +444,7 @@ else
       alert('Renseigner un site !');
       return false;
     }
+    return true;
   }
 
   function delVol()
@@ -565,6 +588,8 @@ if ($id && !isset($_GET["del"]))
 </select>
 </p>
   <input type="hidden" name="id" value="<?php echo $id;?>">
+  <input type="hidden" name="lat" value="<?php echo $lat;?>">
+  <input type="hidden" name="lon" value="<?php echo $lon;?>">
  <p>Date : <input type="text" name="date" value="<?php echo date('d/m/Y');?>" onKeyUp="calcdate();"/>&nbsp;&nbsp;<span name="jrsem"></span>
  Heure : <input type="text" name="heure" value="<?php echo date('H:i:s');?>"/></p>
  <p>Durée : <input type="text" name="dureeheures" onKeyUp="calcsecondes()"/>(<span name="dureeHMS"></span>)&nbsp;soit&nbsp;<span name="duree">0</span>&nbsp;secondes</p>

@@ -148,10 +148,14 @@ a:hover {
 
 <script>
 var showComment = true;
-function editvol(id) {
+function editvol(id, lat, lon) {
   let url = 'edit.php';
   if (id > 0)
     url += '?id='+parseInt(id);
+  if (typeof(lat) !== 'undefined' && !isNaN(parseFloat(lat)))
+    url += '&lat='+parseFloat(lat);
+  if (typeof(lon) !== 'undefined' && !isNaN(parseFloat(lon)))
+    url += '&lon='+parseFloat(lon);
   var MyWindow=window.open(url,'EditVol','width=600,height=480');
 }
 function parse_query_string(query) {
@@ -279,13 +283,11 @@ function afficheImageTrace(elem,id, hide) {
   if (hide && imgTrace.style.display == 'block')
   {
     imgTrace.style.display='none';
-    console.log('hide');
   }
   else if (!hide && imgTrace.style.display == 'none')
   {
     imgTrace.getElementsByTagName('img')[0].src= "image.php?id="+id;
     imgTrace.style.display='block';
-    console.log('show');
     imgTrace.style.top = rect.top+'px';
     imgTrace.style.left = (rect.left-340)+'px';
   }

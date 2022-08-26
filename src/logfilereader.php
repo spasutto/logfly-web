@@ -82,7 +82,7 @@ class LogflyReader
     return $ret->fetchArray(SQLITE3_ASSOC);
   }
 
-  function updateVol($id, $nomsite, $date, $heure, $duree, $voile, $commentaire)
+  function updateVol($id, $nomsite, $date, $heure, $duree, $voile, $commentaire, $lat = 0.0, $lon = 0.0)
   {
     if (!$this->existeVol($id))
       return $this->addVol($nomsite, $date, $heure, $duree, $voile, $commentaire, $id);
@@ -94,7 +94,7 @@ class LogflyReader
     $site = $this->getInfoSite($nomsite);
     //echo "<pre>".print_r($site)."</pre>";
     if (!$site)
-      $site = $this->createSite($nomsite);
+      $site = $this->createSite($nomsite, $lat, $lon);
     //echo "<pre>".print_r($site)."</pre>";
     $sduree = Utils::timeFromSeconds($duree, TRUE);
     //echo print_r($site);
@@ -109,7 +109,7 @@ class LogflyReader
     return TRUE;
   }
 
-  function addVol($nomsite, $date, $heure, $duree, $voile, $commentaire, $id=FALSE)
+  function addVol($nomsite, $date, $heure, $duree, $voile, $commentaire, $id=FALSE, $lat = 0.0, $lon = 0.0)
   {
     $heureformat = "H:i:s";
     if (strlen($heure) < 8)
@@ -124,7 +124,7 @@ class LogflyReader
       $nomsite = strtoupper($nomsite);
       $site = $this->getInfoSite($nomsite);
       if (!$site)
-        $site = $this->createSite($nomsite);
+        $site = $this->createSite($nomsite, $lat, $lon);
       $sitealt = $site->altitude;
       $sitelon = $site->longitude;
       $sitelat = $site->latitude;
@@ -156,9 +156,11 @@ class LogflyReader
     return $sites;
   }
 
-  function createSite($nom)
+  function createSite($nom, $lat = 0.0, $lon = 0.0)
   {
-    $sql = "INSERT INTO SITE (S_Nom) VALUES ('".str_replace("'", "''", strtoupper($nom))."') ";
+    if (!is_float($lat)) $lat = 0.0;
+    if (!is_float($lon)) $lon = 0.0;
+    $sql = "INSERT INTO SITE (S_Nom,S_Latitude,S_Longitude) VALUES ('".str_replace("'", "''", strtoupper($nom))."', '".$lat."', '".$lon."') ";
     //echo $sql."<BR>\n";
     $ret = $this->db->query($sql);
 

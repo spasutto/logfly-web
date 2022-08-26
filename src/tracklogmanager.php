@@ -6,7 +6,7 @@ class TrackLogManager
 {
   const FOLDER_TL = 'Tracklogs';
 
-  public static function getSite($lat, $lon) {
+  public static function getSiteFFVL($lat, $lon) {
     $sites = @json_decode(@file_get_contents('https://data.ffvl.fr/json/sites.json'));
     $site = "";
     $dist = 1000000000;
@@ -27,7 +27,7 @@ class TrackLogManager
     return ["nom"=> $site->nom, "site"=> $site, "dist"=>$dist];
   }
 
-  public function uploadIGC($tmpfname, $ext, $id = null, &$destname) {
+  public function uploadIGC($tmpfname, $ext, $id = null, &$destname, &$fpt) {
     $tfreader = TrackfileLoader::load($tmpfname, $ext);
     if (!$tfreader || !($fpt = $tfreader->getFirstRecord())) {
       echo "bad IGC file!!!";
@@ -51,7 +51,7 @@ class TrackLogManager
           $duree = $tfreader->duration;
           $osite = $lgfr->getSite($fpt->latitude, $fpt->longitude);
           if (!$osite)
-            $osite = TrackLogManager::getSite($fpt->latitude, $fpt->longitude);
+            $osite = TrackLogManager::getSiteFFVL($fpt->latitude, $fpt->longitude);
           $dist = 0;
           $sitenom = NULL;
           $site = NULL;

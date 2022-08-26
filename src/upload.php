@@ -56,7 +56,7 @@ if (!isset($_FILES['userfile']['tmp_name'])) {
 </script>
 <!-- Le type d'encodage des données, enctype, DOIT être spécifié comme ce qui suit -->
 <form enctype="multipart/form-data" action="<?php echo $url;?>" method="post">
-    vol à editer/créer :<select name="id">
+    vol à editer/créer :<BR><select name="id">
   <option value="-1">Nouveau...</option>
 </select><BR>
   <!-- MAX_FILE_SIZE doit précéder le champ input de type file -->
@@ -89,7 +89,8 @@ if (!isset($_FILES['userfile']['tmp_name'])) {
     $mgr = new TrackLogManager();
     $ext = $_FILES['userfile']['name'];
     $ext = substr(trim(strtolower($ext)), -3);
-    $id = $mgr->uploadIGC($_FILES['userfile']['tmp_name'], $ext, $id, $igcfname);
+    $fpt = false;
+    $id = $mgr->uploadIGC($_FILES['userfile']['tmp_name'], $ext, $id, $igcfname, $fpt);
     if ($id) {
 ?>
 <script>
@@ -99,11 +100,11 @@ function finish() {
     // TODO ouvrir popup d'edit
     setTimeout(function(){
       if (typeof window.opener.editvol == 'function') {
-        window.opener.editvol(id);
+        window.opener.editvol(id, <?php echo $fpt->latitude?>, <?php echo $fpt->longitude?>);
       }
     }, 500);
   } else {
-    window.location = 'edit.php?id=' + id;
+    window.location = 'edit.php?id=' + id + '&lat=<?php echo urlencode($fpt->latitude)?>&lon=<?php echo urlencode($fpt->longitude)?>';
   }
 }
 function postFlightScore(id, score) {

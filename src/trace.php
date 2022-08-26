@@ -241,7 +241,7 @@
       hotlineLayer.setStyle({'min':fi.minalt, 'max':fi.maxalt});
     } else if (dispmode == 'vz') {
       hotlineLayer.setLatLngs(window.fi.pts.map(pt => ([pt.lat, pt.lon, pt.vz])));
-      hotlineLayer.setStyle({'min':fi.minvz, 'max':fi.maxvz});
+      hotlineLayer.setStyle({'min':-5/*fi.minvz*/, 'max':5/*fi.maxvz*/});
     } else {
       hotlineLayer.setLatLngs(window.fi.pts.map(pt => ([pt.lat, pt.lon, 0])));
       hotlineLayer.setStyle({'min':0, 'max':0.1});
@@ -289,8 +289,8 @@
         //this.responseXML.getElementsByTagName('trkpt')[0].getElementsByTagName('ele')[0].innerHTML
         let points = [...this.responseXML.getElementsByTagName('trkpt')].map(pt => ([parseFloat(pt.getAttribute('lat')), parseFloat(pt.getAttribute('lon')),parseFloat(pt.getElementsByTagName('ele')[0].innerHTML)]));
         window.hotlineLayer = L.hotline(points, {
-          min: Math.min.apply(null, points.map(pt => pt[2])),
-          max: Math.max.apply(null, points.map(pt => pt[2])),
+          min: -5,//Math.min.apply(null, points.map(pt => pt[2])),
+          max: 8,//Math.max.apply(null, points.map(pt => pt[2])),
           'palette': {
             0.0: '#0000ff',
             0.4: '#00ff00',
