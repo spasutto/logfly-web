@@ -2,39 +2,26 @@
   $id = -1;
   if (isset($_REQUEST['id']) && preg_match('/^\d+$/', $_REQUEST['id']))
     $id = intval($_REQUEST['id']);
-
-  if ((isset($_REQUEST['gpx']) || isset($_REQUEST['igc'])) && ($id>0 || isset($_POST['igccont'])))
+  $igc = "";
+  if ($id>0 && isset($_REQUEST['igc']))
   {
     require("logfilereader.php");
-    require('Trackfile-Lib/TrackfileLoader.php');
     try
     {
-      if ($id>0)
-      {
-        $lgfr = new LogflyReader();
-        $igc = $lgfr->getIGC($id);
-      }
-      else
-        $igc = $_POST['igccont'];
-      if (!isset($_REQUEST['gpx'])) {
+      $lgfr = new LogflyReader();
+      $igc = $lgfr->getIGC($id);
+      if (isset($_REQUEST['dl'])) {
         header('Content-type: text/plain');
-        if (isset($_REQUEST['dl']))
-          header('Content-Disposition: attachment; filename="flightlog.igc"');
-        echo $igc;
+        header('Content-Disposition: attachment; filename="flightlog.igc"');
       }
-      else if (strlen(trim($igc))>0) {
-        $gpx = TrackfileLoader::toGPX($igc, "igc");
-        //header('Content-Type: application/json; charset=utf-8');
-        //echo json_encode(array('GPX' => $gpx));
-        header("Content-type: text/xml");
-        echo $gpx;
-      }
+      echo $igc;
+      exit(0);
     }
     catch(Exception $e)
     {
       echo "error!!! : ".$e->getMessage();
+      exit(0);
     }
-    exit(0);
   }
   @include("config.php");
 ?>
@@ -127,12 +114,19 @@
 <label for="file-selector">Sélectionnez un fichier IGC : </label>
 <input type="file" id="file-selector" accept=".igc"><HR>
 <label for="formigc">Ou placez directement le contenu du fichier IGC : </label>
-<form id="formigc" method="post" action="<?php echo strtok($_SERVER['REQUEST_URI'], '?');?>" onsubmit="loadGPX();return false;">
+<form id="formigc" method="post" action="<?php echo strtok($_SERVER['REQUEST_URI'], '?');?>" onsubmit="loadIGC(undefined, true);return false;">
 <div style="max-width: 640px">
   <textarea type="text" id="igccont" style="width:100%;height:80px"></textarea><BR>
-  <input type="submit" id="frmsub" style="display:none;float: right;" value="calculer">
+  <input type="submit" id="frmsub" style="display:none;float: right;" value="afficher">
 </div>
 </form>
+</div>
+
+<div id="dispmodes">
+  <p class="gras centre souligne">Couleur trace :</p>
+  <input type="radio" id="dmVz" name="dispmodes" value="vz" onclick="window.dispmode=this.value;redrawFlight();" checked><label for="dmVz">vz</label><BR>
+  <input type="radio" id="dmAlt" name="dispmodes" value="alt" onclick="window.dispmode=this.value;redrawFlight();"><label for="dmAlt">altitude</label><BR>
+  <input type="radio" id="dmNone" name="dispmodes" value="none" onclick="window.dispmode=this.value;redrawFlight();"><label for="dmNone">aucune</label>
 </div>
 
 <script>
@@ -142,7 +136,7 @@
     const reader = new FileReader();
     reader.addEventListener('load', (event) => {
       document.getElementById('igccont').value = reader.result;
-      loadGPX();
+      loadIGC(reader.result, true);
       document.getElementById('formcont').style.display = 'none';
     });
     reader.readAsText(fileList[0]);
@@ -177,8 +171,8 @@
   var disablescroll = <?php echo isset($_GET['disablescroll'])?'true':'false'; ?>;
   var map = loadCarto("<?php if (defined('CLEGEOPORTAIL')) echo CLEGEOPORTAIL;?>", disablescroll, document.getElementById('mapcont'));
   var marker = L.marker([0,0]).addTo(map);
-  var graph = new GraphGPX(document.getElementById("graph"), '<?php if (defined('ELEVATIONSERVICE')) echo ELEVATIONSERVICE;?>', disablescroll);
-  var flstats = [];
+  var graph = new GraphGPX(document.getElementById("graph"), {elevationservice:'<?php if (defined('ELEVATIONSERVICE')) echo ELEVATIONSERVICE;?>', disablescroll: disablescroll});
+  var flstats = {};
   var gpx_bounds = null;
   var touchtimer = null;
   var launchtimer = function(e) {
@@ -193,15 +187,13 @@
     let s = (fi.pts[fi.pts.length-1].time.getTime() - fi.pts[0].time.getTime()) / 1000;
     let t = new Date(Date.UTC(1970, 0, 1));
     t.setUTCSeconds(s);
-    flstats.unshift(
-      ['durée', `${t.toLocaleString('fr-FR', { timeZone: 'UTC' }).substr(-8, 5)}`],
-      ['alt max', `${Math.round(fi.maxalt)}m`],
-      ['alt min', `${Math.round(fi.minalt)}m`],
-      ['vz max', `${Math.round(fi.maxvz*10)/10}m/s`],
-      ['vz min', `${Math.round(fi.minvz*10)/10}m/s`],
-      ['vx max', `${Math.round(fi.maxvx)}km/h`],
-      //['vx min', `${Math.round(fi.minvx)}km/h`],
-    );
+    flstats['durée'] = `${t.toLocaleString('fr-FR', { timeZone: 'UTC' }).substr(-8, 5)}`,
+    flstats['alt max'] = `${Math.round(fi.maxalt)}m`,
+    flstats['alt min'] = `${Math.round(fi.minalt)}m`,
+    flstats['vz max'] = `${Math.round(fi.maxvz*10)/10}m/s`,
+    flstats['vz min'] = `${Math.round(fi.minvz*10)/10}m/s`,
+    flstats['vx max'] = `${Math.round(fi.maxvx)}km/h`,
+      //flstats['vx min'] = `${Math.round(fi.minvx)}km/h`,
     updateTraceInfos();
   });
   graph.addEventListener('onposchanged', function(e) {
@@ -232,6 +224,17 @@
     let center = marker.getLatLng();
     let zoom = map.getZoom() + (e.detail>0?-1:1);
     map.setView(center, zoom);
+  });
+  graph.addEventListener('onselectionchanged', function(e) {
+    window.graphsel = e.detail;
+    if (typeof graphsel == 'object' && Array.isArray(graphsel) && graphsel.length == 2 && graphsel[1] < fi.pts.length && graphsel[0] != graphsel[1]) {
+      let stpt = fi.pts[graphsel[0]],
+        endpt = fi.pts[graphsel[1]];
+      let finesse = graph.distance(stpt.lat, stpt.lon, endpt.lat, endpt.lon) / (stpt.alt - endpt.alt);
+      console.log(finesse);
+      flstats['finesse'] = finesse>0?Math.round(finesse*100)/100:'&infin;';
+      updateTraceInfos();
+    }
   });
 
   function redrawFlight() {
@@ -264,8 +267,11 @@
       date = fi.pts[0].time;
       date = ('0'+date.getDate()).slice(-2)+"/"+('0'+(date.getMonth()+1)).slice(-2)+"/"+date.getFullYear();
     }
-    divTraceInfos.innerHTML = '<div id="ctinfos"><p class="gras centre souligne">'+date+'</p>'+
-    flstats.map(function(info) {return "<p>"+(info[0].length<=0?"<HR>":"<span class=\"gras\">"+info[0]+"</span>&nbsp;:&nbsp;"+info[1])+"</p>";}).join('') + '</div><p id="iinfos">&#9432;</p>';
+    divTraceInfos.innerHTML = '<div id="ctinfos"><p class="gras centre souligne">'+date+'</p>';
+    //flstats.map(function(info) {return "<p>"+(info[0].length<=0?"<HR>":"<span class=\"gras\">"+info[0]+"</span>&nbsp;:&nbsp;"+info[1])+"</p>";}).join('') + '</div><p id="iinfos">&#9432;</p>';
+    for (let prop in flstats)
+      divTraceInfos.innerHTML += "<p>"+(flstats[prop].length<=0?"<HR>":"<span class=\"gras\">"+prop+"</span>&nbsp;:&nbsp;"+flstats[prop])+"</p>";
+    divTraceInfos.innerHTML += '</div><p id="iinfos">&#9432;</p>';
     divTraceInfos.style.display = 'block';
     divTraceInfos.onclick = function() {
       document.getElementById('ctinfos').style.display = binfos ? 'none':'block';
@@ -273,65 +279,103 @@
       binfos = !binfos;
     };
   }
-  function loadGPX() {
+  function loadIGC(igccont, calcfs) {
+    if (typeof igccont !== 'string') {
+      igccont = document.getElementById('igccont').value;
+      document.getElementById('formcont').style.display = 'none';
+    }
+    if (calcfs === true) calcFlightScore(igccont);
+    let lines = igccont.split(/\r?\n/);
+    let records = lines.filter(l => l.trim().startsWith('B'));
+    let points = [];
+    //0000000000111111111
+    //0123456789012345678
+    //HFDTEDATE:100522,01
+    let startdateline = lines.find(l => l.trim().startsWith('HFDTEDATE'));
+    let startdate = new Date();
+    if (startdateline) {
+      startdate.setDate(parseInt(startdateline.substr(10,2)));
+      startdate.setMonth(parseInt(startdateline.substr(12,2))-1);
+      let year = 2000+parseInt(startdateline.substr(14,2));
+      if (year > startdate.getFullYear()) year -= 100;
+      startdate.setFullYear(year);
+    }
+    records.forEach(r => {
+      //0000000000111111111122222222223333333
+      //0123456789012345678901234567890123456
+      //B0925064454728N00535480EA016100161528
+      let date = new Date(startdate);
+      date.setHours(parseInt(r.substr(1,2)));
+      date.setMinutes(parseInt(r.substr(3,2)));
+      date.setSeconds(parseInt(r.substr(5,2)));
+      let alt = parseInt(r.substr(25,5));
+      if (alt == 0) alt = parseInt(r.substr(30,5));
+      let lat = parseFloat(r.substr(7,2));
+      lat += parseFloat((r.substr(9,2)+'.'+r.substr(11,3)))/60;
+      lat *=  r[14]=='N'?1:-1;
+      let lon = parseFloat(r.substr(15,3));
+      lon += parseFloat((r.substr(18,2)+'.'+r.substr(20,3)))/60;
+      lon *=  r[23]=='E'?1:-1;
+      points.push({
+        lat: lat,
+        lon: lon,
+        time: date,
+        /*alt: {
+          baro: parseInt(r.substr(25,5)),
+          gps: parseInt(r.substr(30,5))
+        },*/
+        alt: alt
+      });
+    });
+    graph.setData(points);
+    let pointshotline = points.map(pt => [pt.lat, pt.lon,pt.alt]);
+    window.hotlineLayer = L.hotline(pointshotline, {
+      min: -5,//Math.min.apply(null, pointshotline.map(pt => pt[2])),
+      max: 8,//Math.max.apply(null, pointshotline.map(pt => pt[2])),
+      'palette': {
+        0.0: '#0000ff',
+        0.4: '#00ff00',
+        0.7: '#ffff00',
+        1.0: '#ff0000'
+      },
+      weight: 2,
+      outlineColor: '#000000',
+      outlineWidth: 0.5
+    });
+    window.gpx_bounds = hotlineLayer.getBounds();
+    map.fitBounds(gpx_bounds/*, {padding: [35,35]}*/);
+    hotlineLayer.addTo(map);
+
+    let btndl = document.getElementById('btnDlTrace');
+    btndl.onclick = function() {window.location = "<?php echo strtok($_SERVER['REQUEST_URI'], '?');?>?id="+id+"&igc&dl";};
+    btndl.style.display = 'block';
+    let divDispMode = document.getElementById('divDispMode');
+    divDispMode.appendChild(document.getElementById('dispmodes'))
+    divDispMode.style.display = 'block';
+  }
+  function getIGC(id) {
     let xhttp = new XMLHttpRequest();
-    //xhttp.responseType = 'text';
-    xhttp.responseType = 'document';
-    xhttp.overrideMimeType('text/xml');
+    xhttp.responseType = 'text';
     xhttp.onreadystatechange = function() {
       if (this.readyState == 4 && this.status == 200) {
-        if (!this.response) return;
+        if (!this.responseText) return;
         document.getElementById('formcont').style.display = 'none';
-        xml = new XMLSerializer().serializeToString(this.responseXML);
-        graph.setGPX(this.responseXML);
-        //maxvz = Math.max(Math.abs(fi.maxvz), Math.abs(fi.minvz))
-        //this.responseXML.getElementsByTagName('trkpt')[0].getAttribute('lat')
-        //this.responseXML.getElementsByTagName('trkpt')[0].getElementsByTagName('ele')[0].innerHTML
-        let points = [...this.responseXML.getElementsByTagName('trkpt')].map(pt => ([parseFloat(pt.getAttribute('lat')), parseFloat(pt.getAttribute('lon')),parseFloat(pt.getElementsByTagName('ele')[0].innerHTML)]));
-        window.hotlineLayer = L.hotline(points, {
-          min: -5,//Math.min.apply(null, points.map(pt => pt[2])),
-          max: 8,//Math.max.apply(null, points.map(pt => pt[2])),
-          'palette': {
-            0.0: '#0000ff',
-            0.4: '#00ff00',
-            0.7: '#ffff00',
-            1.0: '#ff0000'
-          },
-          weight: 2,
-          outlineColor: '#000000',
-          outlineWidth: 0.5
-        });
-        window.gpx_bounds = hotlineLayer.getBounds();
-        map.fitBounds(gpx_bounds/*, {padding: [35,35]}*/);
-        hotlineLayer.addTo(map);
-
-        let btndl = document.getElementById('btnDlTrace');
-        btndl.onclick = function() {window.location = "<?php echo strtok($_SERVER['REQUEST_URI'], '?');?>?id="+id+"&igc&dl";};
-        btndl.style.display = 'block';
-        let divDispMode = document.getElementById('divDispMode');
-        divDispMode.appendChild(document.getElementById('dispmodes'))
-        divDispMode.style.display = 'block';
+        loadIGC(this.response, false);
+        document.getElementById('igccont').value = this.response;
       }
     };
     let data = null;
-    let url = "<?php echo strtok($_SERVER['REQUEST_URI'], '?');?>?";
-    if (id>0) url += "id="+id+"&";
-    else
-    {
-      let igccontent = document.getElementById('igccont').value;
-      data = "igccont="+escape(igccontent);
-      calcFlightScore(igccontent);
-    }
-    xhttp.open("POST", url+"gpx", true);
+    let url = "<?php echo strtok($_SERVER['REQUEST_URI'], '?');?>?id="+id+"&";
+    xhttp.open("POST", url+"igc", true);
     xhttp.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');
     xhttp.send(data);
   }
   function displayFlightScore(flightscore) {
     let isTriangle = function() { return (flightscore.opt.scoring.code == 'tri' || flightscore.opt.scoring.code == 'fai'); };
-    flstats.push(['','']);
+    flstats['flightscore'] = '';
     if (typeof flightscore.scoreInfo == 'object') {
-      flstats.push(['distance', `${Math.round(flightscore.scoreInfo.distance*100)/100}km`]);
-      flstats.push(['type', `${flightscore.opt.scoring.name}`]);
+      flstats['distance'] = `${Math.round(flightscore.scoreInfo.distance*100)/100}km`;
+      flstats['type'] = `${flightscore.opt.scoring.name}`;
       if (Array.isArray(flightscore.scoreInfo.tp)) {
         scorepointlist = [];
         let tps = flightscore.scoreInfo.tp;
@@ -377,8 +421,8 @@
         }).addTo(map);
       }
     }
-    flstats.push(['score', `${Math.round(flightscore.score*10)/10}pts`]);
-    flstats.push(['vit.', `${Math.round(36000*flightscore.scoreInfo.distance/(flightscore.opt.landing-flightscore.opt.launch))/10}km/h`]);
+    flstats['score'] = `${Math.round(flightscore.score*10)/10}pts`;
+    flstats['vit.'] = `${Math.round(36000*flightscore.scoreInfo.distance/(flightscore.opt.landing-flightscore.opt.launch))/10}km/h`;
     updateTraceInfos();
   }
   function calcFlightScore(igccontent) {
@@ -408,7 +452,7 @@
     xhttp.send();
   }
   if (id>0) {
-    loadGPX();
+    getIGC(id);
     loadFlightScore();
   }
 
@@ -421,13 +465,6 @@
       map.fitBounds(gpx_bounds/*, {padding: [35,35]}*/);
   };
 </script>
-
-<div id="dispmodes">
-  <p class="gras centre souligne">Couleur trace :</p>
-  <input type="radio" id="dmVz" name="dispmodes" value="vz" onclick="window.dispmode=this.value;redrawFlight();" checked><label for="dmVz">vz</label><BR>
-  <input type="radio" id="dmAlt" name="dispmodes" value="alt" onclick="window.dispmode=this.value;redrawFlight();"><label for="dmAlt">altitude</label><BR>
-  <input type="radio" id="dmNone" name="dispmodes" value="none" onclick="window.dispmode=this.value;redrawFlight();"><label for="dmNone">aucune</label>
-</div>
 
 </body>
 </html>

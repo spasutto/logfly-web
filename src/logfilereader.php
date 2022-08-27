@@ -281,6 +281,7 @@ class LogflyReader
 
   function getIGC($id, $fromdb=false)
   {
+    $igc = "";
     if ($fromdb)
     {
       $sql = "SELECT V_IGC FROM VOL WHERE V_ID=".intval($id);

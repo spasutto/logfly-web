@@ -1,38 +1,62 @@
 
 class GraphGPX {
-
-  constructor(elem, elevationservice, disablescrollzoom, showvz, showvx) {
-    this.resetInfos();
-    this.elem = elem;
-    this.disablescrollzoom = disablescrollzoom == true;
-    if (typeof elevationservice == 'string' && elevationservice.trim().length > 0) {
-      this.elevationservice = elevationservice;
+  static get DEFAULT_CONF() {
+    return { 
+      elevationservice:undefined,
+      disablescrollzoom: false,
+      showvz: false,
+      showvx: false,
+      colors: {
+        background: "#EAF8C4",
+        text: "#0f0f0f",
+        selection: "#55FF9C8F",
+        axis: "#5f5f5f",
+        axissecondary: "#afafaf",
+        alt: "#002fff",
+        vz: "#af00af",
+        vx: "#22af00"
+      }
     }
-    this.elevcalls = 0;
-    this.showvz = showvz === true;
-    this.showvx = showvx === true;
-    this.delaytouch = 0;
+  }
+ 
+  constructor(elem, options) {
+    this.resetInfos();
+    this.options = {...GraphGPX.DEFAULT_CONF, ...options};
+    this.elem = elem;
+    this.options.disablescrollzoom = this.options.disablescrollzoom === true;
+    if (typeof this.options.elevationservice !== 'string' || this.options.elevationservice.trim().length <= 0) {
+      this.options.elevationservice = undefined;
+    }
+    this.options.showvz = this.options.showvz === true;
+    this.options.showvx = this.options.showvx === true;
+    this.bdrect = this.elem.getBoundingClientRect();
+    this.resetInfos();
     this.createCanvas();
   }
 
   set showVz(showvz) {
-    this.showvz = showvz === true;
+    this.options.showvz = showvz === true;
     this.paint();
   }
   get showVz() {
-    return this.showvz === true;
+    return this.options.showvz === true;
   }
 
   set showVx(showvx) {
-    this.showvx = showvx === true;
+    this.options.showvx = showvx === true;
     this.paint();
   }
   get showVx() {
-    return this.showvx === true;
+    return this.options.showvx === true;
   }
 
   resetInfos() {
     this.fi = { 'pts': [], maxalt: -1000, minalt: 100000, maxvz:-1000, minvz:100000, maxvx:-1000, minvx:100000, start: new Date };
+    this.elevcalls = 0;
+    this.delaytouch = 0;
+    this.isselecting = false;
+    this.curidx = -1;
+    this.selection = [-1,-1];
   }
 
   createCanvas() {
@@ -54,8 +78,11 @@ class GraphGPX {
     this.ctx = this.canvas.getContext('2d');
     this.ctx2 = this.canvas2.getContext('2d');
     this.canvas2.addEventListener('mousemove', this.mousemove.bind(this));
+    this.canvas2.addEventListener('mousedown', this.mousedown.bind(this));
+    this.canvas2.addEventListener('mouseup', this.mouseup.bind(this));
+    this.canvas2.addEventListener('mouseleave', this.mouseleave.bind(this));
     this.canvas2.addEventListener('click', this.click.bind(this));
-    if (!this.disablescrollzoom)
+    if (!this.options.disablescrollzoom)
       this.canvas2.addEventListener('wheel', this.wheel.bind(this));
     if ('ontouchstart' in document.documentElement) {
       this.canvas2.addEventListener("touchstart", this.touchevts.bind(this), true);
@@ -85,11 +112,12 @@ class GraphGPX {
     let elem2 = document.createElement("input");
     elem2.setAttribute('type', 'checkbox');
     elem2.id = 'grphshowvz';
-    if (this.showvz) {
+    if (this.options.showvz) {
       elem2.checked = true;
     }
     elem2.onclick = function (evt) {
-      this.showVz = evt.currentTarget.checked;
+      this.options.showvz = evt.currentTarget.checked;
+      this.paint();
     }.bind(this);
     elem.appendChild(elem2);
     elem2 = document.createElement("label");
@@ -101,11 +129,12 @@ class GraphGPX {
     elem2 = document.createElement("input");
     elem2.setAttribute('type', 'checkbox');
     elem2.id = 'grphshowvx';
-    if (this.showvx) {
+    if (this.options.showvx) {
       elem2.checked = true;
     }
     elem2.onclick = function (evt) {
-      this.showVx = evt.currentTarget.checked;
+      this.options.showvx = evt.currentTarget.checked;
+      this.paint();
     }.bind(this);
     elem.appendChild(elem2);
     elem2 = document.createElement("label");
@@ -125,6 +154,7 @@ class GraphGPX {
     this.canvas2.width  = this.canvas.width  = this.canvas.offsetWidth;
     this.canvas2.height = this.canvas.height = this.canvas.offsetHeight;
     this.paint();
+    this.paintmouseinfos();
   }
 
   touchevts(e) {
@@ -161,14 +191,13 @@ class GraphGPX {
     this.opencfg(true);
     if (!Array.isArray(this.fi.pts) || this.fi.pts.length <= 0)
       return;
-    let rect = this.elem.getBoundingClientRect(),
-        x = e.clientX - rect.left,
-        idxpt = Math.round(x/this.incx)*this.incr;
-    if (idxpt > this.fi.pts.length-1) {
-      idxpt = this.fi.pts.length-1;
-      x = Math.round((idxpt / this.incr) * this.incx);
+    let x = e.clientX - this.bdrect.left;
+    this.curidx = this.indexforx(x);
+    if (this.curidx > this.fi.pts.length-1) {
+      this.curidx = this.fi.pts.length-1;
+      x = this.xforindex(this.curidx);
     }
-    let curpt = this.fi.pts[idxpt];
+    let curpt = this.fi.pts[this.curidx];
     let event = new CustomEvent('onclick', {"detail": curpt});
     this.elem.dispatchEvent(event);
   }
@@ -176,38 +205,60 @@ class GraphGPX {
   mousemove(e) {
     if (!Array.isArray(this.fi.pts) || this.fi.pts.length <= 0)
       return;
-    let rect = this.elem.getBoundingClientRect(),
-        x = e.clientX - rect.left,
-        idxpt = Math.round(x/this.incx)*this.incr;
-    if (idxpt > this.fi.pts.length-1) {
-      idxpt = this.fi.pts.length-1;
-      x = Math.round((idxpt / this.incr) * this.incx);
+    let x = e.clientX - this.bdrect.left;
+    this.curidx = this.indexforx(x);
+    if (this.curidx > this.fi.pts.length-1) {
+      this.curidx = this.fi.pts.length-1;
+      x = this.xforindex(this.curidx);
     }
-    this.ctx2.clearRect(0, 0, this.canvas2.width, this.canvas2.height);
-    this.ctx2.lineWidth = 1;
-    this.ctx2.beginPath();
-    this.ctx2.moveTo(x,0);
-    this.ctx2.lineTo(x,this.canvas2.height);
-    this.ctx2.stroke();
-    this.ctx2.fillStyle = "#FFFF9C8F";
-    this.ctx2.fillRect(this.canvas2.width-70, 0, this.canvas2.width, 50);
-    let curpt = this.fi.pts[idxpt];
-    this.ctx2.font = '10px sans-serif';
-    this.ctx2.fillStyle = "#5f5f5f";
-    let posx=this.canvas2.width - 70, posy = 0;
-    this.ctx2.fillText(curpt.alt + ' m AMSL', posx, posy+=10);
-    if (typeof curpt.gndalt == 'number')
-      this.ctx2.fillText(Math.round(curpt.alt-curpt.gndalt)+' m AGL', posx, posy+=10);
-    this.ctx2.fillStyle = "#af00af";
-    this.ctx2.fillText(curpt.vz + ' m/s', posx, posy+=10);
-    this.ctx2.fillStyle = "#22af00";
-    this.ctx2.fillText(curpt.vx + ' km/h', posx, posy+=10);
-    let t = new Date(Date.UTC(1970, 0, 1));
-    t.setUTCSeconds((curpt.time.getTime() - this.start.getTime()) / 1000);
-    this.ctx2.fillStyle = "#5f5f5f";
-    this.ctx2.fillText(curpt.time.toLocaleString('fr-FR'/*, { timeZone: 'UTC' }*/).substr(-8, 5) + " ("+t.toLocaleString('fr-FR', { timeZone: 'UTC' }).substr(-8, 5)+")", posx, posy+=10);
+    if (this.isselecting)
+      this.selection[1] = this.curidx;
+    this.paintmouseinfos();
+    let curpt = this.fi.pts[this.curidx];
     let event = new CustomEvent('onposchanged', {"detail": curpt});
     this.elem.dispatchEvent(event);
+  }
+  
+  mousedown(e) {
+    this.isselecting = true;
+    if (!Array.isArray(this.fi.pts) || this.fi.pts.length <= 0)
+      return;
+    let x = e.clientX - this.bdrect.left;
+    this.curidx = this.indexforx(x);
+    if (this.curidx > this.fi.pts.length-1)
+      this.curidx = this.fi.pts.length-1;
+    this.selection[1] = this.selection[0] = this.curidx;
+    this.paintmouseinfos();
+  }
+  
+  mouseup(e) {
+    this.isselecting = false;
+    let x = e.clientX - this.bdrect.left;
+    this.curidx = this.indexforx(x);
+    if (this.curidx > this.fi.pts.length-1)
+      this.curidx = this.fi.pts.length-1;
+    this.selection[1] = this.curidx;
+    this.paintmouseinfos();
+    let startx = Math.min(this.selection[0], this.selection[1]),
+      endx = Math.max(this.selection[0], this.selection[1]);
+    let event = new CustomEvent('onselectionchanged', {"detail": [startx, endx]});
+    this.elem.dispatchEvent(event);
+  }
+  
+  mouseleave(e) {
+    if (this.isselecting) {
+      this.isselecting = false;
+      this.selection[1] = this.selection[0] = -1;
+      this.paintmouseinfos(this.curidx);
+    }
+  }
+
+  indexforx(x) {
+    return Math.round(x/this.incx)*this.incr;
+  }
+
+  xforindex(idx) {
+    return Math.round(idx/this.incr)*this.incx;
   }
 
   opencfg(closecfg) {
@@ -218,10 +269,46 @@ class GraphGPX {
     pp.style.display = closecfg ? 'none' : 'block';
   }
 
+  paintmouseinfos() {
+    this.ctx2.clearRect(0, 0, this.canvas2.width, this.canvas2.height);
+
+    if (this.selection[0] != this.selection[1]) {
+      let startx = this.xforindex(Math.min(this.selection[0], this.selection[1])),
+        endx = this.xforindex(Math.max(this.selection[0], this.selection[1]));
+      this.ctx2.fillStyle = this.options.colors.selection;
+      this.ctx2.fillRect(startx, 0, endx-startx, this.canvas2.height-1);
+    }
+    if (this.curidx > -1) {
+      let x = this.xforindex(this.curidx);
+      this.ctx2.lineWidth = 1;
+      this.ctx2.beginPath();
+      this.ctx2.moveTo(x,0);
+      this.ctx2.lineTo(x,this.canvas2.height);
+      this.ctx2.stroke();
+      this.ctx2.fillStyle = "#FFFF9C8F";
+      this.ctx2.fillRect(this.canvas2.width-70, 0, this.canvas2.width, 50);
+      let curpt = this.fi.pts[this.curidx];
+      this.ctx2.font = '10px sans-serif';
+      this.ctx2.fillStyle = this.options.colors.axis;
+      let posx=this.canvas2.width - 70, posy = 0;
+      this.ctx2.fillText(curpt.alt + ' m AMSL', posx, posy+=10);
+      if (typeof curpt.gndalt == 'number')
+        this.ctx2.fillText(Math.round(curpt.alt-curpt.gndalt)+' m AGL', posx, posy+=10);
+      this.ctx2.fillStyle = this.options.colors.vz;
+      this.ctx2.fillText(curpt.vz + ' m/s', posx, posy+=10);
+      this.ctx2.fillStyle = this.options.colors.vx;
+      this.ctx2.fillText(curpt.vx + ' km/h', posx, posy+=10);
+      let t = new Date(Date.UTC(1970, 0, 1));
+      t.setUTCSeconds((curpt.time.getTime() - this.start.getTime()) / 1000);
+      this.ctx2.fillStyle = this.options.colors.axis;
+      this.ctx2.fillText(curpt.time.toLocaleString('fr-FR'/*, { timeZone: 'UTC' }*/).substr(-8, 5) + " ("+t.toLocaleString('fr-FR', { timeZone: 'UTC' }).substr(-8, 5)+")", posx, posy+=10);
+    }
+  }
+
   paint() {
-    this.ctx.fillStyle = "#EAF8C4";
+    this.ctx.fillStyle = this.options.colors.background;
     this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
-    this.ctx.strokeStyle = "#5f5f5f";
+    this.ctx.strokeStyle = this.options.colors.axis;
     this.ctx.lineWidth = 1;
     if (!Array.isArray(this.fi.pts) || this.fi.pts.length <= 0) {
       this.ctx.font = '18px sans-serif';
@@ -257,7 +344,7 @@ class GraphGPX {
     firsthour = 3600 - ((this.start - firsthour) / 1000);
     let secstotal = (this.fi.pts[this.fi.pts.length - 1].time - this.start) / 1000;
     let inct = (secstotal / (this.incx * this.fi.pts.length)) / this.incr;
-    this.ctx.strokeStyle = "#afafaf";
+    this.ctx.strokeStyle = this.options.colors.axissecondary;
     this.ctx.beginPath();
     x = 0;
     for (t = firsthour; t < secstotal; t += 3600) {
@@ -270,8 +357,8 @@ class GraphGPX {
 
     // gnd alt
     if (typeof this.fi.pts[0].gndalt == 'number') {
-      this.ctx.fillStyle = "#afafaf";
-      this.ctx.strokeStyle = "#5f5f5f";
+      this.ctx.fillStyle = this.options.colors.axissecondary;
+      this.ctx.strokeStyle = this.options.colors.axis;
       x = 0;
       y = getY(this.fi.pts[0].gndalt)
       this.ctx.beginPath();
@@ -291,7 +378,7 @@ class GraphGPX {
       this.ctx.fill();
     }
 
-    this.ctx.strokeStyle = "#002fff";
+    this.ctx.strokeStyle = this.options.colors.alt;
 
     // alt
     x = 0;
@@ -309,8 +396,8 @@ class GraphGPX {
     this.ctx.stroke();
 
     // vz
-    if (this.showvz) {
-      this.ctx.strokeStyle = "#af00af";
+    if (this.options.showvz) {
+      this.ctx.strokeStyle = this.options.colors.vz;
       x = 0;
       y = getYVz(this.fi.pts[0].vz);
       this.ctx.beginPath();
@@ -327,8 +414,8 @@ class GraphGPX {
     }
 
     // vx
-    if (this.showvx) {
-      this.ctx.strokeStyle = "#22af00";
+    if (this.options.showvx) {
+      this.ctx.strokeStyle = this.options.colors.vx;
       x = 0;
       y = getYVx(this.fi.pts[0].vx);
       this.ctx.beginPath();
@@ -344,7 +431,7 @@ class GraphGPX {
       this.ctx.stroke();
     }
 
-    this.ctx.strokeStyle = "#5f5f5f";
+    this.ctx.strokeStyle = this.options.colors.axis;
     this.ctx.lineWidth = 2;
     // legende alt
     this.ctx.beginPath();
@@ -352,7 +439,7 @@ class GraphGPX {
     this.ctx.lineTo(0, this.canvas.height);
     this.ctx.lineTo(this.canvas.width - 1, this.canvas.height);
     this.ctx.stroke();
-    this.ctx.fillStyle = "#0f0f0f";
+    this.ctx.fillStyle = this.options.colors.text;
     minaltg = Math.floor(minaltg / 500) * 500;
     for (t = minaltg; t <= maxaltg; t += 500) {
       y = getY(t);
@@ -366,9 +453,9 @@ class GraphGPX {
 
     let minscale = 33;
     // legende vz
-    if (this.showvz) {
-      this.ctx.strokeStyle = "#8f8f8f";
-      this.ctx.fillStyle = "#af00af";
+    if (this.options.showvz) {
+      this.ctx.strokeStyle = this.options.colors.axissecondary;
+      this.ctx.fillStyle = this.options.colors.vz;
       this.ctx.lineWidth = 1;
       this.ctx.beginPath();
       this.ctx.moveTo(minscale, 0);
@@ -397,9 +484,9 @@ class GraphGPX {
     }
 
     // legende vx
-    if (this.showvx) {
-      this.ctx.strokeStyle = "#8f8f8f";
-      this.ctx.fillStyle = "#22af00";
+    if (this.options.showvx) {
+      this.ctx.strokeStyle = this.options.colors.axissecondary;
+      this.ctx.fillStyle = this.options.colors.vx;
       this.ctx.lineWidth = 1;
       this.ctx.beginPath();
       this.ctx.moveTo(minscale, 0);
@@ -420,24 +507,18 @@ class GraphGPX {
     }
   }
 
-  setFlightInfo(fi) {
-    this.fi = fi;
-    this.paint();
-  }
-
-  setGPX(gpx) {
+  setData(points) {
     // les vz max/min sont en instantané donc très grandes
     const VZMAX = 30;
     const VZMIN = -30;
-    let xpts = gpx.getElementsByTagName("trkpt");
     this.resetInfos();
     let i = 0, j = 0, k = 0, alt = 0, lat = 0, lon = 0, latvx = 0, lonvx = 0, vz = 0, vx = 0, tdiff = 0, vzm = [], vxm = [];
     let time, timevx;
-    for (i=0; i<xpts.length; i++) {
-      alt = parseFloat(xpts[i].getElementsByTagName("ele")[0].textContent);
-      time = new Date(xpts[i].getElementsByTagName("time")[0].textContent);
-      lat = parseFloat(xpts[i].getAttribute('lat'));
-      lon = parseFloat(xpts[i].getAttribute('lon'));
+    for (i=0; i<points.length; i++) {
+      alt = points[i].alt;
+      time = points[i].time;
+      lat = points[i].lat;
+      lon = points[i].lon;
       this.fi.pts.push(
         {
           'lat': lat,
@@ -492,7 +573,7 @@ class GraphGPX {
     this.fi.maxvz = Math.min(15, this.fi.maxvz);
     this.fi.minvx = Math.max(0, this.fi.minvx);
     this.fi.maxvx = Math.min(200, this.fi.maxvx);
-    if (typeof this.elevationservice === 'string') {
+    if (typeof this.options.elevationservice === 'string') {
       let curelev = 0;
       let locations = [];
       for (let i = 0; i < this.fi.pts.length; i++) {
@@ -511,6 +592,7 @@ class GraphGPX {
       this.elem.dispatchEvent(event);
     }
     this.paint();
+    this.paintmouseinfos();
     return this.fi;
   }
 
@@ -548,7 +630,7 @@ class GraphGPX {
         }
       }
     }.bind(this);
-    xhttp.open("POST", this.elevationservice, true);
+    xhttp.open("POST", this.options.elevationservice, true);
     xhttp.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');
     xhttp.send(JSON.stringify(data));
     this.elevcalls++;
