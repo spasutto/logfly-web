@@ -53,8 +53,11 @@ class GraphGPX {
   resetInfos() {
     this.fi = { 'pts': [], maxalt: -1000, minalt: 100000, maxvz:-1000, minvz:100000, maxvx:-1000, minvx:100000, start: new Date };
     this.elevcalls = 0;
-    this.delaytouch = 0;
+    this.starttouch = 0;
+    this.endtouch = 0;
+    this.firstmovetouch = 0;
     this.isselecting = false;
+    this.selectionpossible = !('ontouchstart' in document.documentElement); // sur les desktop selection toujours possible
     this.curidx = -1;
     this.selection = [-1,-1];
   }
@@ -164,13 +167,32 @@ class GraphGPX {
 
     switch(e.type)
     {
-      case "touchstart": mouseEv = "mousedown"; this.delaytouch = Date.now(); break;
-      case "touchend": mouseEv = "mouseup"; this.delaytouch = Date.now() - this.delaytouch; break;
-      case "touchmove":  mouseEv="mousemove"; break;
-      default: return;
+      case "touchstart":
+        mouseEv = "mousedown";
+        this.endtouch = this.starttouch = Date.now();
+        this.selectionpossible = false;
+        break;
+      case "touchend":
+        mouseEv = "mouseup";
+        this.endtouch = Date.now();
+        this.firstmovetouch = 0;
+        break;
+      case "touchmove":
+        mouseEv="mousemove";
+        break;
+      default:
+        return;
     }
 
-    if (e.type == "touchend" && this.delaytouch < 250) {
+    if (e.type == "touchmove" && this.firstmovetouch == 0) {
+      this.firstmovetouch = Date.now();
+      if (this.firstmovetouch - this.starttouch > 500) {
+        this.selectionpossible = true;
+        this.isselecting = true;
+        this.selection[1] = this.selection[0] = this.curidx;
+      }
+    }
+    if (e.type == "touchend" && this.endtouch - this.starttouch < 250) {
       mouseEv = "click";
     }
 
@@ -220,14 +242,16 @@ class GraphGPX {
   }
   
   mousedown(e) {
-    this.isselecting = true;
+    if (this.selectionpossible)
+      this.isselecting = true;
     if (!Array.isArray(this.fi.pts) || this.fi.pts.length <= 0)
       return;
     let x = e.clientX - this.bdrect.left;
     this.curidx = this.indexforx(x);
     if (this.curidx > this.fi.pts.length-1)
       this.curidx = this.fi.pts.length-1;
-    this.selection[1] = this.selection[0] = this.curidx;
+    if (this.selectionpossible)
+      this.selection[1] = this.selection[0] = this.curidx;
     this.paintmouseinfos();
   }
   
@@ -237,12 +261,15 @@ class GraphGPX {
     this.curidx = this.indexforx(x);
     if (this.curidx > this.fi.pts.length-1)
       this.curidx = this.fi.pts.length-1;
-    this.selection[1] = this.curidx;
+    if (this.selectionpossible)
+      this.selection[1] = this.curidx;
     this.paintmouseinfos();
-    let startx = Math.min(this.selection[0], this.selection[1]),
-      endx = Math.max(this.selection[0], this.selection[1]);
-    let event = new CustomEvent('onselectionchanged', {"detail": [startx, endx]});
-    this.elem.dispatchEvent(event);
+    if (this.selectionpossible) {
+      let startx = Math.min(this.selection[0], this.selection[1]),
+        endx = Math.max(this.selection[0], this.selection[1]);
+      let event = new CustomEvent('onselectionchanged', {"detail": [startx, endx]});
+      this.elem.dispatchEvent(event);
+    }
   }
   
   mouseleave(e) {
@@ -272,7 +299,7 @@ class GraphGPX {
   paintmouseinfos() {
     this.ctx2.clearRect(0, 0, this.canvas2.width, this.canvas2.height);
 
-    if (this.selection[0] != this.selection[1]) {
+    if (this.selectionpossible && this.selection[0] != this.selection[1]) {
       let startx = this.xforindex(Math.min(this.selection[0], this.selection[1])),
         endx = this.xforindex(Math.max(this.selection[0], this.selection[1]));
       this.ctx2.fillStyle = this.options.colors.selection;
