@@ -230,9 +230,14 @@
     if (typeof graphsel == 'object' && Array.isArray(graphsel) && graphsel.length == 2 && graphsel[1] < fi.pts.length && graphsel[0] != graphsel[1]) {
       let stpt = fi.pts[graphsel[0]],
         endpt = fi.pts[graphsel[1]];
-      let finesse = graph.distance(stpt.lat, stpt.lon, endpt.lat, endpt.lon) / (stpt.alt - endpt.alt);
-      console.log(finesse);
-      flstats['finesse'] = finesse>0?Math.round(finesse*100)/100:'&infin;';
+      let dist = graph.distance(stpt.lat, stpt.lon, endpt.lat, endpt.lon);
+      let deniv = stpt.alt - endpt.alt;
+      let finesse = dist / deniv;
+      dist /= 1000;
+      deniv *= -1;
+      dist = Math.round(dist*10)/10;
+      finesse = finesse>0?Math.round(finesse*100)/100:'&infin;';
+      flstats['finesse'] = `${finesse}<BR><i>(${deniv}m en ${dist}km)</i>`;
       updateTraceInfos();
     }
   });

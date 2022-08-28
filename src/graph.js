@@ -186,7 +186,7 @@ class GraphGPX {
     }
 
     if (e.type == "touchmove" && this.firstmovetouch == 0) {
-      if (Math.abs(e.touches[0].pageX - this.xtouchdown) > 2)
+      if (Math.abs(e.touches[0].pageX - this.xtouchdown) > 3)
         this.firstmovetouch = Date.now();
       if (this.firstmovetouch - this.starttouch > 500) {
         this.selectionpossible = true;
