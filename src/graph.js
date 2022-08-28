@@ -169,6 +169,7 @@ class GraphGPX {
     {
       case "touchstart":
         mouseEv = "mousedown";
+        this.xtouchdown = e.touches[0].pageX;
         this.endtouch = this.starttouch = Date.now();
         this.selectionpossible = false;
         break;
@@ -185,7 +186,8 @@ class GraphGPX {
     }
 
     if (e.type == "touchmove" && this.firstmovetouch == 0) {
-      this.firstmovetouch = Date.now();
+      if (Math.abs(e.touches[0].pageX - this.xtouchdown) > 2)
+        this.firstmovetouch = Date.now();
       if (this.firstmovetouch - this.starttouch > 500) {
         this.selectionpossible = true;
         this.isselecting = true;
