@@ -1,5 +1,6 @@
 
 class GraphGPX {
+  #analysers = [];
   static get DEFAULT_CONF() {
     return { 
       elevationservice:undefined,
@@ -48,6 +49,10 @@ class GraphGPX {
   }
   get showVx() {
     return this.options.showvx === true;
+  }
+
+  addAnalyser(analyser) {
+    this.#analysers.push(analyser);
   }
 
   resetInfos() {
@@ -326,7 +331,17 @@ class GraphGPX {
       this.ctx2.fillStyle = this.options.colors.vz;
       this.ctx2.fillText(curpt.vz + ' m/s', posx, posy+=10);
       this.ctx2.fillStyle = this.options.colors.vx;
-      this.ctx2.fillText(curpt.vx + ' km/h', posx, posy+=10);
+      let vxtext = curpt.vx + ' km/h';
+      this.ctx2.fillText(vxtext, posx, posy+=10);
+      let rvxtextw = this.ctx2.measureText(vxtext+' ').width;
+      this.ctx2.save();
+      this.ctx2.textAlign="center";
+      this.ctx2.textBaseline="middle";
+      this.ctx2.translate(posx+rvxtextw+5,posy-4);
+      this.ctx2.rotate(curpt.bearing * (Math.PI / 180));
+      this.ctx2.font = '15px sans-serif';
+      this.ctx2.fillText('\u21e7' , 0, 0);// 2b99 2191 21A5 21E7 21EB 21EC 25B2 032D 1403 1431
+      this.ctx2.restore();
       let t = new Date(Date.UTC(1970, 0, 1));
       t.setUTCSeconds((curpt.time.getTime() - this.start.getTime()) / 1000);
       this.ctx2.fillStyle = this.options.colors.axis;
@@ -556,6 +571,7 @@ class GraphGPX {
           'time': time,
           'vz': 0,
           'vx': 0,
+          'bearing': 0,
         });
       if (i == 0) {
         this.start = timevx = time;
@@ -578,7 +594,7 @@ class GraphGPX {
         vz = vzm.reduce((a, b) => a + b, 0) / vzm.length;
         this.fi.pts[i].vz = Math.round(vz * 10) / 10;
 
-        vx = 3.6 * this.distance(lat, lon, this.fi.pts[i - 1].lat, this.fi.pts[i - 1].lon) / tdiff;
+        vx = 3.6 * GraphGPX.distance(lat, lon, this.fi.pts[i - 1].lat, this.fi.pts[i - 1].lon) / tdiff;
         if (vxm.length < 15) {
           vxm.push(vx);
         } else {
@@ -587,6 +603,7 @@ class GraphGPX {
         }
         vx = Math.round(vxm.reduce((a, b) => a + b, 0) / vxm.length);
         this.fi.pts[i].vx = vx;
+        this.fi.pts[i].bearing = GraphGPX.bearing(this.fi.pts[i - 1].lat, this.fi.pts[i - 1].lon, lat, lon);
       }
       if (alt < this.fi.minalt) this.fi.minalt = alt;
       if (alt > this.fi.maxalt) this.fi.maxalt = alt;
@@ -622,6 +639,9 @@ class GraphGPX {
     }
     this.paint();
     this.paintmouseinfos();
+    if (Array.isArray(this.#analysers)) {
+      this.#analysers.forEach(a => a.analyse(this.fi));
+    }
     return this.fi;
   }
 
@@ -684,24 +704,23 @@ class GraphGPX {
     }
     return max;
   }
+  
+  // Converts from degrees to radians.
+  static toRadians(degrees) {
+    return degrees * Math.PI / 180;
+  };
+   
+  // Converts from radians to degrees.
+  static toDegrees(radians) {
+    return radians * 180 / Math.PI;
+  }
 
-  /**
-   * Calculates the great-circle distance between two points, with
-   * the Haversine formula.
-   * @param float latitudeFrom Latitude of start point in [deg decimal]
-   * @param float longitudeFrom Longitude of start point in [deg decimal]
-   * @param float latitudeTo Latitude of target point in [deg decimal]
-   * @param float longitudeTo Longitude of target point in [deg decimal]
-   * @param float earthRadius Mean earth radius in [m]
-   * @return float Distance between points in [m] (same as earthRadius)
-   */
-   distance(latitudeFrom, longitudeFrom, latitudeTo, longitudeTo, earthRadius = 6371000) {
-    const deg2rad = deg => (deg * Math.PI) / 180.0;
-    // convert from degrees to radians
-    let latFrom = deg2rad(latitudeFrom);
-    let lonFrom = deg2rad(longitudeFrom);
-    let latTo = deg2rad(latitudeTo);
-    let lonTo = deg2rad(longitudeTo);
+  // Calculates the great-circle distance between two points, with the Haversine formula.
+  static distance(latitudeFrom, longitudeFrom, latitudeTo, longitudeTo, earthRadius = 6371000) {
+    let latFrom = GraphGPX.toRadians(latitudeFrom);
+    let lonFrom = GraphGPX.toRadians(longitudeFrom);
+    let latTo = GraphGPX.toRadians(latitudeTo);
+    let lonTo = GraphGPX.toRadians(longitudeTo);
 
     let latDelta = latTo - latFrom;
     let lonDelta = lonTo - lonFrom;
@@ -709,5 +728,20 @@ class GraphGPX {
     let angle = 2 * Math.asin(Math.sqrt(Math.pow(Math.sin(latDelta / 2), 2) +
     Math.cos(latFrom) * Math.cos(latTo) * Math.pow(Math.sin(lonDelta / 2), 2)));
     return angle * earthRadius;
+  }
+
+  // Calculates the bearing between two points
+  static bearing(startLat, startLng, destLat, destLng){
+    startLat = GraphGPX.toRadians(startLat);
+    startLng = GraphGPX.toRadians(startLng);
+    destLat = GraphGPX.toRadians(destLat);
+    destLng = GraphGPX.toRadians(destLng);
+
+    let y = Math.sin(destLng - startLng) * Math.cos(destLat);
+    let x = Math.cos(startLat) * Math.sin(destLat) -
+          Math.sin(startLat) * Math.cos(destLat) * Math.cos(destLng - startLng);
+    let brng = Math.atan2(y, x);
+    brng = GraphGPX.toDegrees(brng);
+    return (brng + 360) % 360;
   }
 }
