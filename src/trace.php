@@ -226,11 +226,21 @@
     map.setView(center, zoom);
   });
   graph.addEventListener('onselectionchanged', function(e) {
-    window.graphsel = e.detail;
+    let graphsel = e.detail;
     if (typeof graphsel == 'object' && Array.isArray(graphsel) && graphsel.length == 2 && graphsel[1] < fi.pts.length && graphsel[0] != graphsel[1]) {
       let stpt = fi.pts[graphsel[0]],
         endpt = fi.pts[graphsel[1]];
-      let dist = GraphGPX.distance(stpt.lat, stpt.lon, endpt.lat, endpt.lon);
+      let portion = fi.pts.slice(graphsel[0], graphsel[1]);
+      let prevpt = {lat: stpt.lat, lon: stpt.lon};
+      let vxmoy = 0;
+      let dist = portion.reduce((total, currentValue, currentIndex, arr) => 
+      {
+        let tdist = total+GraphGPX.distance(prevpt.lat, prevpt.lon, currentValue.lat, currentValue.lon);
+        vxmoy += currentValue.vx;
+        prevpt = currentValue;
+        return tdist;
+      }, 0);
+      vxmoy = Math.round(vxmoy/portion.length);
       let deniv = stpt.alt - endpt.alt;
       let finesse = Math.round(100*dist / deniv)/100;
       dist /= 1000;
@@ -240,7 +250,7 @@
         finesse = '&infin;';
         deniv = '+' + deniv;
       }
-      flstats['finesse'] = `${finesse}<BR><i>(${deniv}m en ${dist}km)</i>`;
+      flstats['finesse'] = `${finesse}<BR><i>(${deniv}m en ${dist}km à ${vxmoy}km/h)</i>`;
       updateTraceInfos();
     }
   });
@@ -275,11 +285,11 @@
       date = fi.pts[0].time;
       date = ('0'+date.getDate()).slice(-2)+"/"+('0'+(date.getMonth()+1)).slice(-2)+"/"+date.getFullYear();
     }
-    divTraceInfos.innerHTML = '<div id="ctinfos"><p class="gras centre souligne">'+date+'</p>';
-    //flstats.map(function(info) {return "<p>"+(info[0].length<=0?"<HR>":"<span class=\"gras\">"+info[0]+"</span>&nbsp;:&nbsp;"+info[1])+"</p>";}).join('') + '</div><p id="iinfos">&#9432;</p>';
+    let htmlinfos = '<div id="ctinfos"><p class="gras centre souligne">'+date+'</p>';
     for (let prop in flstats)
-      divTraceInfos.innerHTML += "<p>"+(flstats[prop].length<=0?"<HR>":"<span class=\"gras\">"+prop+"</span>&nbsp;:&nbsp;"+flstats[prop])+"</p>";
-    divTraceInfos.innerHTML += '</div><p id="iinfos">&#9432;</p>';
+      htmlinfos += "<p>"+(flstats[prop].length<=0?"<HR>":"<span class=\"gras\">"+prop+"</span>&nbsp;:&nbsp;"+flstats[prop])+"</p>";
+    htmlinfos += '</div><p id="iinfos">&#9432;</p>';
+    divTraceInfos.innerHTML = htmlinfos;
     divTraceInfos.style.display = 'block';
     divTraceInfos.onclick = function() {
       document.getElementById('ctinfos').style.display = binfos ? 'none':'block';
