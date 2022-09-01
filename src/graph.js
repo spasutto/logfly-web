@@ -603,7 +603,7 @@ class GraphGPX {
         }
         vx = Math.round(vxm.reduce((a, b) => a + b, 0) / vxm.length);
         this.fi.pts[i].vx = vx;
-        this.fi.pts[i].bearing = GraphGPX.bearing(this.fi.pts[i - 1].lat, this.fi.pts[i - 1].lon, lat, lon);
+        this.fi.pts[i].bearing = Math.round(GraphGPX.bearing(this.fi.pts[i - 1].lat, this.fi.pts[i - 1].lon, lat, lon));
       }
       if (alt < this.fi.minalt) this.fi.minalt = alt;
       if (alt > this.fi.maxalt) this.fi.maxalt = alt;
@@ -703,6 +703,25 @@ class GraphGPX {
       }
     }
     return max;
+  }
+  
+  toCSV() {
+    let csvContent = "data:application/octet-stream,";
+    csvContent += Object.keys(graph.fi.pts[0]).join(";") + "\n";
+    csvContent += graph.fi.pts.map(pt => Object.keys(pt).map(k =>
+    {
+      if (typeof pt[k].getMonth === 'function')
+        return '"' + GraphGPX.formatDate(pt[k]) + '"';
+      else if (typeof pt[k] === 'string')
+        return '"' + pt[k].replaceAll('"', '""') + '"';
+      return pt[k];
+    }).join(";")).join("\n");
+    window.open(encodeURI(csvContent));
+  }
+  
+  static formatDate(dt) {
+    var options = { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' };
+    return dt.toLocaleDateString("fr-FR", options);
   }
   
   // Converts from degrees to radians.
