@@ -1,8 +1,9 @@
 
 class GraphGPX {
   #analysers = [];
+  #DEBUG = true;
   static get DEFAULT_CONF() {
-    return { 
+    return {
       elevationservice:undefined,
       disablescrollzoom: false,
       showvz: false,
@@ -475,6 +476,26 @@ class GraphGPX {
       this.ctx.stroke();
     }
 
+    // bearing
+    if (this.#DEBUG) {
+      let coefhbearing = this.canvas.height / 90;
+      let getYBearing = function (bearing) { return this.canvas.height - Math.round(coefhbearing * (bearing)); }.bind(this);
+      this.ctx.strokeStyle = this.options.colors.vx;
+      x = 0;
+      y = getYBearing(this.fi.pts[0].diffbearing);
+      this.ctx.beginPath();
+      this.ctx.moveTo(x, y);
+      for (t = 0; t < this.fi.pts.length; t += this.incr) {
+        y = getYBearing(this.fi.pts[t].diffbearing);
+        y = Math.min(this.canvas.height, y);
+        if (y >= 0) {
+          this.ctx.lineTo(x, y);
+        }
+        x += this.incx;
+      }
+      this.ctx.stroke();
+    }
+
     this.ctx.strokeStyle = this.options.colors.axis;
     this.ctx.lineWidth = 2;
     // legende alt
@@ -568,7 +589,7 @@ class GraphGPX {
           'lat': lat,
           'lon': lon,
           'alt': alt,
-          'gndalt': 0,
+          //'gndalt': 0, // todo voir pourquoi bug, parfois un élément du tableau n'a pas de gndalt
           'time': time,
           'vz': 0,
           'vx': 0,
