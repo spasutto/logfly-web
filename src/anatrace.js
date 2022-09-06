@@ -2,8 +2,7 @@
 class AnaTrace {
   analyse(data) {
     //http://192.168.1.16/web/logfly-web/src/trace.php?id=392
-    debugger;
-    const nbbearmean = 20;
+    const nbbearmean = 40;
     let imean = 0;
     let pt = data.pts[0];
     if (!pt) return;
@@ -17,7 +16,7 @@ class AnaTrace {
       if (bearmean.length < nbbearmean)
         bearmean.push(pt.diffbearing);
       else {
-        if (imean > 0 && imean % nbbearmean == 0) imean = 0;
+        if (imean > 0 && (imean % nbbearmean) == 0) imean = 0;
         bearmean[imean++] = pt.diffbearing;
       }
       pt.diffbearing = Math.round(bearmean.reduce((a, b) => a + b, 0) / bearmean.length);

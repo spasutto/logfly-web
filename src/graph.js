@@ -16,7 +16,8 @@ class GraphGPX {
         axissecondary: "#afafaf",
         alt: "#002fff",
         vz: "#af00af",
-        vx: "#22af00"
+        vx: "#22af00",
+        debug: "#af2200"
       }
     }
   }
@@ -57,7 +58,9 @@ class GraphGPX {
   }
 
   resetInfos() {
+    // à chaque changement impacter aussi fizoom dans updateZoom()
     this.fi = { 'pts': [], maxalt: -1000, minalt: 100000, maxvz:-1000, minvz:100000, maxvx:-1000, minvx:100000, start: new Date };
+    //this.fizoom = JSON.parse(JSON.stringify(this.fi)); // clone ne fonctionne pas pour la date
     this.elevcalls = 0;
     this.starttouch = 0;
     this.endtouch = 0;
@@ -66,6 +69,33 @@ class GraphGPX {
     this.selectionpossible = !('ontouchstart' in document.documentElement); // sur les desktop selection toujours possible
     this.curidx = -1;
     this.selection = [-1,-1];
+    this.zoomsel = [-1,-1];
+    this.updateZoom();
+  }
+  
+  updateZoom() {
+    if (this.zoomsel[0]>-1 && this.zoomsel[1]>-1) {
+      this.fizoom.pts = this.fi.pts.slice(this.zoomsel[0], this.zoomsel[1]);
+      //let fpt = this.fizoom.pts[0];
+      //this.fizoom.minalt = this.fizoom.pts.reduce((prev, cur) => prev<cur.alt?prev:cur.alt, fpt.alt);
+      //this.fizoom.maxalt = this.fizoom.pts.reduce((prev, cur) => prev>cur.alt?prev:cur.alt, fpt.alt);
+      //this.fizoom.minvx = this.fizoom.pts.reduce((prev, cur) => prev<cur.vx?prev:cur.vx, fpt.vx);
+      //this.fizoom.maxvx = this.fizoom.pts.reduce((prev, cur) => prev>cur.vx?prev:cur.vx, fpt.vx);
+      //this.fizoom.minvz = this.fizoom.pts.reduce((prev, cur) => prev<cur.vx?prev:cur.vz, fpt.vz);
+      //this.fizoom.maxvz = this.fizoom.pts.reduce((prev, cur) => prev>cur.vx?prev:cur.vz, fpt.vz);
+      //this.fizoom.start = fpt.time;
+    } else {
+      this.fizoom = {};
+      Object.keys(this.fi).forEach((function(k)
+      {
+        if (Array.isArray(this.fi[k]))
+          this.fizoom[k] = this.fi[k].slice();
+        else if (typeof this.fi[k].getMonth === 'function')
+          this.fizoom[k] = new Date(this.fi[k]);
+        else
+          this.fizoom[k] = this.fi[k];
+      }).bind(this));
+    }
   }
 
   createCanvas() {
@@ -73,6 +103,7 @@ class GraphGPX {
     let elem = document.createTextNode('Navigateur obsolète!');
     this.canvas.appendChild(elem);
 
+    this.canvas.oncontextmenu = function(){return false;};
     this.canvas2 = document.createElement("canvas");
     elem = document.createTextNode('Navigateur obsolète!');
     this.canvas2.appendChild(elem);
@@ -86,6 +117,7 @@ class GraphGPX {
     new ResizeObserver(this.fitCanvas.bind(this)).observe(this.elem);
     this.ctx = this.canvas.getContext('2d');
     this.ctx2 = this.canvas2.getContext('2d');
+    this.canvas2.oncontextmenu = function(){return false;};
     this.canvas2.addEventListener('mousemove', this.mousemove.bind(this));
     this.canvas2.addEventListener('mousedown', this.mousedown.bind(this));
     this.canvas2.addEventListener('mouseup', this.mouseup.bind(this));
@@ -219,32 +251,32 @@ class GraphGPX {
 
   click(e) {
     this.opencfg(true);
-    if (!Array.isArray(this.fi.pts) || this.fi.pts.length <= 0)
+    if (!Array.isArray(this.fizoom.pts) || this.fizoom.pts.length <= 0)
       return;
     let x = e.clientX - this.bdrect.left;
     this.curidx = this.indexforx(x);
-    if (this.curidx > this.fi.pts.length-1) {
-      this.curidx = this.fi.pts.length-1;
+    if (this.curidx > this.fizoom.pts.length-1) {
+      this.curidx = this.fizoom.pts.length-1;
       x = this.xforindex(this.curidx);
     }
-    let curpt = this.fi.pts[this.curidx];
+    let curpt = this.fizoom.pts[this.curidx];
     let event = new CustomEvent('onclick', {"detail": curpt});
     this.elem.dispatchEvent(event);
   }
 
   mousemove(e) {
-    if (!Array.isArray(this.fi.pts) || this.fi.pts.length <= 0)
+    if (!Array.isArray(this.fizoom.pts) || this.fizoom.pts.length <= 0)
       return;
     let x = e.clientX - this.bdrect.left;
     this.curidx = this.indexforx(x);
-    if (this.curidx > this.fi.pts.length-1) {
-      this.curidx = this.fi.pts.length-1;
+    if (this.curidx > this.fizoom.pts.length-1) {
+      this.curidx = this.fizoom.pts.length-1;
       x = this.xforindex(this.curidx);
     }
     if (this.isselecting)
       this.selection[1] = this.curidx;
     this.paintmouseinfos();
-    let curpt = this.fi.pts[this.curidx];
+    let curpt = this.fizoom.pts[this.curidx];
     let event = new CustomEvent('onposchanged', {"detail": curpt});
     this.elem.dispatchEvent(event);
   }
@@ -252,14 +284,16 @@ class GraphGPX {
   mousedown(e) {
     if (this.selectionpossible)
       this.isselecting = true;
-    if (!Array.isArray(this.fi.pts) || this.fi.pts.length <= 0)
+    if (!Array.isArray(this.fizoom.pts) || this.fizoom.pts.length <= 0)
       return;
     let x = e.clientX - this.bdrect.left;
     this.curidx = this.indexforx(x);
-    if (this.curidx > this.fi.pts.length-1)
-      this.curidx = this.fi.pts.length-1;
+    if (this.curidx > this.fizoom.pts.length-1)
+      this.curidx = this.fizoom.pts.length-1;
     if (this.selectionpossible)
       this.selection[1] = this.selection[0] = this.curidx;
+    if (e.which == 3)
+      this.zoomsel[0] = this.curidx;
     this.paintmouseinfos();
   }
   
@@ -267,11 +301,15 @@ class GraphGPX {
     this.isselecting = false;
     let x = e.clientX - this.bdrect.left;
     this.curidx = this.indexforx(x);
-    if (this.curidx > this.fi.pts.length-1)
-      this.curidx = this.fi.pts.length-1;
+    if (this.curidx > this.fizoom.pts.length-1)
+      this.curidx = this.fizoom.pts.length-1;
     if (this.selectionpossible)
       this.selection[1] = this.curidx;
     this.paintmouseinfos();
+    if (e.which == 3) {
+      this.zoomsel[1] = this.curidx;
+      this.zoom();
+    }
     if (this.selectionpossible) {
       let startx = Math.min(this.selection[0], this.selection[1]),
         endx = Math.max(this.selection[0], this.selection[1]);
@@ -322,7 +360,7 @@ class GraphGPX {
       this.ctx2.stroke();
       this.ctx2.fillStyle = "#FFFF9C8F";
       this.ctx2.fillRect(this.canvas2.width-70, 0, this.canvas2.width, 50);
-      let curpt = this.fi.pts[this.curidx];
+      let curpt = this.fizoom.pts[this.curidx];
       this.ctx2.font = '10px sans-serif';
       this.ctx2.fillStyle = this.options.colors.axis;
       let posx=this.canvas2.width - 70, posy = 0;
@@ -343,6 +381,10 @@ class GraphGPX {
       this.ctx2.font = '15px sans-serif';
       this.ctx2.fillText('\u21e7' , 0, 0);// 2b99 2191 21A5 21E7 21EB 21EC 25B2 032D 1403 1431
       this.ctx2.restore();
+      if (this.#DEBUG) {
+      this.ctx2.fillStyle = this.options.colors.debug;
+        this.ctx2.fillText(curpt.diffbearing+'°' , posx+rvxtextw+12, posy);
+      }
       let t = new Date(Date.UTC(1970, 0, 1));
       t.setUTCSeconds((curpt.time.getTime() - this.start.getTime()) / 1000);
       this.ctx2.fillStyle = this.options.colors.axis;
@@ -355,27 +397,27 @@ class GraphGPX {
     this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
     this.ctx.strokeStyle = this.options.colors.axis;
     this.ctx.lineWidth = 1;
-    if (!Array.isArray(this.fi.pts) || this.fi.pts.length <= 0) {
+    if (!Array.isArray(this.fizoom.pts) || this.fizoom.pts.length <= 0) {
       this.ctx.font = '18px sans-serif';
       this.ctx.fillText('chargement...', (this.canvas.width / 2) - 20, (this.canvas.height / 2) - 5);
       return;
     }
     this.ctx.font = '10px sans-serif';
     let t = 0, x = 0, y = 0;
-    let minaltg = Math.floor(this.fi.minalt / 100) * 100;
-    let maxaltg = Math.ceil(this.fi.maxalt / 100) * 100;
+    let minaltg = Math.floor(this.fizoom.minalt / 100) * 100;
+    let maxaltg = Math.ceil(this.fizoom.maxalt / 100) * 100;
     if (maxaltg == minaltg) maxaltg += 500;
-    //console.log(this.fi.minalt, this.fi.maxalt, minaltg, maxaltg, this.fi.pts[0]);
-    let altdiff = maxaltg - minaltg;//this.fi.maxalt-this.fi.minalt;
+    //console.log(this.fizoom.minalt, this.fizoom.maxalt, minaltg, maxaltg, this.fizoom.pts[0]);
+    let altdiff = maxaltg - minaltg;//this.fizoom.maxalt-this.fizoom.minalt;
     altdiff *= 1.05;
-    let maxvx = Math.ceil(Math.min(100, this.fi.maxvx));
+    let maxvx = Math.ceil(Math.min(100, this.fizoom.maxvx));
     let coefh = this.canvas.height / altdiff;
-    let coefhvz = this.canvas.height / (this.fi.maxvz-this.fi.minvz);
-    let coefhvx = this.canvas.height / (maxvx-this.fi.minvx);
-    let getY = function (alt) { return this.canvas.height - Math.round(coefh * (alt - this.fi.minalt)); }.bind(this);
-    let getYVz = function (vz) { return this.canvas.height - Math.round(coefhvz * (vz - this.fi.minvz)); }.bind(this);
-    let getYVx = function (vx) { return this.canvas.height - Math.round(coefhvx * (vx - this.fi.minvx)); }.bind(this);
-    this.incx = this.canvas.width / this.fi.pts.length;
+    let coefhvz = this.canvas.height / (this.fizoom.maxvz-this.fizoom.minvz);
+    let coefhvx = this.canvas.height / (maxvx-this.fizoom.minvx);
+    let getY = function (alt) { return this.canvas.height - Math.round(coefh * (alt - this.fizoom.minalt)); }.bind(this);
+    let getYVz = function (vz) { return this.canvas.height - Math.round(coefhvz * (vz - this.fizoom.minvz)); }.bind(this);
+    let getYVx = function (vx) { return this.canvas.height - Math.round(coefhvx * (vx - this.fizoom.minvx)); }.bind(this);
+    this.incx = this.canvas.width / this.fizoom.pts.length;
     this.incr = 1;
     if (this.incx < 1) {
       this.incr = 1 / this.incx;
@@ -387,8 +429,8 @@ class GraphGPX {
     // heures
     let firsthour = new Date(this.start); firsthour.setMilliseconds(0); firsthour.setSeconds(0); firsthour.setMinutes(0);
     firsthour = 3600 - ((this.start - firsthour) / 1000);
-    let secstotal = (this.fi.pts[this.fi.pts.length - 1].time - this.start) / 1000;
-    let inct = (secstotal / (this.incx * this.fi.pts.length)) / this.incr;
+    let secstotal = (this.fizoom.pts[this.fizoom.pts.length - 1].time - this.start) / 1000;
+    let inct = (secstotal / (this.incx * this.fizoom.pts.length)) / this.incr;
     this.ctx.strokeStyle = this.options.colors.axissecondary;
     this.ctx.beginPath();
     x = 0;
@@ -401,15 +443,15 @@ class GraphGPX {
     this.ctx.stroke();
 
     // gnd alt
-    if (typeof this.fi.pts[0].gndalt == 'number') {
+    if (typeof this.fizoom.pts[0].gndalt == 'number') {
       this.ctx.fillStyle = this.options.colors.axissecondary;
       this.ctx.strokeStyle = this.options.colors.axis;
       x = 0;
-      y = getY(this.fi.pts[0].gndalt)
+      y = getY(this.fizoom.pts[0].gndalt)
       this.ctx.beginPath();
       this.ctx.moveTo(0, y);
-      for (t = 0; t < this.fi.pts.length; t += this.incr) {
-        y = getY(this.fi.pts[t].gndalt);
+      for (t = 0; t < this.fizoom.pts.length; t += this.incr) {
+        y = getY(this.fizoom.pts[t].gndalt);
         y = Math.min(this.canvas.height, y);
         if (y >= 0) {
           this.ctx.lineTo(x, y);
@@ -427,11 +469,11 @@ class GraphGPX {
 
     // alt
     x = 0;
-    y = getY(this.fi.pts[0].alt);
+    y = getY(this.fizoom.pts[0].alt);
     this.ctx.beginPath();
     this.ctx.moveTo(x, y);
-    for (t = 0; t < this.fi.pts.length; t += this.incr) {
-      y = getY(this.fi.pts[t].alt);
+    for (t = 0; t < this.fizoom.pts.length; t += this.incr) {
+      y = getY(this.fizoom.pts[t].alt);
       y = Math.min(this.canvas.height, y);
       if (y >= 0) {
         this.ctx.lineTo(x, y);
@@ -444,11 +486,11 @@ class GraphGPX {
     if (this.options.showvz) {
       this.ctx.strokeStyle = this.options.colors.vz;
       x = 0;
-      y = getYVz(this.fi.pts[0].vz);
+      y = getYVz(this.fizoom.pts[0].vz);
       this.ctx.beginPath();
       this.ctx.moveTo(x, y);
-      for (t = 0; t < this.fi.pts.length; t += this.incr) {
-        y = getYVz(this.fi.pts[t].vz);
+      for (t = 0; t < this.fizoom.pts.length; t += this.incr) {
+        y = getYVz(this.fizoom.pts[t].vz);
         y = Math.min(this.canvas.height, y);
         if (y >= 0) {
           this.ctx.lineTo(x, y);
@@ -462,11 +504,11 @@ class GraphGPX {
     if (this.options.showvx) {
       this.ctx.strokeStyle = this.options.colors.vx;
       x = 0;
-      y = getYVx(this.fi.pts[0].vx);
+      y = getYVx(this.fizoom.pts[0].vx);
       this.ctx.beginPath();
       this.ctx.moveTo(x, y);
-      for (t = 0; t < this.fi.pts.length; t += this.incr) {
-        y = getYVx(this.fi.pts[t].vx);
+      for (t = 0; t < this.fizoom.pts.length; t += this.incr) {
+        y = getYVx(this.fizoom.pts[t].vx);
         y = Math.min(this.canvas.height, y);
         if (y >= 0) {
           this.ctx.lineTo(x, y);
@@ -478,15 +520,15 @@ class GraphGPX {
 
     // bearing
     if (this.#DEBUG) {
-      let coefhbearing = this.canvas.height / 90;
+      let coefhbearing = this.canvas.height / 45;
       let getYBearing = function (bearing) { return this.canvas.height - Math.round(coefhbearing * (bearing)); }.bind(this);
-      this.ctx.strokeStyle = this.options.colors.vx;
+      this.ctx.strokeStyle = this.options.colors.debug;
       x = 0;
-      y = getYBearing(this.fi.pts[0].diffbearing);
+      y = getYBearing(this.fizoom.pts[0].diffbearing);
       this.ctx.beginPath();
       this.ctx.moveTo(x, y);
-      for (t = 0; t < this.fi.pts.length; t += this.incr) {
-        y = getYBearing(this.fi.pts[t].diffbearing);
+      for (t = 0; t < this.fizoom.pts.length; t += this.incr) {
+        y = getYBearing(this.fizoom.pts[t].diffbearing);
         y = Math.min(this.canvas.height, y);
         if (y >= 0) {
           this.ctx.lineTo(x, y);
@@ -528,8 +570,8 @@ class GraphGPX {
       this.ctx.lineTo(this.canvas.width - 1, this.canvas.height);
       this.ctx.stroke();
       //this.ctx.fillStyle = "#0f0f0f";
-      let maxvz = Math.ceil(this.fi.maxvz);
-      let minvz = Math.floor(this.fi.minvz);
+      let maxvz = Math.ceil(this.fizoom.maxvz);
+      let minvz = Math.floor(this.fizoom.minvz);
       for (t = minvz; t <= maxvz; t++) {
         y = getYVz(t);
         if (y <= 0 || y > this.canvas.height) continue;
@@ -559,7 +601,7 @@ class GraphGPX {
       this.ctx.lineTo(this.canvas.width - 1, this.canvas.height);
       this.ctx.stroke();
       //this.ctx.fillStyle = "#0f0f0f";
-      let minvx = Math.floor(this.fi.minvx);
+      let minvx = Math.floor(this.fizoom.minvx);
       for (t = minvx; t <= maxvx; t+=10) {
         y = getYVx(t);
         if (y <= 0 || y > this.canvas.height) continue;
@@ -570,6 +612,15 @@ class GraphGPX {
         this.ctx.fillText(t, minscale+5, y);
       }
     }
+  }
+
+  zoom(reset) {
+    reset = reset === true || this.zoomsel[0] >= this.zoomsel[1];
+    if (reset)
+      this.zoomsel = [-1,-1];
+    this.updateZoom();
+    this.paint();
+    this.paintmouseinfos();
   }
 
   setData(points) {
@@ -659,6 +710,7 @@ class GraphGPX {
       let event = new CustomEvent('ondataloaded', { "detail": this.fi });
       this.elem.dispatchEvent(event);
     }
+    this.updateZoom();
     this.paint();
     this.paintmouseinfos();
     if (Array.isArray(this.#analysers)) {
@@ -695,6 +747,7 @@ class GraphGPX {
         this.fi.maxalt = Math.min(10000, this.fi.maxalt);
         this.elevcalls--;
         if (this.elevcalls <= 0) {
+          this.updateZoom();
           this.paint();
           let event = new CustomEvent('ondataloaded', {"detail": this.fi});
           this.elem.dispatchEvent(event);
