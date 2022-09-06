@@ -41,6 +41,7 @@
     <script src='lib/leaflet.hotline.min.js'></script>
     <script src="carto.js"></script>
     <script src="graph.js"></script>
+    <script src="anatrace.js"></script>
     <script src="igc-xc-score.js"></script>
 
 <style>
@@ -172,6 +173,7 @@
   var map = loadCarto("<?php if (defined('CLEGEOPORTAIL')) echo CLEGEOPORTAIL;?>", disablescroll, document.getElementById('mapcont'));
   var marker = L.marker([0,0]).addTo(map);
   var graph = new GraphGPX(document.getElementById("graph"), {elevationservice:'<?php if (defined('ELEVATIONSERVICE')) echo ELEVATIONSERVICE;?>', disablescroll: disablescroll});
+  graph.addAnalyser(new AnaTrace());
   var flstats = {};
   var gpx_bounds = null;
   var touchtimer = null;
@@ -345,7 +347,6 @@
         alt: alt
       });
     });
-    graph.setData(points);
     let pointshotline = points.map(pt => [pt.lat, pt.lon,pt.alt]);
     window.hotlineLayer = L.hotline(pointshotline, {
       min: -5,//Math.min.apply(null, pointshotline.map(pt => pt[2])),
@@ -360,6 +361,7 @@
       outlineColor: '#000000',
       outlineWidth: 0.5
     });
+    graph.setData(points);
     window.gpx_bounds = hotlineLayer.getBounds();
     map.fitBounds(gpx_bounds/*, {padding: [35,35]}*/);
     hotlineLayer.addTo(map);

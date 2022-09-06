@@ -568,6 +568,7 @@ class GraphGPX {
           'lat': lat,
           'lon': lon,
           'alt': alt,
+          'gndalt': 0,
           'time': time,
           'vz': 0,
           'vx': 0,
@@ -710,7 +711,9 @@ class GraphGPX {
     csvContent += Object.keys(graph.fi.pts[0]).join(";") + "\n";
     csvContent += graph.fi.pts.map(pt => Object.keys(pt).map(k =>
     {
-      if (typeof pt[k].getMonth === 'function')
+      if (!Object.hasOwn(pt, k) || typeof pt[k] === 'undefined')
+        return "";
+      else if (typeof pt[k].getMonth === 'function')
         return '"' + GraphGPX.formatDate(pt[k]) + '"';
       else if (typeof pt[k] === 'string')
         return '"' + pt[k].replaceAll('"', '""') + '"';
