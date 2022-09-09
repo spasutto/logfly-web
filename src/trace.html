@@ -1,30 +1,3 @@
-<?php
-  $id = -1;
-  if (isset($_REQUEST['id']) && preg_match('/^\d+$/', $_REQUEST['id']))
-    $id = intval($_REQUEST['id']);
-  $igc = "";
-  if ($id>0 && isset($_REQUEST['igc']))
-  {
-    require("logfilereader.php");
-    try
-    {
-      $lgfr = new LogflyReader();
-      $igc = $lgfr->getIGC($id);
-      if (isset($_REQUEST['dl'])) {
-        header('Content-type: text/plain');
-        header('Content-Disposition: attachment; filename="flightlog.igc"');
-      }
-      echo $igc;
-      exit(0);
-    }
-    catch(Exception $e)
-    {
-      echo "error!!! : ".$e->getMessage();
-      exit(0);
-    }
-  }
-  @include("config.php");
-?>
 <!DOCTYPE html>
 <html>
 <head>
@@ -115,7 +88,7 @@
 <label for="file-selector">Sélectionnez un fichier IGC : </label>
 <input type="file" id="file-selector" accept=".igc"><HR>
 <label for="formigc">Ou placez directement le contenu du fichier IGC : </label>
-<form id="formigc" method="post" action="<?php echo strtok($_SERVER['REQUEST_URI'], '?');?>" onsubmit="loadIGC(undefined, true);return false;">
+<form id="formigc" method="post" onsubmit="loadIGC(undefined, true);return false;">
 <div style="max-width: 640px">
   <textarea type="text" id="igccont" style="width:100%;height:80px"></textarea><BR>
   <input type="submit" id="frmsub" style="display:none;float: right;" value="afficher">
@@ -142,11 +115,7 @@
     });
     reader.readAsText(fileList[0]);
   });
-
-  var id = new URL(window.location.href).searchParams.get("id");
-  if (id > 0) {
-    document.getElementById('formcont').style.display = 'none';
-  }
+  
 
   Element.prototype.setGradient = function( from, to, horizontal ){
     this.style.background = 'linear-gradient(to '+(horizontal ? 'left' : 'top')+', '+from+', '+to+' 100%)';
@@ -154,6 +123,8 @@
   var mapelem = document.getElementById('map');
   var vzelem = document.getElementById('vz');
   var maxvz = 10;
+  //http://192.168.1.16/web/logfly-web/src/trace.php?igc=http%3A%2F%2F192.168.1.16%2Fweb%2Flogfly-web%2Fsrc%2FTracklogs%2F392.igc&finfo=http%3A%2F%2F192.168.1.16%2Fweb%2Flogfly-web%2Fsrc%2FTracklogs%2F392.json
+  var url = new URL(window.location.href);
 
   function isTouchDevice() {
     return (('ontouchstart' in window) ||
@@ -167,12 +138,22 @@
   function rgbToHex(r, g, b) {
     return "#" + componentToHex(r) + componentToHex(g) + componentToHex(b);
   }
+  function getParameter(param, clean) {
+    let val = url.searchParams.get(param);
+    if (val && clean)
+      val = val.trim().toLowerCase();
+    return val;
+  }
 
   var istouch = isTouchDevice();
-  var disablescroll = <?php echo isset($_GET['disablescroll'])?'true':'false'; ?>;
-  var map = loadCarto("<?php if (defined('CLEGEOPORTAIL')) echo CLEGEOPORTAIL;?>", disablescroll, document.getElementById('mapcont'));
+  var igc = getParameter("igc");
+  var finfo = getParameter("finfo");
+  var disablescroll = getParameter("disablescroll", true);disablescroll = disablescroll == "true" || disablescroll == "1";
+  var clegeoportail = getParameter("clegeoportail");
+  var elevationservice = getParameter("elevationservice") || 'elevation/getElevation.php';
+  var map = loadCarto(clegeoportail, disablescroll, document.getElementById('mapcont'));
   var marker = L.marker([0,0]).addTo(map);
-  var graph = new GraphGPX(document.getElementById("graph"), {elevationservice:'<?php if (defined('ELEVATIONSERVICE')) echo ELEVATIONSERVICE;?>', disablescroll: disablescroll});
+  var graph = new GraphGPX(document.getElementById("graph"), {elevationservice:elevationservice, disablescroll: disablescroll});
   graph.addAnalyser(new AnaTrace());
   var flstats = {};
   var gpx_bounds = null;
@@ -367,28 +348,26 @@
     hotlineLayer.addTo(map);
 
     let btndl = document.getElementById('btnDlTrace');
-    btndl.onclick = function() {window.location = "<?php echo strtok($_SERVER['REQUEST_URI'], '?');?>?id="+id+"&igc&dl";};
+    btndl.onclick = function() {window.location = "data:application/octet-stream,"+encodeURI(igccont);};
     btndl.style.display = 'block';
     let divDispMode = document.getElementById('divDispMode');
     divDispMode.appendChild(document.getElementById('dispmodes'))
     divDispMode.style.display = 'block';
   }
-  function getIGC(id) {
+  function getIGC(igc) {
     let xhttp = new XMLHttpRequest();
     xhttp.responseType = 'text';
     xhttp.onreadystatechange = function() {
       if (this.readyState == 4 && this.status == 200) {
         if (!this.responseText) return;
+        window.igccontent = this.response;
         document.getElementById('formcont').style.display = 'none';
-        loadIGC(this.response, false);
+        loadIGC(this.response, typeof finfo !== 'string');
         document.getElementById('igccont').value = this.response;
       }
     };
-    let data = null;
-    let url = "<?php echo strtok($_SERVER['REQUEST_URI'], '?');?>?id="+id+"&";
-    xhttp.open("POST", url+"igc", true);
-    xhttp.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');
-    xhttp.send(data);
+    xhttp.open("GET", igc, true);
+    xhttp.send(null);
   }
   function displayFlightScore(flightscore) {
     let isTriangle = function() { return (flightscore.opt.scoring.code == 'tri' || flightscore.opt.scoring.code == 'fai'); };
@@ -446,6 +425,7 @@
     updateTraceInfos();
   }
   function calcFlightScore(igccontent) {
+    if (typeof igccontent !== 'string') return;
     try {
       IGCScore.score(igccontent, (score) => {
         if (score && typeof score.value == 'object') {
@@ -454,26 +434,32 @@
         if (score && typeof score.opt == 'object' && typeof score.opt.flight == 'object') delete score.opt.flight;
         displayFlightScore(score);
       });
-    } catch(e) {finish();}
+    } catch(e) {console.log(e);}
   }
-  function loadFlightScore() {
+  function loadFlightScore(finfo) {
     let xhttp = new XMLHttpRequest();
     xhttp.responseType = 'json';
     xhttp.onreadystatechange = function() {
-      if (this.readyState == 4 && this.status == 200) {
-        try {
-          if (typeof this.response == 'object') {
-            displayFlightScore(this.response);
-          }
-        } catch(e) {}
+      if (this.readyState == 4) {
+        if (this.status == 200) {
+          try {
+            if (typeof this.response == 'object') {
+              displayFlightScore(this.response);
+            }
+          } catch(e) {window.finfo=null;calcFlightScore(window.igccontent);}
+        } else {
+          window.finfo=null;
+          calcFlightScore(window.igccontent);
+        }
       }
     };
-    xhttp.open("GET", "Tracklogs/"+id+".json", true);
+    xhttp.open("GET", finfo, true);
     xhttp.send();
   }
-  if (id>0) {
-    getIGC(id);
-    loadFlightScore();
+  if (igc) {
+    getIGC(igc);
+    if (finfo)
+      loadFlightScore(finfo);
   }
 
   window.onload = function() {

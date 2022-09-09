@@ -1,4 +1,5 @@
 <?php
+require("config.php");
 require("logfilereader.php");
 
 try
@@ -266,7 +267,8 @@ function affichComment(id) {
       zonecomm.innerHTML = "<b>Chargement...</b>";
     }
     if (zonecarto.innerHTML == "" && btncomm.previousElementSibling.innerHTML) {
-      zonecarto.innerHTML += "<iframe src=\"trace.php?id="+id+"&disablescroll=1\" width=\"100%\" height=\"555px\"></iframe>";
+      let tracefileprefix = encodeURI("<?php if (defined('FOLDER_TL')) echo FOLDER_TL;?>/" + id);
+      zonecarto.innerHTML += "<iframe src=\"trace.html?igc="+tracefileprefix+".igc&finfo="+tracefileprefix+".json&disablescroll=1&elevationservice="+encodeURI('<?php if (defined('ELEVATIONSERVICE')) echo ELEVATIONSERVICE;?>')+"&clegeoportail="+encodeURI('<?php if (defined('CLEGEOPORTAIL')) echo CLEGEOPORTAIL;?>')+"\" width=\"100%\" height=\"555px\"></iframe>";
     }
     ligne.style.display = 'table-row';
     btncomm.style.textDecoration = "line-through";
@@ -276,6 +278,11 @@ function affichComment(id) {
     btncomm.style.textDecoration = "";
     btncomm.title="afficher le commentaire";
   }
+}
+function openTrace(id) {
+  let tracefileprefix = encodeURI("<?php if (defined('FOLDER_TL')) echo FOLDER_TL;?>/" + id);
+  let url = "trace.html?igc="+tracefileprefix+".igc&finfo="+tracefileprefix+".json&elevationservice="+encodeURI('<?php if (defined('ELEVATIONSERVICE')) echo ELEVATIONSERVICE;?>')+"&clegeoportail="+encodeURI('<?php if (defined('CLEGEOPORTAIL')) echo CLEGEOPORTAIL;?>');
+  MyWindow=window.open(url,'MyWindow','width=900,height=380');
 }
 function afficheImageTrace(elem,id, hide) {
   hide = hide === true;
@@ -395,7 +402,7 @@ window.onload = function() {
     echo "<TD><a href=\"".url_with_parameter("voile", $vol->voile, "offset")."\" title=\"filtrer les vols pour cette voile\">".$vol->voile."</a></TD>";
     echo "<TD";
     if ($vol->igc) {
-      echo " onMouseOver=\"afficheImageTrace(this, ".$vol->id.")\" onmouseleave=\"afficheImageTrace(this, ".$vol->id.", true)\"><a href=\"#\" onClick=\"MyWindow=window.open('trace.php?id=".$vol->id."','MyWindow','width=900,height=380'); return false;\" title=\"voir la trace GPS de ce vol\"><img src=\"map.svg\" width=\"18px\"></a>";
+      echo " onMouseOver=\"afficheImageTrace(this, ".$vol->id.")\" onmouseleave=\"afficheImageTrace(this, ".$vol->id.", true)\"><a href=\"#\" onClick=\"openTrace(".$vol->id.");return false;\" title=\"voir la trace GPS de ce vol\"><img src=\"map.svg\" width=\"18px\"></a>";
     }
     else {
       echo ">";

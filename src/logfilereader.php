@@ -1,6 +1,6 @@
 <?php
 define("LOGFLYDB", "Logfly.db");
-define("FOLDER_TL", "Tracklogs");
+if (!defined('FOLDER_TL')) define("FOLDER_TL", "Tracklogs");
 require("logfileutils.php");
 
 class Vol
