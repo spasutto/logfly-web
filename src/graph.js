@@ -1,7 +1,7 @@
 
 class GraphGPX {
   #analysers = [];
-  #DEBUG = true;
+  #DEBUG = false;
   static get DEFAULT_CONF() {
     return {
       elevationservice:undefined,
@@ -17,7 +17,7 @@ class GraphGPX {
         alt: "#002fff",
         vz: "#af00af",
         vx: "#22af00",
-        debug: "#af2200"
+        debug: "#ff0000"
       }
     }
   }
@@ -303,19 +303,21 @@ class GraphGPX {
     this.curidx = this.indexforx(x);
     if (this.curidx > this.fizoom.pts.length-1)
       this.curidx = this.fizoom.pts.length-1;
-    if (this.selectionpossible)
-      this.selection[1] = this.curidx;
-    this.paintmouseinfos();
     if (e.which == 3) {
+      this.selection[0] = this.selection[1] = -1;
       this.zoomsel[1] = this.curidx;
       this.zoom();
+    } else {
+      if (this.selectionpossible)
+        this.selection[1] = this.curidx;
+      if (this.selectionpossible) {
+        let startx = Math.min(this.selection[0], this.selection[1]),
+          endx = Math.max(this.selection[0], this.selection[1]);
+        let event = new CustomEvent('onselectionchanged', {"detail": [startx, endx]});
+        this.elem.dispatchEvent(event);
+      }
     }
-    if (this.selectionpossible) {
-      let startx = Math.min(this.selection[0], this.selection[1]),
-        endx = Math.max(this.selection[0], this.selection[1]);
-      let event = new CustomEvent('onselectionchanged', {"detail": [startx, endx]});
-      this.elem.dispatchEvent(event);
-    }
+    this.paintmouseinfos();
   }
   
   mouseleave(e) {
@@ -360,6 +362,8 @@ class GraphGPX {
       this.ctx2.stroke();
       this.ctx2.fillStyle = "#FFFF9C8F";
       this.ctx2.fillRect(this.canvas2.width-70, 0, this.canvas2.width, 50);
+      if (this.curidx > this.fizoom.pts.length-1)
+        this.curidx = this.fizoom.pts.length-1;
       let curpt = this.fizoom.pts[this.curidx];
       this.ctx2.font = '10px sans-serif';
       this.ctx2.fillStyle = this.options.colors.axis;
@@ -518,8 +522,10 @@ class GraphGPX {
       this.ctx.stroke();
     }
 
-    // bearing
     if (this.#DEBUG) {
+      let bklw = this.ctx.lineWidth;
+      // diff bearing
+      //this.ctx.lineWidth = 2;
       let coefhbearing = this.canvas.height / 45;
       let getYBearing = function (bearing) { return this.canvas.height - Math.round(coefhbearing * (bearing)); }.bind(this);
       this.ctx.strokeStyle = this.options.colors.debug;
@@ -536,6 +542,26 @@ class GraphGPX {
         x += this.incx;
       }
       this.ctx.stroke();
+      // diff vz
+      let mindiffvz = this.fizoom.pts.reduce((prev, cur) => prev<cur.diffvz?prev:cur.diffvz, 0);
+      let maxdiffvz = this.fizoom.pts.reduce((prev, cur) => prev>cur.diffvz?prev:cur.diffvz, 0);
+      coefhvz = this.canvas.height / (maxdiffvz-mindiffvz);
+      getYVz = function (vz, mindiffvz) { return this.canvas.height - Math.round(coefhvz * (vz - mindiffvz)); }.bind(this);
+      this.ctx.strokeStyle = 'black';
+      x = 0;
+      y = getYVz(this.fizoom.pts[0].diffvz, mindiffvz);
+      this.ctx.beginPath();
+      this.ctx.moveTo(x, y);
+      for (t = 0; t < this.fizoom.pts.length; t += this.incr) {
+        y = getYVz(this.fizoom.pts[t].diffvz, mindiffvz);
+        y = Math.min(this.canvas.height, y);
+        if (y >= 0) {
+          this.ctx.lineTo(x, y);
+        }
+        x += this.incx;
+      }
+      this.ctx.stroke();
+      this.ctx.lineWidth = bklw;
     }
 
     this.ctx.strokeStyle = this.options.colors.axis;

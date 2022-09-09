@@ -7,19 +7,31 @@ class AnaTrace {
     let pt = data.pts[0];
     if (!pt) return;
     pt.diffbearing = 0;
-    let bearmean = [];
+    pt.diffvz = 0;
+    let meanbear = [];
+    let meanvz = [];
     for (let i=1; i<data.pts.length; i++) {
       pt = data.pts[i];
+      // Bearing
       pt.diffbearing = Math.abs(pt.bearing-data.pts[i-1].bearing);
       if (pt.diffbearing > 180)
         pt.diffbearing = 360-pt.diffbearing;
-      if (bearmean.length < nbbearmean)
-        bearmean.push(pt.diffbearing);
+      if (meanbear.length < nbbearmean)
+        meanbear.push(pt.diffbearing);
       else {
         if (imean > 0 && (imean % nbbearmean) == 0) imean = 0;
-        bearmean[imean++] = pt.diffbearing;
+        meanbear[imean++] = pt.diffbearing;
       }
-      pt.diffbearing = Math.round(bearmean.reduce((a, b) => a + b, 0) / bearmean.length);
+      pt.diffbearing = Math.round(meanbear.reduce((a, b) => a + b, 0) / meanbear.length);
+      // Vz
+      pt.diffvz = pt.vz-data.pts[i-1].vz;
+      if (meanvz.length < nbbearmean)
+        meanvz.push(pt.diffvz);
+      else {
+        if (imean > 0 && (imean % nbbearmean) == 0) imean = 0;
+        meanvz[imean++] = pt.diffvz;
+      }
+      pt.diffvz = meanvz.reduce((a, b) => a + b, 0) / meanvz.length;
     }
   }
 }
