@@ -176,6 +176,7 @@
     flstats['vz max'] = `${Math.round(fi.maxvz*10)/10}m/s`,
     flstats['vz min'] = `${Math.round(fi.minvz*10)/10}m/s`,
     flstats['vx max'] = `${Math.round(fi.maxvx)}km/h`,
+    flstats['deniv'] = `${Math.round(fi.pts[0].alt-fi.pts[fi.pts.length-1].alt)}m`,
       //flstats['vx min'] = `${Math.round(fi.minvx)}km/h`,
     updateTraceInfos();
   });
