@@ -41,13 +41,13 @@
       $newnom = htmlspecialchars(urldecode($_REQUEST['newnom']));
       if ($_REQUEST['action'] == 'delete')
       {
-        $ret = $lgfr->deleteSite($newnom);
+        $ret = $lgfr->deleteSite($site);
         if ($ret)
           echo "OK";
       }
-      else if ($lgfr->getInfoSite($newnom) != FALSE)
+      else if ($lgfr->getInfoSite($site) != FALSE)
       {
-        $ret = $lgfr->editSite($newnom, $newnom, $_REQUEST['lat'], $_REQUEST['lon'], $_REQUEST['alt']);
+        $ret = $lgfr->editSite($site, $newnom, $_REQUEST['lat'], $_REQUEST['lon'], $_REQUEST['alt']);
         if ($ret)
           echo "Le site existait déjà et a été mis à jour";
       }
@@ -183,14 +183,21 @@
     }
     else if (frmsite.value != -1)
       action = 'update';
-    var xhttp = new XMLHttpRequest();
+    let nom = frmsite.value;
+    let newnom = document.getElementsByName("nom")[0].value;
+    let lat = parseFloat(document.getElementsByName("lat")[0].value.replaceAll(',', '.'));
+    let lon = parseFloat(document.getElementsByName("lon")[0].value.replaceAll(',', '.'));
+    let alt = parseFloat(document.getElementsByName("alt")[0].value.replaceAll(',', '.'));
+    lat = isNaN(lat) ? "" : lat;
+    lon = isNaN(lon) ? "" : lon;
+    alt = isNaN(alt) ? "" : alt;
     message("loading...");
+    var xhttp = new XMLHttpRequest();
     xhttp.onreadystatechange = function() {
       if (this.readyState == 4 && this.status == 200) {
         if (!this.responseText.startsWith("OK"))
           alert(this.responseText);
         else {
-          getSiteList(newnom);
           let msg = 'création';
           switch (action)
           {
@@ -201,17 +208,10 @@
           alert(msg + ' OK !');
           window.opener.location.reload();
         }
+        getSiteList(newnom);
         message("");
       }
     };
-    let nom = frmsite.value;
-    let newnom = document.getElementsByName("nom")[0].value;
-    let lat = parseFloat(document.getElementsByName("lat")[0].value.replaceAll(',', '.'));
-    let lon = parseFloat(document.getElementsByName("lon")[0].value.replaceAll(',', '.'));
-    let alt = parseFloat(document.getElementsByName("alt")[0].value.replaceAll(',', '.'));
-    lat = isNaN(lat) ? "" : lat;
-    lon = isNaN(lon) ? "" : lon;
-    alt = isNaN(alt) ? "" : alt;
     xhttp.open("GET", "<?php echo $_SERVER['REQUEST_URI'];?>?action="+action+"&nom="+encodeURIComponent(nom)+"&newnom="+encodeURIComponent(newnom)+"&lat="+encodeURIComponent(lat)+"&lon="+encodeURIComponent(lon)+"&alt="+encodeURIComponent(alt), true);
     xhttp.send();
     return false;

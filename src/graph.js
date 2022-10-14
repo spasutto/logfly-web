@@ -704,8 +704,8 @@ class GraphGPX {
         this.fi.pts[i].vx = vx;
         this.fi.pts[i].bearing = Math.round(GraphGPX.bearing(this.fi.pts[i - 1].lat, this.fi.pts[i - 1].lon, lat, lon));
       }
-      if (alt < this.fi.minalt) this.fi.minalt = alt;
-      if (alt > this.fi.maxalt) this.fi.maxalt = alt;
+      if (alt != 0 && alt < this.fi.minalt) this.fi.minalt = alt;
+      if (alt != 0 && alt > this.fi.maxalt) this.fi.maxalt = alt;
       if (vz < this.fi.minvz) this.fi.minvz = vz;
       if (vz > this.fi.maxvz) this.fi.maxvz = vz;
       if (vx < this.fi.minvx) this.fi.minvx = vx;

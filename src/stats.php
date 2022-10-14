@@ -197,7 +197,7 @@ for ($y=0; $y<count($years); $y++) {
     continue;
   }
   echo "[";
-  for ($m=0; $m<12; $m++) {
+  for ($m=1; $m<=12; $m++) {
     $volsm = array_filter($volsy, function($vol) {
       global $m;
       return intval($vol->date->format("m")) == $m;
@@ -227,7 +227,7 @@ for ($y=0; $y<count($years); $y++) {
     continue;
   }
   echo "[";
-  for ($m=0; $m<12; $m++) {
+  for ($m=1; $m<=12; $m++) {
     $volsm = array_filter($volsy, function($vol) {
       global $m;
       return intval($vol->date->format("m")) == $m;
@@ -256,7 +256,7 @@ for ($y=0; $y<count($years); $y++) {
     continue;
   }
   echo "[";
-  for ($m=0; $m<12; $m++) {
+  for ($m=1; $m<=12; $m++) {
     $volsm = array_filter($volsy, function($vol) {
       global $m;
       return intval($vol->date->format("m")) == $m;
