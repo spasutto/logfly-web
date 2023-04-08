@@ -83,10 +83,16 @@
         return;
       }
       message();
-      sitesko = sites.filter(function(s) { return (typeof s.latitude != 'number') || (typeof s.longitude != 'number') || (!isNumeric(s.altitude)); }).map(function(s) {return s.nom;});
-      sites = sites.filter(function(s) { return (typeof s.latitude == 'number') && (typeof s.longitude == 'number') && (isNumeric(s.altitude)); });
+      sitesko = sites.filter(function(s) { return (typeof s.latitude != 'number') || (typeof s.longitude != 'number')/* || (!isNumeric(s.altitude))*/; }).map(function(s) {return s.nom;});
+      sites = sites.filter(function(s) { return (typeof s.latitude == 'number') && (typeof s.longitude == 'number')/* && (isNumeric(s.altitude))*/; });
+      siteswarning = sites.filter(function(s) { return !isNumeric(s.altitude) || s.altitude == 0; }).map(function(s) {return s.nom;});
+      let msg = '';
       if (sitesko.length > 0)
-        message("Certains sites ne sont pas affichés car ils comportaient des positions invalides : " + sitesko.join(", "));
+        msg = "Certains sites ne sont pas affichés car ils comportaient des positions invalides : " + sitesko.join(", ");
+      if (siteswarning.length > 0)
+        msg = "Certains sites comportent des altitudes invalides : " + siteswarning.join(", ");
+      if (msg.trim().length > 0)
+        message(msg);
       //sites = sites.filter(function(s) { return (typeof s.latitude != 'number') || (typeof s.longitude != 'number') || (!isNumeric(s.altitude)); });
       sites.forEach(function(s) {
         let sitenom = s.nom;
