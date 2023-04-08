@@ -79,7 +79,8 @@ function extract_igc()
     }
     $vols = "[" . implode (",", $vols) . "]";
   ?>
-  <script src="igc-xc-score.js"></script>
+  <script src="lib/igc-xc-score.js"></script>
+  <script src="score.js"></script>
   <script>
     var vols = <?php echo $vols;?>;
     var volscore = [];
@@ -110,11 +111,7 @@ function extract_igc()
           scoring = false;
           return;
         }
-        IGCScore.score(currenttrace.igc, (score) => {
-          if (score && typeof score.value == 'object') {
-            score = score.value;
-          }
-          if (score && typeof score.opt == 'object' && typeof score.opt.flight == 'object') delete score.opt.flight;
+        score(currenttrace.igc, (score) => {
           postFlightScore(currenttrace.id, score);
           //document.body.innerHTML += currenttrace.id + " : score OK "+score.score+" pts<BR/>";
           document.getElementById('score_'+currenttrace.id).innerHTML = score.score+" pts, ";

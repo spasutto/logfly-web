@@ -82,7 +82,7 @@ class LogflyReader
     return $ret->fetchArray(SQLITE3_ASSOC);
   }
 
-  function updateVol($id, $nomsite, $date, $heure, $duree, $voile, $commentaire, $lat = 0.0, $lon = 0.0)
+  function updateVol($id, $nomsite, $date, $heure, $duree, $voile, $commentaire, $lat = 0.0, $lon = 0.0, $alt = 0.0)
   {
     if (!$this->existeVol($id))
       return $this->addVol($nomsite, $date, $heure, $duree, $voile, $commentaire, $id);
@@ -94,7 +94,7 @@ class LogflyReader
     $site = $this->getInfoSite($nomsite);
     //echo "<pre>".print_r($site)."</pre>";
     if (!$site)
-      $site = $this->createSite($nomsite, $lat, $lon);
+      $site = $this->createSite($nomsite, $lat, $lon, $alt);
     //echo "<pre>".print_r($site)."</pre>";
     $sduree = Utils::timeFromSeconds($duree, TRUE);
     //echo print_r($site);
@@ -109,7 +109,7 @@ class LogflyReader
     return TRUE;
   }
 
-  function addVol($nomsite, $date, $heure, $duree, $voile, $commentaire, $id=FALSE, $lat = 0.0, $lon = 0.0)
+  function addVol($nomsite, $date, $heure, $duree, $voile, $commentaire, $id=FALSE, $lat = 0.0, $lon = 0.0, $alt = 0.0)
   {
     $heureformat = "H:i:s";
     if (strlen($heure) < 8)
@@ -124,7 +124,7 @@ class LogflyReader
       $nomsite = strtoupper($nomsite);
       $site = $this->getInfoSite($nomsite);
       if (!$site)
-        $site = $this->createSite($nomsite, $lat, $lon);
+        $site = $this->createSite($nomsite, $lat, $lon, $alt);
       $sitealt = $site->altitude;
       $sitelon = $site->longitude;
       $sitelat = $site->latitude;
@@ -143,6 +143,21 @@ class LogflyReader
     }
     return $this->db->lastInsertRowID();
   }
+  
+  function permutVol($id1, $id2)
+  {
+    unlink("Tracklogs/".$id1.".png");
+    unlink("Tracklogs/".$id2.".png");
+    rename("Tracklogs/".$id1.".json", "Tracklogs/tempid.json");
+    rename("Tracklogs/".$id2.".json", "Tracklogs/".$id1.".json");
+    rename("Tracklogs/tempid.json", "Tracklogs/".$id2.".json");
+    rename("Tracklogs/".$id1.".igc", "Tracklogs/tempid.igc");
+    rename("Tracklogs/".$id2.".igc", "Tracklogs/".$id1.".igc");
+    rename("Tracklogs/tempid.igc", "Tracklogs/".$id2.".igc");
+    $this->updateVolId($id1, -1);
+    $this->updateVolId($id2, $id1);
+    $this->updateVolId(-1, $id2);
+  }
 
   function getSites()
   {
@@ -156,11 +171,12 @@ class LogflyReader
     return $sites;
   }
 
-  function createSite($nom, $lat = 0.0, $lon = 0.0)
+  function createSite($nom, $lat = 0.0, $lon = 0.0, $alt = 0.0)
   {
     if (!is_float($lat)) $lat = 0.0;
     if (!is_float($lon)) $lon = 0.0;
-    $sql = "INSERT INTO SITE (S_Nom,S_Latitude,S_Longitude) VALUES ('".str_replace("'", "''", strtoupper($nom))."', '".$lat."', '".$lon."') ";
+    if (!is_float($alt)) $alt = 0.0;
+    $sql = "INSERT INTO SITE (S_Nom,S_Latitude,S_Longitude,S_Alti) VALUES ('".str_replace("'", "''", strtoupper($nom))."', '".$lat."', '".$lon."', '".$alt."') ";
     //echo $sql."<BR>\n";
     $ret = $this->db->query($sql);
 

@@ -7,15 +7,19 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
+    <!--<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css" integrity="sha256-kLaT2GOSpHechhsozzB+flnD+zUyjE2LlfWPgU04xyI=" crossorigin="" />
+    <script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js" integrity="sha256-WBkoXOwTeyKclOHuWtc+i2uENFpDZ9YPdf5Hf+D7ewM=" crossorigin=""></script>-->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" integrity="sha512-xodZBNTC5n17Xt2atTPuE1HxjVMSvLVW9ocqUKLsCC5CXdbqCmblAshOMAS6/keqq/sMZMZ19scR4PsZChSR7A==" crossorigin=""/>
     <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js" integrity="sha512-XQoYMqMTK8LvdxXYG3nZ448hOEQiglfqkJs1NOQV44cWnUrBc8PkAOcXy20w0vlaXaVUearIOBhiXZ5V3ynxwA==" crossorigin=""></script>
     <script src='lib/Leaflet.fullscreen.js'></script>
     <link href='lib/leaflet.fullscreen.css' rel='stylesheet' />
-    <script src='lib/leaflet.hotline.min.js'></script>
+    <script src='lib/leaflet.hotline.js'></script>
     <script src="carto.js"></script>
     <script src="graph.js"></script>
     <script src="anatrace.js"></script>
-    <script src="igc-xc-score.js"></script>
+    <script src="lib/igc-xc-score.js"></script>
+    <script src="https://cdn.plot.ly/plotly-2.16.1.min.js"></script>
+    <script src="lib/igc2kmz.min.js"></script>
 
 <style>
   body {
@@ -25,6 +29,7 @@
   html, body {
     height: 100%;
     width: 100%;
+    font-family: sans-serif;
   }
   p {
     margin: 0;
@@ -72,6 +77,36 @@
     font-weight: bolder;
     font-size : 15pt;
   }
+  #popupPolaire {
+    display: none;
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    border: solid 1px #afafaf;
+    background-color: #dfdfdf;
+    border-radius: 15px;
+    padding: 10px;
+  }
+  #btnClose {
+    position: absolute;
+    top: 0;
+    right: 0;
+    z-index: 20;
+    margin: 10px;
+    padding: 0px;
+    width: 22px;
+    height: 20px;
+    cursor: pointer;
+    border: solid 1px black;
+    background-color: #efefef;
+    border-radius: 5px;
+    text-align: center;
+    vertical-align: middle;
+    padding-top: 2px;
+  }
+  #ctinfos {
+    max-width: 150px;
+  }
 </style>
 
 </head>
@@ -99,8 +134,15 @@
 <div id="dispmodes">
   <p class="gras centre souligne">Couleur trace :</p>
   <input type="radio" id="dmVz" name="dispmodes" value="vz" onclick="window.dispmode=this.value;redrawFlight();" checked><label for="dmVz">vz</label><BR>
+  <input type="radio" id="dmVx" name="dispmodes" value="vx" onclick="window.dispmode=this.value;redrawFlight();"><label for="dmVx">vx</label><BR>
   <input type="radio" id="dmAlt" name="dispmodes" value="alt" onclick="window.dispmode=this.value;redrawFlight();"><label for="dmAlt">altitude</label><BR>
+  <input type="radio" id="dmAltSol" name="dispmodes" value="altsol" onclick="window.dispmode=this.value;redrawFlight();"><label for="dmAltSol">altitude sol</label><BR>
   <input type="radio" id="dmNone" name="dispmodes" value="none" onclick="window.dispmode=this.value;redrawFlight();"><label for="dmNone">aucune</label>
+</div>
+
+<div id="popupPolaire">
+  <div id="btnClose" title="fermer le graph">X</div>
+  <div id="graphPolaire"></div>
 </div>
 
 <script>
@@ -147,20 +189,33 @@
 
   var istouch = isTouchDevice();
   var igc = getParameter("igc");
+  var tzoffset = parseInt(getParameter("tzoffset", true));
+  tzoffset = typeof tzoffset === 'number' && !isNaN(tzoffset) ? tzoffset : 0;
   var finfo = getParameter("finfo");
   var disablescroll = getParameter("disablescroll", true);disablescroll = disablescroll == "true" || disablescroll == "1";
   var clegeoportail = getParameter("clegeoportail");
   var elevationservice = getParameter("elevationservice") || 'elevation/getElevation.php';
   var map = loadCarto(clegeoportail, disablescroll, document.getElementById('mapcont'));
+
   var marker = L.marker([0,0]).addTo(map);
-  var graph = new GraphGPX(document.getElementById("graph"), {elevationservice:elevationservice, disablescroll: disablescroll});
+  var graph = new GraphGPX(document.getElementById("graph"), {elevationservice:elevationservice, disablescrollzoom: disablescroll});
   graph.addAnalyser(new AnaTrace());
+  map.on('fullscreenchange', function () {
+    if (map.isFullscreen()) {
+        graph.disableScrollZoom = false;
+    } else {
+        graph.disableScrollZoom = disablescroll;
+    }
+  });
   var flstats = {};
   var gpx_bounds = null;
   var touchtimer = null;
   var launchtimer = function(e) {
     touchtimer = window.setTimeout(function(){map.setView(marker.getLatLng());}, 1000);
   };
+  document.getElementById('btnClose').addEventListener('click', function(e) {
+    e.srcElement.parentElement.style.display = 'none';
+  });
   graph.addEventListener('touchstart', launchtimer);
   graph.addEventListener('touchend', function(e) {window.clearTimeout(touchtimer);});
   graph.addEventListener('touchmove', function(e) {window.clearTimeout(touchtimer);launchtimer();});
@@ -217,14 +272,17 @@
       let portion = fi.pts.slice(graphsel[0], graphsel[1]);
       let prevpt = {lat: stpt.lat, lon: stpt.lon};
       let vxmoy = 0;
+      let vzmoy = 0;
       let dist = portion.reduce((total, currentValue, currentIndex, arr) => 
       {
         let tdist = total+GraphGPX.distance(prevpt.lat, prevpt.lon, currentValue.lat, currentValue.lon);
         vxmoy += currentValue.vx;
+        vzmoy += currentValue.vz;
         prevpt = currentValue;
         return tdist;
       }, 0);
       vxmoy = Math.round(vxmoy/portion.length);
+      vzmoy = Math.round(10*vzmoy/portion.length)/10;
       let deniv = stpt.alt - endpt.alt;
       let finesse = Math.round(100*dist / deniv)/100;
       dist /= 1000;
@@ -234,7 +292,7 @@
         finesse = '&infin;';
         deniv = '+' + deniv;
       }
-      flstats['finesse'] = `${finesse}<BR><i>(${deniv}m en ${dist}km à ${vxmoy}km/h)</i>`;
+      flstats['finesse'] = `<a title="afficher la polaire pour la sélection" href="#" onclick="event.stopPropagation();showpolaire(${JSON.stringify(portion.map(p => ({'vx': p.vx, 'vz': p.vz}))).replaceAll("\"", "'")});">${finesse}</a><BR><i>(${deniv}m en ${dist}km à ${vxmoy}km/h, vz moy: ${vzmoy}m/s)</i>`;
       updateTraceInfos();
     }
   });
@@ -247,6 +305,17 @@
     } else if (dispmode == 'vz') {
       hotlineLayer.setLatLngs(window.fi.pts.map(pt => ([pt.lat, pt.lon, pt.vz])));
       hotlineLayer.setStyle({'min':-5/*fi.minvz*/, 'max':5/*fi.maxvz*/});
+    } else if (dispmode == 'vx') {
+      hotlineLayer.setLatLngs(window.fi.pts.map(pt => ([pt.lat, pt.lon, pt.vx])));
+      hotlineLayer.setStyle({'min':0/*fi.minvx*/, 'max':55/*fi.maxvx*/});
+    } else if (dispmode == 'altsol') {
+      let pts = window.fi.pts.map(pt => ([pt.lat, pt.lon, pt.alt - pt.gndalt]));
+      let ptsr = pts.map(p => p[2]);
+      let min = Number.MAX_SAFE_INTEGER;
+      let max = Number.MIN_SAFE_INTEGER;
+      ptsr.forEach(p => {if (p<min) min = p;if (p>max) max = p;})
+      hotlineLayer.setLatLngs(pts);
+      hotlineLayer.setStyle({'min':min, 'max':max});
     } else {
       hotlineLayer.setLatLngs(window.fi.pts.map(pt => ([pt.lat, pt.lon, 0])));
       hotlineLayer.setStyle({'min':0, 'max':0.1});
@@ -281,6 +350,24 @@
       binfos = !binfos;
     };
   }
+  function parseIRecord(line) {
+    const extensions = {};
+    line = line??'';
+    const IRE = /I(\d\d)(\d{4}.{3})+/;
+    const EXTRE = /(\d{2})(\d{2})(.{3})/;
+    if (IRE.test(line)) {
+      let matches = line.match(IRE);
+      let nbr = parseInt(matches[1]);
+      line = line.substring(3);
+      for (let i = 0; i < nbr; i++) {
+        matches = line.match(EXTRE);
+        if (matches == null || matches.length != 4) continue;
+        extensions[matches[3]] = {'start': parseInt(matches[1])-1, 'end': parseInt(matches[2])};
+        line = line.substring(i+7);
+      }
+    }
+    return extensions;
+  }
   function loadIGC(igccont, calcfs) {
     if (typeof igccont !== 'string') {
       igccont = document.getElementById('igccont').value;
@@ -288,8 +375,9 @@
     }
     if (calcfs === true) calcFlightScore(igccont);
     let lines = igccont.split(/\r?\n/);
+    let extensions = parseIRecord(lines.find(l => l.trim().startsWith('I')));
     let records = lines.filter(l => l.trim().startsWith('B'));
-    let points = [];
+    window.points = [];
     //0000000000111111111
     //0123456789012345678
     //HFDTEDATE:100522,01
@@ -309,14 +397,22 @@
       let date = new Date(startdate);
       date.setHours(parseInt(r.substr(1,2)));
       date.setMinutes(parseInt(r.substr(3,2)));
-      date.setSeconds(parseInt(r.substr(5,2)));
+      date.setSeconds(parseInt(r.substr(5,2))+tzoffset);
       let alt = parseInt(r.substr(25,5));
       if (alt == 0) alt = parseInt(r.substr(30,5));
       let lat = parseFloat(r.substr(7,2));
-      lat += parseFloat((r.substr(9,2)+'.'+r.substr(11,3)))/60;
+      let mmmext = 0;
+      if (extensions.hasOwnProperty('LAD')) {
+        mmmext = parseInt(r.substring(extensions['LAD'].start, extensions['LAD'].end));
+      }
+      lat += parseFloat((r.substr(9,2)+'.'+r.substr(11,3)+mmmext))/60;
       lat *=  r[14]=='N'?1:-1;
       let lon = parseFloat(r.substr(15,3));
-      lon += parseFloat((r.substr(18,2)+'.'+r.substr(20,3)))/60;
+      mmmext = 0;
+      if (extensions.hasOwnProperty('LOD')) {
+        mmmext = parseInt(r.substring(extensions['LOD'].start, extensions['LOD'].end));
+      }
+      lon += parseFloat((r.substr(18,2)+'.'+r.substr(20,3)+mmmext))/60;
       lon *=  r[23]=='E'?1:-1;
       points.push({
         lat: lat,
@@ -329,7 +425,26 @@
         alt: alt
       });
     });
-    let pointshotline = points.map(pt => [pt.lat, pt.lon,pt.alt]);
+    let interval = Math.ceil((points[points.length - 1].time.getTime() - points[0].time.getTime())/points.length);
+    let gap = 0;
+    let j = 0, k = 0;
+    let clone = null;
+    for (let i=1; i<points.length; i++) {
+      gap = points[i].time.getTime() - points[i-1].time.getTime();
+      if (gap > interval) {
+        //let url = location.protocol+'//'+location.hostname+(location.port?":"+location.port:"")+location.pathname+(location.search?location.search:"");
+        //\n${url}#${points[i].time.getTime()}
+        console.log(`trou dans la trace de ${gap}ms @${points[i].time.toString()}`);
+        j = i+gap/interval;
+        k = i-1;
+        for (; i<j; i++) {
+          clone = JSON.parse(JSON.stringify(points[i-1]));
+          clone.time = new Date(new Date(clone.time).getTime() + interval);
+          points.splice(i, 0, clone);
+        }
+      }
+    }
+    let pointshotline = points.map(pt => [pt.lat, pt.lon, pt.alt]);
     window.hotlineLayer = L.hotline(pointshotline, {
       min: -5,//Math.min.apply(null, pointshotline.map(pt => pt[2])),
       max: 8,//Math.max.apply(null, pointshotline.map(pt => pt[2])),
@@ -349,11 +464,38 @@
     hotlineLayer.addTo(map);
 
     let btndl = document.getElementById('btnDlTrace');
-    btndl.onclick = function() {window.location = "data:application/octet-stream,"+encodeURI(igccont);};
+    btndl.onclick = function() {downloadIGC(igccont, startdate);/*window.location = "data:application/octet-stream,"+encodeURI(igccont);*/};
     btndl.style.display = 'block';
+    let btnkmz = document.getElementById('btnDlKMZ');
+    btnkmz.onclick = function() {downloadKMZ(igccont, startdate);};
+    btnkmz.style.display = 'block';
     let divDispMode = document.getElementById('divDispMode');
     divDispMode.appendChild(document.getElementById('dispmodes'))
     divDispMode.style.display = 'block';
+  }
+  function downloadIGC(igccont, startdate) {
+    const a = document.createElement("a");
+    a.setAttribute('href', "data:application/octet-stream,"+encodeURI(igccont));
+    if (typeof startdate.toISOString === 'function') {
+      a.setAttribute('download', startdate.toISOString().substring(0,10)+".igc");
+    } else {
+      a.setAttribute('download', "track.igc");
+    }
+    const textnode = document.createTextNode("télécharger");
+    a.appendChild(textnode);
+    a.style.display = 'none';
+    document.body.appendChild(a);
+    a.click();
+  }
+  function downloadKMZ(igccont, startdate) {
+    let filename = "track.kmz";
+    if (typeof startdate.toISOString === 'function') {
+      filename = startdate.toISOString().substring(0,10)+".kmz";
+    }
+    igc2kmz(igccont, filename).catch(err => {
+      alert(err);
+      throw err;
+    });
   }
   function getIGC(igc) {
     let xhttp = new XMLHttpRequest();
@@ -457,19 +599,37 @@
     xhttp.open("GET", finfo, true);
     xhttp.send();
   }
-  if (igc) {
-    getIGC(igc);
-    if (finfo)
-      loadFlightScore(finfo);
+  function showpolaire(portion) {
+    portion.sort((p1, p2) => p1.vx - p2.vx);
+    var trace1 = {
+      x: portion.map(p => p.vx),
+      y: portion.map(p => p.vz),
+      mode: 'lines+markers'
+    };
+    Plotly.newPlot('graphPolaire', [ trace1 ], { title:'Polaire des vitesses pour la zone sélectionnée'});
+    document.getElementById('popupPolaire').style.display='block';
   }
 
   window.onload = function() {
+    if (igc) {
+      getIGC(igc);
+      document.getElementById('formcont').style.display = 'none';
+      if (finfo)
+        loadFlightScore(finfo);
+    }
     document.getElementById('frmsub').style.display = 'block';
   };
 
   window.onresize = function(e) {
     if (map && gpx_bounds && !usermoved)
       map.fitBounds(gpx_bounds/*, {padding: [35,35]}*/);
+  };
+  window.onhashchange = function(e) {
+    let hash = location.hash.substring(12).trim();
+    let timetoseek = parseInt(hash);
+    if (/^\d+$/g.test(hash) && Array.isArray(points) && points[0].time.getTime() <= timetoseek && points[points.length-1].time.getTime() >= timetoseek) {
+      console.log(points.find(p => p.time.getTime() == timetoseek));
+    }
   };
 </script>
 

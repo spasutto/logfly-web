@@ -53,6 +53,13 @@ class GraphGPX {
     return this.options.showvx === true;
   }
 
+  set disableScrollZoom(disablescrollzoom) {
+    this.options.disablescrollzoom = disablescrollzoom === true;
+  }
+  get disableScrollZoom() {
+    return this.options.disablescrollzoom === true;
+  }
+
   addAnalyser(analyser) {
     this.#analysers.push(analyser);
   }
@@ -123,8 +130,7 @@ class GraphGPX {
     this.canvas2.addEventListener('mouseup', this.mouseup.bind(this));
     this.canvas2.addEventListener('mouseleave', this.mouseleave.bind(this));
     this.canvas2.addEventListener('click', this.click.bind(this));
-    if (!this.options.disablescrollzoom)
-      this.canvas2.addEventListener('wheel', this.wheel.bind(this));
+    this.canvas2.addEventListener('wheel', this.wheel.bind(this));
     if ('ontouchstart' in document.documentElement) {
       this.canvas2.addEventListener("touchstart", this.touchevts.bind(this), true);
       this.canvas2.addEventListener("touchmove", this.touchevts.bind(this), true);
@@ -244,6 +250,7 @@ class GraphGPX {
   }
 
   wheel(e) {
+    if (this.options.disablescrollzoom) return;
     let event = new CustomEvent('onwheel', {"detail": e.deltaY});
     this.elem.dispatchEvent(event);
     e.preventDefault();
@@ -406,7 +413,8 @@ class GraphGPX {
       this.ctx.fillText('chargement...', (this.canvas.width / 2) - 20, (this.canvas.height / 2) - 5);
       return;
     }
-    this.ctx.font = '10px sans-serif';
+    let defaultfont = '10px sans-serif';
+    this.ctx.font = defaultfont;
     let t = 0, x = 0, y = 0;
     let minaltg = Math.floor(this.fizoom.minalt / 100) * 100;
     let maxaltg = Math.ceil(this.fizoom.maxalt / 100) * 100;
@@ -430,7 +438,7 @@ class GraphGPX {
     this.incx = Math.floor(this.incx);
     this.incr = Math.ceil(this.incr);
 
-    // heures
+    // heures (barres)
     let firsthour = new Date(this.start); firsthour.setMilliseconds(0); firsthour.setSeconds(0); firsthour.setMinutes(0);
     firsthour = 3600 - ((this.start - firsthour) / 1000);
     let secstotal = (this.fizoom.pts[this.fizoom.pts.length - 1].time - this.start) / 1000;
@@ -451,7 +459,7 @@ class GraphGPX {
       this.ctx.fillStyle = this.options.colors.axissecondary;
       this.ctx.strokeStyle = this.options.colors.axis;
       x = 0;
-      y = getY(this.fizoom.pts[0].gndalt)
+      y = getY(this.fizoom.pts[0].gndalt);
       this.ctx.beginPath();
       this.ctx.moveTo(0, y);
       for (t = 0; t < this.fizoom.pts.length; t += this.incr) {
@@ -468,6 +476,17 @@ class GraphGPX {
       this.ctx.stroke();
       this.ctx.fill();
     }
+
+    // heures (texte)
+    this.ctx.font = '9px sans-serif';
+    this.ctx.fillStyle  = this.options.colors.text;
+    x = 0;
+    for (t = firsthour; t < secstotal; t += 3600) {
+      x = Math.round(inct * t);
+      let h = this.pad(new Date(this.start.getTime() + t*1000).getHours(), 2) + ':00';
+      this.ctx.fillText(h, x-11, this.canvas.height-1);
+    }
+    this.ctx.font = defaultfont;
 
     this.ctx.strokeStyle = this.options.colors.alt;
 
@@ -655,7 +674,7 @@ class GraphGPX {
     const VZMIN = -30;
     this.resetInfos();
     let i = 0, j = 0, k = 0, alt = 0, lat = 0, lon = 0, latvx = 0, lonvx = 0, vz = 0, vx = 0, tdiff = 0, vzm = [], vxm = [];
-    let time, timevx;
+    let time;
     for (i=0; i<points.length; i++) {
       alt = points[i].alt;
       time = points[i].time;
@@ -673,11 +692,12 @@ class GraphGPX {
           'bearing': 0,
         });
       if (i == 0) {
-        this.start = timevx = time;
+        this.start = new Date(time);
         latvx = lat;
         lonvx = lon;
       } else {
         tdiff = (time.getTime() - this.fi.pts[i - 1].time.getTime()) / 1000;
+        tdiff = (tdiff === 0 || isNaN(tdiff) || tdiff === Infinity) ? 1 : tdiff;
         vz = (alt - this.fi.pts[i - 1].alt) / tdiff;
         // si VZ > max alors on réévalue alt avec VZ -antérieur- ne fonctionne pas, on prends vz = 0 et l'altitude du point précédent
         if (vz > VZMAX || vz < VZMIN) {
@@ -804,6 +824,12 @@ class GraphGPX {
       }
     }
     return max;
+  }
+  
+  pad(num, size) {
+    num = num.toString();
+    while (num.length < size) num = "0" + num;
+    return num;
   }
   
   toCSV() {

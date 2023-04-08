@@ -100,7 +100,7 @@ function finish() {
     // TODO ouvrir popup d'edit
     setTimeout(function(){
       if (typeof window.opener.editvol == 'function') {
-        window.opener.editvol(id, <?php echo $fpt->latitude?>, <?php echo $fpt->longitude?>);
+        window.opener.editvol(id, <?php echo $fpt->latitude?>, <?php echo $fpt->longitude?>, <?php echo $fpt->altitude?>);
       }
     }, 500);
   } else {

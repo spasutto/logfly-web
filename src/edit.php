@@ -69,7 +69,12 @@ if (isset($_GET['lon']) && preg_match('/^\d+\.?\d*$/', $_GET['lon']))
   $lon = floatval($_GET['lon']);
 else if (isset($_POST['lon']) && preg_match('/^\d+\.?\d*$/', $_POST['lon']))
   $lon = floatval($_POST['lon']);
-
+$alt = false;
+if (isset($_GET['alt']) && preg_match('/^\d+\.?\d*$/', $_GET['alt']))
+  $alt = floatval($_GET['alt']);
+else if (isset($_POST['alt']) && preg_match('/^\d+\.?\d*$/', $_POST['alt']))
+  $alt = floatval($_POST['alt']);
+  
 /*if (isset($_REQUEST["uvol"])) {
     print_r($_POST);
     exit(0);
@@ -88,9 +93,9 @@ else
   return;
 }
 if (!$id)
-  $ret = @(new LogflyReader())->addVol($site, $_POST['date'], $_POST['heure'], $_POST['duree'], $_POST['voile'], htmlspecialchars($_POST['commentaire']), $lat, $lon);
+  $ret = @(new LogflyReader())->addVol($site, $_POST['date'], $_POST['heure'], $_POST['duree'], $_POST['voile'], htmlspecialchars($_POST['commentaire']), $lat, $lon, $alt);
 else
-  $ret = @(new LogflyReader())->updateVol($id, $site, $_POST['date'], $_POST['heure'], $_POST['duree'], $_POST['voile'], htmlspecialchars($_POST['commentaire']), $lat, $lon);
+  $ret = @(new LogflyReader())->updateVol($id, $site, $_POST['date'], $_POST['heure'], $_POST['duree'], $_POST['voile'], htmlspecialchars($_POST['commentaire']), $lat, $lon, $alt);
 echo $ret?"OK":"KO";
 exit(0);
 }
@@ -102,7 +107,8 @@ exit(0);
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
   <title>Edition d'un vol</title>
-  <script src="igc-xc-score.js"></script>
+  <script src="lib/igc-xc-score.js"></script>
+  <script src="score.js"></script>
 
   <style>
   .fullwidth {
@@ -248,6 +254,7 @@ exit(0);
         if (this.response.latdeco && this.response.londeco) {
             document.getElementsByName("lat")[0].value = this.response.latdeco;
             document.getElementsByName("lon")[0].value = this.response.londeco;
+            document.getElementsByName("alt")[0].value = this.response.altdeco;
         }
         onSiteChange(document.getElementsByName("site")[0].value);
         document.getElementsByName("vol")[0].value = id;
@@ -271,6 +278,7 @@ exit(0);
     params.site = document.getElementsByName("site")[0].value;
     params.lat = document.getElementsByName("lat")[0].value;
     params.lon = document.getElementsByName("lon")[0].value;
+    params.alt = document.getElementsByName("alt")[0].value;
     if (params.site == -1 || params.site.toString().trim().length <= 0) {
       params.site = document.getElementsByName("autresite")[0].value;
     }
@@ -491,17 +499,13 @@ else
       if (this.readyState == 4 && this.status == 200) {
         message("calcul...");
         try {
-          IGCScore.score(this.responseText, (score) => {
+          score(this.responseText, (score) => {
             message("");
-            if (score && typeof score.value == 'object') {
-              score = score.value;
-            }
-            if (score && typeof score.opt == 'object' && typeof score.opt.flight == 'object') delete score.opt.flight;
             if (confirm ("Le score calculé est de " + Math.round(score.score*10)/10 + " points pour "+Math.round(score.scoreInfo.distance*10)/10+"km, mettre à jour?")) {
               message("enregistrement...");
               postFlightScore(id, score, (msg) => {message("");alert(msg == "OK"?"Fait!":"Il semble qu'il y'ai eu un problème : " + msg);});
             }
-          }, 'FFVL');
+          });
         } catch(e) {alert(e);}
       }
     };
@@ -590,6 +594,7 @@ if ($id && !isset($_GET["del"]))
   <input type="hidden" name="id" value="<?php echo $id;?>">
   <input type="hidden" name="lat" value="<?php echo $lat;?>">
   <input type="hidden" name="lon" value="<?php echo $lon;?>">
+  <input type="hidden" name="alt" value="<?php echo $alt;?>">
  <p>Date : <input type="text" name="date" value="<?php echo date('d/m/Y');?>" onKeyUp="calcdate();"/>&nbsp;&nbsp;<span name="jrsem"></span>
  Heure : <input type="text" name="heure" value="<?php echo date('H:i:s');?>"/></p>
  <p>Durée : <input type="text" name="dureeheures" onKeyUp="calcsecondes()"/>(<span name="dureeHMS"></span>)&nbsp;soit&nbsp;<span name="duree">0</span>&nbsp;secondes</p>

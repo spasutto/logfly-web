@@ -21,7 +21,7 @@ function loadCarto(clegeoportail, disablescrollzoom, rootelem) {
     id: 'mapbox/streets-v11',
     tileSize: 512,
     zoomOffset: -1
-  }).addTo(map);
+  });
   var ignphoto, carteign;
   if (useign) {
     ignphoto = L.tileLayer(
@@ -40,7 +40,7 @@ function loadCarto(clegeoportail, disablescrollzoom, rootelem) {
         attribution : '<a target="_blank" href="https://www.geoportail.gouv.fr/">IGN-F/Geoportail</a>',
       tileSize : 256 // les tuiles du Géooportail font 256x256px
       }
-    ).addTo(map);
+    );
     carteign = L.tileLayer(
         "https://wxs.ign.fr/"+clegeoportail+"/geoportail/wmts?" +
         "&REQUEST=GetTile&SERVICE=WMTS&VERSION=1.0.0" +
@@ -58,24 +58,36 @@ function loadCarto(clegeoportail, disablescrollzoom, rootelem) {
         attribution : '<a target="_blank" href="https://www.geoportail.gouv.fr/">IGN-F/Geoportail</a>',
       tileSize : 256 // les tuiles du Géooportail font 256x256px
       }
-    ).addTo(map);
+    );
   }
   var opentopomap = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
     maxZoom: 17,
     attribution: 'Map data: &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, <a href="http://viewfinderpanoramas.org">SRTM</a> | Map style: &copy; <a href="https://opentopomap.org">OpenTopoMap</a> (<a href="https://creativecommons.org/licenses/by-sa/3.0/">CC-BY-SA</a>)'
-  }).addTo(map);
+  });
 
   var baseMaps = {};
   if (useign) {
     baseMaps["Photos Satellite"] = ignphoto;
     baseMaps["Carte IGN"] = carteign;
   }
-  baseMaps["MapBox"] = mapbox;
+  //baseMaps["MapBox"] = mapbox;
   baseMaps["Carte Topo"] = opentopomap;
+  for (let basemap in baseMaps) {
+    baseMaps[basemap].addTo(map);
+  }
   L.control.layers(baseMaps).addTo(map);
 
   if (typeof L.Control.Fullscreen == 'function') {
     let options = {'element' : rootelem};
+    map.on('fullscreenchange', function () {
+        if (map.isFullscreen()) {
+            map.scrollWheelZoom.enable();
+            map.dragging.enable();
+        } else {
+            map.scrollWheelZoom.disable();
+            isTouchDevice()?map.dragging.disable():map.dragging.enable();
+        }
+    });
     map.addControl(new L.Control.Fullscreen(options));
   }
 
@@ -95,6 +107,23 @@ function loadCarto(clegeoportail, disablescrollzoom, rootelem) {
     onRemove: function(map) {}
   });
   new L.Control.DlIGC({ position: 'topright' }).addTo(map);
+
+  L.Control.DlKMZ = L.Control.extend({
+    onAdd: function(map) {
+      var img = L.DomUtil.create('img');
+      img.src = 'data:image/png;base64, iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAMAAABEpIrGAAADAFBMVEX5+fna8P/I4v7N6f/49vXw8/bC4P/y9fn4+PaYwv+eyP+Uwf6hyf+w0v652f+q0P9alfZSkPVxpvlQjvRYlvpMi/RNjvlPkPxGiPSRvv4xaN06c+RIhvGLsfODq+owZtxKh+tEhvMtaeErY9w+gvJDge0zY8s+euImYNsrZuAlXtopXMooXtEmWspyk9sAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACnehSyAAAAAXRSTlMAQObYZgAAAAlwSFlzAAALEgAACxIB0t1+/AAAAZFJREFUeNqtk9tywiAURRUMNaE3Sg8StE0V2xKt/v/ndR8So+nloTPdYfKyFhtCksnkHzMVUggpxawofsbMEaXU1Wz+jcuyqsoSUAqp1AwZc6Y8dG6QopgXo5LrEhDRuLANJeS4g+ejALTUVdXtBMKw1xsIPJiyIztjPgjMuAPRfLvNHRD6Re6qe8N54I6s9YuchNJmbqztudZCsVH0x/FohnQCziN34ESYC7LWWOPcwhNVF4ZUUk15hQUMh+kEh3qBF1EYEoKzRCZfjsj7XtA4LgkHgl0QkTVkHQTjmNYQsFMhtOYG8BCWFgVYhlZAZa1PgfBEy8ChBTD5FfHDdrSun/kxTOjCVUTOn41a53NwvdBgPle8EKbm+fU6CxasCZtNiBCM8cg2C6V/7c46NDHEEGITPZ7TORjOr6Ft+7f5Fjax4YTIa3SB4N9P7ztGlKAFyRwd6zXG+ZPaxCHddM52cpEYL5XM0/izHnBKbWrbXfrCsVMw0NTGBJr2P/xbH6A7dlI6/PZ7HveHw/74t1/6E+SWLvEQZOGyAAAAAElFTkSuQmCC';
+      img.style.width = '32px';
+      var btn = L.DomUtil.create('button');
+      btn.id = "btnDlKMZ";
+      btn.title = "Télécharger la trace au format Google Earth";
+      btn.style.display = 'none';
+      btn.appendChild(img);
+
+      return btn;
+    },
+    onRemove: function(map) {}
+  });
+  new L.Control.DlKMZ({ position: 'topright' }).addTo(map);
 
   L.Control.TraceInfos = L.Control.extend({
     onAdd: function(map) {

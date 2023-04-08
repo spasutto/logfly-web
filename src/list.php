@@ -149,7 +149,7 @@ a:hover {
 
 <script>
 var showComment = true;
-function editvol(id, lat, lon) {
+function editvol(id, lat, lon, altitude) {
   let url = 'edit.php';
   if (id > 0)
     url += '?id='+parseInt(id);
@@ -157,6 +157,8 @@ function editvol(id, lat, lon) {
     url += '&lat='+parseFloat(lat);
   if (typeof(lon) !== 'undefined' && !isNaN(parseFloat(lon)))
     url += '&lon='+parseFloat(lon);
+  if (typeof(altitude) !== 'undefined' && !isNaN(parseFloat(altitude)))
+    url += '&alt='+parseFloat(altitude);
   var MyWindow=window.open(url,'EditVol','width=600,height=480');
 }
 function parse_query_string(query) {
@@ -267,8 +269,9 @@ function affichComment(id) {
       zonecomm.innerHTML = "<b>Chargement...</b>";
     }
     if (zonecarto.innerHTML == "" && btncomm.previousElementSibling.innerHTML) {
-      let tracefileprefix = encodeURI("<?php if (defined('FOLDER_TL')) echo FOLDER_TL;?>/" + id);
-      zonecarto.innerHTML += "<iframe src=\"trace.html?igc="+tracefileprefix+".igc&finfo="+tracefileprefix+".json&disablescroll=1&elevationservice="+encodeURI('<?php if (defined('ELEVATIONSERVICE')) echo ELEVATIONSERVICE;?>')+"&clegeoportail="+encodeURI('<?php if (defined('CLEGEOPORTAIL')) echo CLEGEOPORTAIL;?>')+"\" width=\"100%\" height=\"555px\"></iframe>";
+      let url = document.getElementById('traceurl_'+id).value;
+      url += "&disablescroll=1";
+      zonecarto.innerHTML += "<iframe src=\""+url+"\" width=\"100%\" height=\"555px\"></iframe>";
     }
     ligne.style.display = 'table-row';
     btncomm.style.textDecoration = "line-through";
@@ -279,9 +282,9 @@ function affichComment(id) {
     btncomm.title="afficher le commentaire";
   }
 }
-function openTrace(id) {
-  let tracefileprefix = encodeURI("<?php if (defined('FOLDER_TL')) echo FOLDER_TL;?>/" + id);
-  let url = "trace.html?igc="+tracefileprefix+".igc&finfo="+tracefileprefix+".json&elevationservice="+encodeURI('<?php if (defined('ELEVATIONSERVICE')) echo ELEVATIONSERVICE;?>')+"&clegeoportail="+encodeURI('<?php if (defined('CLEGEOPORTAIL')) echo CLEGEOPORTAIL;?>');
+function openTrace(lnk) {
+  //let tracefileprefix = encodeURI("<?php if (defined('FOLDER_TL')) echo FOLDER_TL;?>/" + id);
+  let url = lnk.href;//"trace.html?igc="+tracefileprefix+".igc&finfo="+tracefileprefix+".json&elevationservice="+encodeURI('<?php if (defined('ELEVATIONSERVICE')) echo ELEVATIONSERVICE;?>')+"&clegeoportail="+encodeURI('<?php if (defined('CLEGEOPORTAIL')) echo CLEGEOPORTAIL;?>');
   MyWindow=window.open(url,'MyWindow','width=900,height=380');
 }
 function afficheImageTrace(elem,id, hide) {
@@ -382,8 +385,13 @@ window.onload = function() {
   echo "</TR>";*/
   foreach ($vols->vols as $vol)
   {
+    $gmtoffset = 0;
+    try {
+      $gmtoffset = @$vol->date->getTimezone()->getOffset($vol->date);
+    } catch (Exception $e) {}
     echo "<TR class=\"lignevol\">";
-    echo "<TD><a id=\"v".$vol->id."\" href=\"#v".$vol->id."\">". $vol->id."</a></TD>";
+    echo "<TD><a id=\"v".$vol->id."\" href=\"#v".$vol->id."\">". $vol->id."</a>";
+    echo "</TD>";
     $nom_parametredate = "datemin";
     $texte_parametredate = "depuis";
     if ($datemin) {
@@ -401,18 +409,29 @@ window.onload = function() {
     echo "<TD><a href=\"".url_with_parameter("site", $vol->site, "offset")."\" title=\"filtrer les vols pour ce site\">".$vol->site."</a>&nbsp;<a href=\"https://maps.google.com/?q=".$vol->latdeco.",".$vol->londeco."\" target=\"_Blank\" class=\"lien_gmaps\" title=\"google maps\">&#9936;</a></TD>";
     echo "<TD><a href=\"".url_with_parameter("voile", $vol->voile, "offset")."\" title=\"filtrer les vols pour cette voile\">".$vol->voile."</a></TD>";
     echo "<TD";
+    $url = "";
     if ($vol->igc) {
-      echo " onMouseOver=\"afficheImageTrace(this, ".$vol->id.")\" onmouseleave=\"afficheImageTrace(this, ".$vol->id.", true)\"><a href=\"#\" onClick=\"openTrace(".$vol->id.");return false;\" title=\"voir la trace GPS de ce vol\"><img src=\"map.svg\" width=\"18px\"></a>";
+      $tracefileprefix = urlencode((defined('FOLDER_TL')?FOLDER_TL:"")."/" . $vol->id);
+      $url = "trace.html?igc=".$tracefileprefix.".igc&tzoffset=".$gmtoffset."&finfo=".$tracefileprefix.".json&elevationservice=".(defined('ELEVATIONSERVICE')?urlencode(ELEVATIONSERVICE):"")."&clegeoportail=".(defined('CLEGEOPORTAIL')?urlencode(CLEGEOPORTAIL):"");
+      echo " onMouseOver=\"afficheImageTrace(this, ".$vol->id.")\" onmouseleave=\"afficheImageTrace(this, ".$vol->id.", true)\"><a href=\"".$url."\" onClick=\"openTrace(this);return false;\" title=\"voir la trace GPS de ce vol\"><img src=\"map.svg\" width=\"18px\"></a>";
     }
     else {
       echo ">";
     }
+    echo "<input type=\"hidden\" id=\"traceurl_".$vol->id."\" value=\"".$url."\">";
     echo "</TD>";
     if ($vol->commentaire || $vol->igc)
       echo "<TD class=\"btncomm\" id=\"btncomm".$vol->id."\" title=\"afficher le commentaire/la trace\" onclick=\"affichComment(".$vol->id.");\" style=\"font-family:Verdana;font-style:italic;font-size:10;\">abc</TD>";
     else
       echo "<TD></TD>";
-    echo "<TR class=\"lignecomm none\"><TD class=\"hidden\">".$vol->id."</TD><TD id=\"comm".$vol->id."\" colspan=\"7\" class=\"desc\"><div id=\"zonecomm".$vol->id."\"></div><div id=\"zonecarto".$vol->id."\"></div></TD></TR>";
+    echo "<TR class=\"lignecomm none\"><TD class=\"hidden\">".$vol->id."</TD><TD id=\"comm".$vol->id."\" colspan=\"7\" class=\"desc\"><div id=\"zonecomm".$vol->id."\"></div>";
+    echo "<div>météo de ce jour : ";
+    //https://www.infoclimat.fr/fr/cartes/observations-meteo/archives/vent_moyen/18/mai/2022/14h/carte-interactive.html
+    $libmois = ['janvier', 'fevrier', 'mars', 'avril', 'mai', 'juin', 'juillet', 'aout', 'septembre', 'octobre', 'novembre', 'decembre'];
+    echo "<a href=\"https://www.meteociel.fr/modeles/arome.php?ech=3&mode=35&map=4&heure=6&jour=".$vol->date->format('j')."&mois=".$vol->date->format('n')."&annee=".$vol->date->format('Y')."&archive=1\">prévisions</a>";
+    echo " / <a href=\"http://78.207.28.106/mto/auto/".$vol->date->format('y').$vol->date->format('m').(intval($vol->date->format('d'))-1)."GFS/frog.html\">Caplain</a>";
+    echo " / <a href=\"https://www.infoclimat.fr/fr/cartes/observations-meteo/archives/vent_moyen/".$vol->date->format('j')."/".$libmois[intval($vol->date->format('n'))-1]."/".$vol->date->format('Y')."/14h/carte-interactive.html\">relevés</a>";
+    echo "</div><div id=\"zonecarto".$vol->id."\"></div></TD></TR>";
     echo "</TR>";
   }
   echo "<TABLE>";
