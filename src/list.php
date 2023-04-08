@@ -412,7 +412,7 @@ window.onload = function() {
     $url = "";
     if ($vol->igc) {
       $tracefileprefix = urlencode((defined('FOLDER_TL')?FOLDER_TL:"")."/" . $vol->id);
-      $url = "trace.html?igc=".$tracefileprefix.".igc&tzoffset=".$gmtoffset."&finfo=".$tracefileprefix.".json&elevationservice=".(defined('ELEVATIONSERVICE')?urlencode(ELEVATIONSERVICE):"")."&clegeoportail=".(defined('CLEGEOPORTAIL')?urlencode(CLEGEOPORTAIL):"");
+      $url = "trace.html?igc=".$tracefileprefix.".igc&tzoffset=".$gmtoffset."&finfo=".$tracefileprefix.".json&elevationservice=".(defined('ELEVATIONSERVICE')?urlencode(ELEVATIONSERVICE):"")."&clegeoportail=".(defined('CLEGEOPORTAIL')?urlencode(CLEGEOPORTAIL):"")."&cletimezonedb=".(defined('CLETIMEZONEDB')?urlencode(CLETIMEZONEDB):"");
       echo " onMouseOver=\"afficheImageTrace(this, ".$vol->id.")\" onmouseleave=\"afficheImageTrace(this, ".$vol->id.", true)\"><a href=\"".$url."\" onClick=\"openTrace(this);return false;\" title=\"voir la trace GPS de ce vol\"><img src=\"map.svg\" width=\"18px\"></a>";
     }
     else {

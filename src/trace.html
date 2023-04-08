@@ -190,10 +190,11 @@
   var istouch = isTouchDevice();
   var igc = getParameter("igc");
   var tzoffset = parseInt(getParameter("tzoffset", true));
-  tzoffset = typeof tzoffset === 'number' && !isNaN(tzoffset) ? tzoffset : 0;
+  tzoffset = typeof tzoffset === 'number' && !isNaN(tzoffset) ? tzoffset : null;
   var finfo = getParameter("finfo");
   var disablescroll = getParameter("disablescroll", true);disablescroll = disablescroll == "true" || disablescroll == "1";
   var clegeoportail = getParameter("clegeoportail");
+  var cletimezonedb = getParameter("cletimezonedb") || '';
   var elevationservice = getParameter("elevationservice") || 'elevation/getElevation.php';
   var map = loadCarto(clegeoportail, disablescroll, document.getElementById('mapcont'));
 
@@ -368,21 +369,55 @@
     }
     return extensions;
   }
-  function loadIGC(igccont, calcfs) {
+  function parseBRecord(r) {
+    //0000000000111111111122222222223333333
+    //0123456789012345678901234567890123456
+    //B0925064454728N00535480EA016100161528
+    let date = new Date(startdate);
+    date.setHours(parseInt(r.substr(1,2)));
+    date.setMinutes(parseInt(r.substr(3,2)));
+    date.setSeconds(parseInt(r.substr(5,2))+tzoffset);
+    let alt = parseInt(r.substr(25,5));
+    if (alt == 0) alt = parseInt(r.substr(30,5));
+    let lat = parseFloat(r.substr(7,2));
+    let mmmext = 0;
+    if (extensions.hasOwnProperty('LAD')) {
+      mmmext = parseInt(r.substring(extensions['LAD'].start, extensions['LAD'].end));
+    }
+    lat += parseFloat((r.substr(9,2)+'.'+r.substr(11,3)+mmmext))/60;
+    lat *=  r[14]=='N'?1:-1;
+    let lon = parseFloat(r.substr(15,3));
+    mmmext = 0;
+    if (extensions.hasOwnProperty('LOD')) {
+      mmmext = parseInt(r.substring(extensions['LOD'].start, extensions['LOD'].end));
+    }
+    lon += parseFloat((r.substr(18,2)+'.'+r.substr(20,3)+mmmext))/60;
+    lon *=  r[23]=='E'?1:-1;
+    return {
+      lat: lat,
+      lon: lon,
+      time: date,
+      /*alt: {
+        baro: parseInt(r.substr(25,5)),
+        gps: parseInt(r.substr(30,5))
+      },*/
+      alt: alt
+    };
+  }
+  async function loadIGC(igccont, calcfs) {
     if (typeof igccont !== 'string') {
       igccont = document.getElementById('igccont').value;
       document.getElementById('formcont').style.display = 'none';
     }
     if (calcfs === true) calcFlightScore(igccont);
     let lines = igccont.split(/\r?\n/);
-    let extensions = parseIRecord(lines.find(l => l.trim().startsWith('I')));
+    window.extensions = parseIRecord(lines.find(l => l.trim().startsWith('I')));
     let records = lines.filter(l => l.trim().startsWith('B'));
-    window.points = [];
     //0000000000111111111
     //0123456789012345678
     //HFDTEDATE:100522,01
     let startdateline = lines.find(l => l.trim().startsWith('HFDTEDATE'));
-    let startdate = new Date();
+    window.startdate = new Date();
     if (startdateline) {
       startdate.setDate(parseInt(startdateline.substr(10,2)));
       startdate.setMonth(parseInt(startdateline.substr(12,2))-1);
@@ -390,40 +425,24 @@
       if (year > startdate.getFullYear()) year -= 100;
       startdate.setFullYear(year);
     }
+    if ((typeof tzoffset !== 'number' || tzoffset < 0) && cletimezonedb.length > 0 && records.length > 0) {
+      //http://api.timezonedb.com/v2.1/get-time-zone?key=cletimezonedb&format=xml&by=position&lat=45.5&lng=5.5&time=1680936096
+      // rajout "&time=" + Math.truncate(date.getTime()/1000)
+      // et on récupère gmtOffset (7200)
+      let p = parseBRecord(records[0]);
+      let url = `https://api.timezonedb.com/v2.1/get-time-zone?key=${cletimezonedb}&format=json&by=position&lat=${p.lat}&lng=${p.lon}&time=${Math.trunc(p.time.getTime()/1000)}`;
+      let data = await fetch(url).then(response => response.json()).catch(err => {});
+      //.then(response => response.text())
+      //.then(str => new window.DOMParser().parseFromString(str, "text/xml"))
+      tzoffset = data && typeof data.gmtOffset === 'number' ? data.gmtOffset : 0;
+      //tzoffset = parseInt(data.getElementsByTagName("gmtOffset")[0].textContent);
+    } else {
+      tzoffset = 0;
+    }
+
+    window.points = [];
     records.forEach(r => {
-      //0000000000111111111122222222223333333
-      //0123456789012345678901234567890123456
-      //B0925064454728N00535480EA016100161528
-      let date = new Date(startdate);
-      date.setHours(parseInt(r.substr(1,2)));
-      date.setMinutes(parseInt(r.substr(3,2)));
-      date.setSeconds(parseInt(r.substr(5,2))+tzoffset);
-      let alt = parseInt(r.substr(25,5));
-      if (alt == 0) alt = parseInt(r.substr(30,5));
-      let lat = parseFloat(r.substr(7,2));
-      let mmmext = 0;
-      if (extensions.hasOwnProperty('LAD')) {
-        mmmext = parseInt(r.substring(extensions['LAD'].start, extensions['LAD'].end));
-      }
-      lat += parseFloat((r.substr(9,2)+'.'+r.substr(11,3)+mmmext))/60;
-      lat *=  r[14]=='N'?1:-1;
-      let lon = parseFloat(r.substr(15,3));
-      mmmext = 0;
-      if (extensions.hasOwnProperty('LOD')) {
-        mmmext = parseInt(r.substring(extensions['LOD'].start, extensions['LOD'].end));
-      }
-      lon += parseFloat((r.substr(18,2)+'.'+r.substr(20,3)+mmmext))/60;
-      lon *=  r[23]=='E'?1:-1;
-      points.push({
-        lat: lat,
-        lon: lon,
-        time: date,
-        /*alt: {
-          baro: parseInt(r.substr(25,5)),
-          gps: parseInt(r.substr(30,5))
-        },*/
-        alt: alt
-      });
+      points.push(parseBRecord(r));
     });
     let interval = Math.ceil((points[points.length - 1].time.getTime() - points[0].time.getTime())/points.length);
     let gap = 0;
