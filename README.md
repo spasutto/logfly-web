@@ -10,13 +10,13 @@ Renommer le fichier _config.php en config.php
 
 Le serveur web doit disposer du [module PHP permettant de lire les bases de données SQLite](https://www.php.net/manual/fr/book.sqlite3.php)
 
-Pour pouvoir utiliser la cartographie IGN il faut éditer le fichier config.php pour remplacer la chaîne "VOTRECLEGEOPORTAIL" par votre clé API Géoportail.
+Pour pouvoir utiliser la cartographie IGN il faut éditer le fichier config.php pour remplacer la chaîne "VOTRECLEGEOPORTAIL" par votre clé API Géoportail. Pour la génération des aperçus de traces côté serveur on peut aussi spécifier une clé sans protection (par exemple sans referer) dans la constante CLEGEOPORTAIL2.
 De même, pour pouvoir utiliser la détermination du fuseau horaire IGC via [timezonedb.com](https://timezonedb.com/) il faut aussi remplacer la chaîne "CLETIMEZONEDB" par votre clé API timezonedb.
 
 # sécurité
 Pour protéger en écriture le carnet de vol on peut placer un fichier ".htaccess" à la racine du répertoire LogFly et y mettre le contenu suivant :
 ```ApacheConf
-<FilesMatch "^(admin|edit|upload|download|comment).*\.php|.*\.db$">
+<FilesMatch "^(admin|edit|upload|download|comment).*\.php|.*\.db|.*\.zip$">
 AuthUserFile /le/chemin/absolu/vers/le/fichier/de/mots/de/passes/.htpasswd
 AuthName "prive"
 AuthType Basic
