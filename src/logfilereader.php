@@ -146,8 +146,8 @@ class LogflyReader
   
   function permutVol($id1, $id2)
   {
-    unlink("Tracklogs/".$id1.".png");
-    unlink("Tracklogs/".$id2.".png");
+    unlink("Tracklogs/".$id1.".jpg");
+    unlink("Tracklogs/".$id2.".jpg");
     rename("Tracklogs/".$id1.".json", "Tracklogs/tempid.json");
     rename("Tracklogs/".$id2.".json", "Tracklogs/".$id1.".json");
     rename("Tracklogs/tempid.json", "Tracklogs/".$id2.".json");
@@ -334,11 +334,14 @@ class LogflyReader
     {
       $sql = "UPDATE VOL set V_IGC=NULL WHERE V_ID=".intval($id);
       $ret = $this->db->query($sql);
-      $igc_file = dirname(__FILE__) . DIRECTORY_SEPARATOR . FOLDER_TL . DIRECTORY_SEPARATOR . $id  .".igc";
+      $basepath = dirname(__FILE__) . DIRECTORY_SEPARATOR . FOLDER_TL . DIRECTORY_SEPARATOR . $id;
+      $igc_file = $basepath  .".igc";
       if ($igc != null)
         return file_put_contents($igc_file, $igc);
-      else
-        return unlink($igc_file);
+      else {
+        @unlink($igc_file)&&@unlink($basepath.".json")&&@unlink($basepath.".jpg");
+        return true;
+      }
     }
   }
 

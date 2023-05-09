@@ -7,14 +7,20 @@ function score(igccontent, cbk) {
         score = score.value;
       }
       if (score && typeof score.opt == 'object' && typeof score.opt.flight == 'object') delete score.opt.flight;
-      let rules = IGCScore.xcScoringRules[scoringrule].find(sr => sr.name == score.opt.scoring.name);
-      if (rules && typeof rules.closingDistance === 'function') {
-        score.closingCircleRadius = rules.closingDistance(score.scoreInfo.distance, {'scoring':rules}) * 1000;
+      score.closingCircleRadius = 0;
+      let rule = IGCScore.xcScoringRules[scoringrule].find(sr => sr.name == score.opt.scoring.name);
+      if (typeof rule === 'object') {
+        if (typeof rule.closingDistance !== 'function') {
+          // on essaie de trouver la règle fermante qui propose le plus grand rayon
+          let rules = IGCScore.xcScoringRules[scoringrule].filter(r => typeof r.closingDistance === 'function').sort((a,b) => b.closingDistance(score.scoreInfo.distance, {'scoring':b})-a.closingDistance(score.scoreInfo.distance, {'scoring':a}));
+          if (rules.length <= 0) return;
+          rule = rules[0];
+        }
+        score.closingCircleRadius = rule.closingDistance(score.scoreInfo.distance, {'scoring':rule}) * 1000;
       }
       cbk(score);
     }, scoringrule, 60);
 }
-
 
 /*
 

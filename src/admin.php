@@ -24,11 +24,22 @@ if (isset($_GET['extract_igc'])) {
   } else {
     recalcul_igc();
   }
+} else if (isset($_GET['regen_img'])) {
+  $start = isset($_GET['start']) ? intval($_GET['start']) : PHP_INT_MAX;
+  $end = isset($_GET['end']) ? intval($_GET['end']) : -1;
+  regen_img($start, $end);
+} else if (isset($_GET['genzip_tracklogs'])) {
+    genzip_tracklogs();
+} else if (isset($_GET['viewzip_tracklogs'])) {
+    viewzip_tracklogs();
 } else {
 ?>
 <ul>
   <li><a href="?extract_igc">extraire les fichiers igc de la base</a></li>
   <li><a href="?recalcul_igc">calculer les scores igc</a></li>
+  <li><a href="?regen_img">regénérer les vignettes</a></li>
+  <li><a href="?genzip_tracklogs">générér un nouveau zip des tracklogs</a></li>
+  <li><a href="?viewzip_tracklogs">voir les zips des tracklogs</a></li>
 </ul>
 <?php
 }
@@ -91,6 +102,7 @@ function extract_igc()
       xhttp.onreadystatechange = function() {
         if (this.readyState == 4 && this.status == 200) {
           document.getElementById('scorepost_'+id).innerHTML = "enregistrement OK";
+          document.getElementById('vol'+id).scrollIntoView();
           volstodo--;
           if (volstodo <= 0)
             alert('tout est ok!');
@@ -134,7 +146,8 @@ function extract_igc()
             return;
           }
           score_igc();
-          document.body.innerHTML += "vol n°" + id + " : IGC récupéré, <span id=\"score_"+id+"\">calcul...</span> <span id=\"scorepost_"+id+"\"></span><BR/>";
+          document.body.innerHTML += "<a name=\"vol" + id + "\">vol n°" + id + "</a> : IGC récupéré, <span id=\"score_"+id+"\">calcul...</span> <span id=\"scorepost_"+id+"\"></span><BR/>";
+          document.getElementById('vol'+id).scrollIntoView();
           volscore.push({id: id, igc: this.responseText});
         }
       };
@@ -148,5 +161,115 @@ function extract_igc()
     };
   </script>
     <?php
+  }
+  
+  
+  function regen_img($start, $end)
+  {
+    $vols = [];
+    //$i=0;
+    foreach ((new LogflyReader())->getRecords()->vols as $vol) {
+      if ($vol->id <= $start && $vol->id >= $end && $vol->igc)
+        $vols[] = $vol->id;
+      //if ($i++ > 10) break;
+    }
+    $vols = "[" . implode (",", $vols) . "]";
+  ?>
+  <script>
+    var vols = <?php echo $vols;?>;
+    var volstodo = vols.length;
+    function regen_img(id) {
+      return new Promise((res,rej) => {
+        document.body.innerHTML += "<a name=\"vol" + id + "\" id=\"vol" + id + "\">vol n°" + id + " ("+(vols.length-volstodo+1)+"/"+vols.length+")</a> : <span id=\"regen_img_"+id+"\">génération de la vignette...</span><BR/>";
+        var xhttp = new XMLHttpRequest();
+        xhttp.responseType = 'text';
+        xhttp.onreadystatechange = function() {
+          if (this.readyState == 4) {
+            volstodo--;
+            document.getElementById('regen_img_'+id).innerHTML = this.status == 200 ? '<a href="image.php?id='+id+'" target="_blank">OK</a>':'KO';
+            document.getElementById('vol'+id).scrollIntoView();
+            if (this.status != 200) rej(id);
+            else res(id);
+          }
+        };
+        xhttp.open("GET", "image.php?force=1&id="+id, true);//http://montagne.pasutto.net/Parapente/logfly/image.php?id=512
+        xhttp.send();
+      });
+    }
+    window.onload = function() {
+      /*let ps = [];
+      for (let i=0; i < vols.length; i++) {
+        ps.push(regen_img(vols[i]));
+      }*/
+      vols.reduce((p, x) => p.then(() => regen_img(x)),  Promise.resolve()).then(res => alert('traitement terminé!'));
+    };
+  </script>
+    <?php
+  }
+  
+  function genzip_tracklogs()
+  {
+    $prefix = 'tracklogs';
+    $zip = new ZipArchive();
+    $basepath = dirname(__FILE__) . DIRECTORY_SEPARATOR . FOLDER_TL . DIRECTORY_SEPARATOR;
+    $matches = array_merge(glob($basepath.'*.igc'), glob($basepath.'*.json'), glob($basepath.'*.jpg'));
+    /*header("Content-type: text/plain");
+    echo "$basepath\n";
+    print_r($matches);
+    for ($i=0; $i<count($matches); $i++) {
+        $localfname = $matches[$i];
+        $j = strrpos($localfname, DIRECTORY_SEPARATOR);
+        if ($j !== false) {
+            $localfname = substr($localfname, $j+1);
+        }
+        echo "$localfname\n";
+    }
+    exit(0);*/
+    $filename = $basepath.$prefix.date("Ymd").".zip";
+    
+    if ($zip->open($filename, ZipArchive::CREATE)!==TRUE) {
+      exit("cannot open <$filename>\n");
+    }
+  	try
+	{
+		$lgfr = new LogflyReader();
+	}
+	catch(Exception $e)
+	{
+		echo "error!!! : ".$e->getMessage();
+	}
+    $carnetcont = chr(255) . chr(254) . mb_convert_encoding($lgfr->getCSV(FALSE), 'UTF-16LE', 'UTF-8');
+    $zip->addFromString("carnet.csv", $carnetcont);
+    for ($i=0; $i<count($matches); $i++) {
+      $localfname = $matches[$i];
+      $j = strrpos($localfname, DIRECTORY_SEPARATOR);
+      if ($j !== false) {
+          $localfname = substr($localfname, $j+1);
+      }
+      $zip->addFile($matches[$i],$localfname);
+    }
+
+    /*$zip->addFromString("testfilephp.txt" . time(), "#1 This is a test string added as testfilephp.txt.\n");
+    $zip->addFromString("testfilephp2.txt" . time(), "#2 This is a test string added as testfilephp2.txt.\n");
+    $zip->addFile($thisdir . "/too.php","/testfromfile.php");
+    echo "numfiles: " . $zip->numFiles . "\n";
+    echo "status:" . $zip->status . "\n";*/
+    $zip->close();
+    viewzip_tracklogs();
+  }
+  
+  function viewzip_tracklogs()
+  {
+    $prefix = 'tracklogs';
+    $basepath = dirname(__FILE__) . DIRECTORY_SEPARATOR . FOLDER_TL . DIRECTORY_SEPARATOR;
+    $matches = array_merge(glob($basepath.$prefix.'*.zip'));
+    for ($i=count($matches)-1; $i>=0; $i--) {
+      $localfname = $matches[$i];
+      $j = strrpos($localfname, DIRECTORY_SEPARATOR);
+      if ($j !== false) {
+          $localfname = substr($localfname, $j+1);
+      }
+      echo '<a href="'.FOLDER_TL.'/'.$localfname.'">'.$localfname.'</a><BR>';
+    }
   }
 ?>

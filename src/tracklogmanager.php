@@ -27,8 +27,40 @@ class TrackLogManager
     return ["nom"=> $site->nom, "site"=> $site, "dist"=>$dist];
   }
 
-  public function uploadIGC($tmpfname, $ext, $id = null, &$destname, &$fpt) {
-    $tfreader = TrackfileLoader::load($tmpfname, $ext);
+  public function uploadIGCs($tmpfnames, $id = null, &$destname, &$fpt) {
+    if (count($tmpfnames)<=0) return;
+    $arrigc = array();
+    for ($i=0; $i<count($tmpfnames); $i++) {
+      $igc = TrackfileLoader::load($tmpfnames[$i], 'igc');
+      $igc->setDetails();
+      if ($igc->datetime instanceof DateTime) {
+        $arrigc[] = array($tmpfnames[$i], $igc->datetime->getTimestamp());
+      }
+    }
+    if (count($arrigc)<=0) return;
+    // tri des IGC par date
+    usort($arrigc, function($a, $b) {
+      return $a[1]-$b[1];
+    });
+    /*usort($tmpfnames, function($a, $b) {
+      $igca = TrackfileLoader::load($a, 'igc');
+      $igcb = TrackfileLoader::load($b, 'igc');
+      $igca->setDetails();
+      $igcb->setDetails();
+      $aduration = !is_int($igca->duration) || $igca->duration<0 ? 0 : $igca->duration;
+      $bduration = !is_int($igcb->duration) || $igcb->duration<0 ? 0 : $igcb->duration;
+      return $bduration-$aduration;
+    });*/
+    $firstfile = fopen($arrigc[0][0], 'a+');
+    for ($i=1; $i<count($arrigc); $i++) {
+      $file2 = file_get_contents($arrigc[$i][0]);
+      fwrite($firstfile, $file2);
+    }
+    return $this->uploadIGC($arrigc[0][0], $id, $destname, $fpt);
+  }
+
+  public function uploadIGC($tmpfname, $id = null, &$destname, &$fpt) {
+    $tfreader = TrackfileLoader::load($tmpfname, 'igc');
     if (!$tfreader || !($fpt = $tfreader->getFirstRecord())) {
       echo "bad IGC file!!!";
       return FALSE;
@@ -76,8 +108,11 @@ class TrackLogManager
         } else {
           //$igc = file_get_contents($destname);
           //if (!$lgfr->setIGC($id, $igc)) {
-          $destname = dirname(__FILE__) . DIRECTORY_SEPARATOR . self::FOLDER_TL . DIRECTORY_SEPARATOR . $id .".igc";
+          $basepath = dirname(__FILE__) . DIRECTORY_SEPARATOR . self::FOLDER_TL . DIRECTORY_SEPARATOR . $id;
+          $destname = $basepath .".igc";
           if (file_exists($destname)) @unlink($destname);
+          if (file_exists($basepath.".json")) @unlink($basepath.".json");
+          if (file_exists($basepath.".jpg")) @unlink($basepath.".jpg");
           if (!move_uploaded_file($tmpfname, $destname)) {
             echo "Probleme de mise à jour de la trace avec l'igc. Supprimer le dernier vol et réessayer";
             return FALSE;

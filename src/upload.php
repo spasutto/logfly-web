@@ -13,7 +13,8 @@ if (isset($_POST['flightscore']) && isset($_GET['id']) && preg_match('/^\d+$/', 
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Upload de vol</title>
-  <script src="igc-xc-score.js"></script>
+  <script src="lib/igc-xc-score.js"></script>
+  <script src="score.js"></script>
 </head>
 <body>
 <?php
@@ -62,14 +63,14 @@ if (!isset($_FILES['userfile']['tmp_name'])) {
   <!-- MAX_FILE_SIZE doit précéder le champ input de type file -->
   <input type="hidden" name="MAX_FILE_SIZE" value="10000000" />
   <!-- Le nom de l'élément input détermine le nom dans le tableau $_FILES -->
-  Envoyez ce fichier : <input name="userfile" type="file" /><BR><BR>
+  Envoyez ce fichier : <input name="userfile[]" type="file" multiple/><BR><BR>
   <center><input type="submit" value="Envoyer le fichier" /></center>
 </form>
 
 <?php
 } else {
 
-  if (!is_file($_FILES['userfile']['tmp_name']))
+  if ((is_string($_FILES['userfile']['tmp_name']) && !is_file($_FILES['userfile']['tmp_name'])) || (is_array($_FILES['userfile']['tmp_name']) && count(array_filter($_FILES['userfile']['tmp_name'], function($e) {return is_file($e);}))<=0))
   {
     echo "Unable to get input file";
   } else {
@@ -87,10 +88,10 @@ if (!isset($_FILES['userfile']['tmp_name'])) {
     }
     require("tracklogmanager.php");
     $mgr = new TrackLogManager();
-    $ext = $_FILES['userfile']['name'];
-    $ext = substr(trim(strtolower($ext)), -3);
     $fpt = false;
-    $id = $mgr->uploadIGC($_FILES['userfile']['tmp_name'], $ext, $id, $igcfname, $fpt);
+    $igcs = $_FILES['userfile']['tmp_name'];
+    if (!is_array($igcs)) $igcs = array($igcs);
+    $id = $mgr->uploadIGCs($igcs, $id, $igcfname, $fpt);
     if ($id) {
 ?>
 <script>
@@ -124,14 +125,14 @@ window.onload = function(){
   id = <?php echo $id;?>;
   igccontent = `<?php echo file_get_contents($igcfname); ?>`;
   try {
-    IGCScore.score(igccontent, (score) => {
+    score(igccontent, (score) => {
       if (score && typeof score.value == 'object') {
         score = score.value;
       }
       if (score && typeof score.opt == 'object' && typeof score.opt.flight == 'object') delete score.opt.flight;
       postFlightScore(id, score);
     });
-  } catch(e) {finish();}
+  } catch(e) {alert('attention, le score n\'a pas pu être calculé');finish();}
   document.body.innerHTML = 'Vol no ' + id + ' <?php echo $newvol?"ajouté":"mis à jour";?><BR>Ne pas fermer cette fenêtre, scoring en cours...';
 };
 </script>

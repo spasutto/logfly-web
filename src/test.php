@@ -2,11 +2,8 @@
 exit(0);
 require('tracklogmanager.php');
 $lgfr = new LogflyReader();
-$lgfr->updateVolId(413, 2000);
-$lgfr->updateVolId(414, 413);
-$lgfr->updateVolId(2000, 414);
+$lgfr->permutVol(529, 527);
 exit(0);
-require('tracklogmanager.php');
 header("Content-Type: text/plain");
 $lat = 44.567933333333;
 $lon = 6.0191666666667;

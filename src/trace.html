@@ -107,6 +107,12 @@
   #ctinfos {
     max-width: 150px;
   }
+  #ctinfos a {
+    text-decoration: none;
+  }
+  #ctinfos a:hover {
+    text-decoration: underline;
+  }
 </style>
 
 </head>
@@ -121,7 +127,7 @@
 <div id="formcont">
 <h1>Calcul de vol</h1>
 <label for="file-selector">Sélectionnez un fichier IGC : </label>
-<input type="file" id="file-selector" accept=".igc"><HR>
+<input type="file" id="file-selector" accept=".igc" multiple><HR>
 <label for="formigc">Ou placez directement le contenu du fichier IGC : </label>
 <form id="formigc" method="post" onsubmit="loadIGC(undefined, true);return false;">
 <div style="max-width: 640px">
@@ -149,13 +155,20 @@
   const fileSelector = document.getElementById('file-selector');
   fileSelector.addEventListener('change', (event) => {
     const fileList = event.target.files;
-    const reader = new FileReader();
-    reader.addEventListener('load', (event) => {
-      document.getElementById('igccont').value = reader.result;
-      loadIGC(reader.result, true);
-      document.getElementById('formcont').style.display = 'none';
+    let filecount = fileList.length;
+    let igccont = '';
+    [...fileList].forEach(file => {
+        const reader = new FileReader();
+        reader.addEventListener('load', (event) => {
+          igccont += (reader.result + '\n');
+          document.getElementById('igccont').value = igccont;
+          filecount--;
+          document.getElementById('formcont').style.display = 'none';
+          if (filecount <= 0) loadIGC(igccont, true);
+        });
+        reader.readAsText(file);
     });
-    reader.readAsText(fileList[0]);
+    event.target.value=null;
   });
   
 
@@ -199,6 +212,14 @@
   var map = loadCarto(clegeoportail, disablescroll, document.getElementById('mapcont'));
 
   var marker = L.marker([0,0]).addTo(map);
+  //var svg = '<svg viewBox="0 0 24 24" height="32" width="32" fill="transparent" stroke="black" stroke-width="2" stroke-linecap="round" xmlns="http://www.w3.org/2000/svg"> <g> <path d="M1 1 l22 22"/> <path d="M1 23 l22 -22"/> </g> </svg>'; /* insert your own svg */
+  //var iconUrl = 'data:image/svg+xml;base64,' + btoa(svg);
+  let iconUrl = 'paraglider.svg';
+  origIconSize = [32, 32];
+  origIconAnchor = [16, 22];
+  var icon = L.icon({iconUrl: iconUrl, iconSize: origIconSize,iconAnchor: origIconAnchor});
+  marker.setIcon(icon);
+
   var graph = new GraphGPX(document.getElementById("graph"), {elevationservice:elevationservice, disablescrollzoom: disablescroll});
   graph.addAnalyser(new AnaTrace());
   map.on('fullscreenchange', function () {
@@ -207,6 +228,9 @@
     } else {
         graph.disableScrollZoom = disablescroll;
     }
+  });
+  map.on('click', function(e) {
+    clickOnMap(e.latlng);
   });
   var flstats = {};
   var gpx_bounds = null;
@@ -238,7 +262,6 @@
   });
   graph.addEventListener('onposchanged', function(e) {
     marker.bindPopup(e.detail.time.toLocaleString('fr-FR', { timeZone: 'UTC' }).substr(-8, 5)).setLatLng([e.detail.lat, e.detail.lon]).update();
-    mapelem.offsetHeight
     let vz =  Math.min(maxvz, Math.abs(e.detail.vz));
     let dh = mapelem.offsetHeight/2;
     let hvz = vz * dh / maxvz;
@@ -253,12 +276,18 @@
       vzelem.style.bottom = (100+(dh-hvz)) + 'px';
       vzelem.setGradient(rgbToHex(r,g,0), 'white');
     }
+    updateIcon(e.detail);
     /*if (istouch && !map.getBounds().contains(marker.getLatLng())) {
       map.setView(marker.getLatLng());
     }*/
   });
   graph.addEventListener('onclick', function(e) {
     map.setView(new L.LatLng(e.detail.lat, e.detail.lon));
+  });
+  graph.addEventListener('ondblclick', function(e) {
+    let center = marker.getLatLng();
+    let zoom = map.getZoom() + 1;
+    map.setView(center, zoom);
   });
   graph.addEventListener('onwheel', function(e) {
     let center = marker.getLatLng();
@@ -267,7 +296,8 @@
   });
   graph.addEventListener('onselectionchanged', function(e) {
     let graphsel = e.detail;
-    if (typeof graphsel == 'object' && Array.isArray(graphsel) && graphsel.length == 2 && graphsel[1] < fi.pts.length && graphsel[0] != graphsel[1]) {
+    if (window.selectionline) map.removeLayer(window.selectionline);
+    if (typeof graphsel == 'object' && Array.isArray(window.fi?.pts) && Array.isArray(graphsel) && graphsel.length === 2 && graphsel[1] < fi.pts.length && graphsel[0] != graphsel[1]) {
       let stpt = fi.pts[graphsel[0]],
         endpt = fi.pts[graphsel[1]];
       let portion = fi.pts.slice(graphsel[0], graphsel[1]);
@@ -286,17 +316,88 @@
       vzmoy = Math.round(10*vzmoy/portion.length)/10;
       let deniv = stpt.alt - endpt.alt;
       let finesse = Math.round(100*dist / deniv)/100;
+      let seconds = (endpt.time.getTime()-stpt.time.getTime())/1000;
+      let elapsed = new Date(0);
+      elapsed.setSeconds(seconds);
+      elapsed = elapsed.toISOString().substring(11, 19);
+      let he = parseInt(elapsed.substring(0,2));
+      let me = parseInt(elapsed.substring(3,5));
+      let se = parseInt(elapsed.substring(6,8));
+      elapsed = ((he>0?he+'h':'')+(me>0?me+'\'':'')+(se>0?se+'"':'')).trim();
       dist /= 1000;
       deniv *= -1;
       dist = Math.round(dist*10)/10;
+      let vmoy = Math.round((GraphGPX.distance(endpt.lat, endpt.lon, stpt.lat, stpt.lon)/1000)/(seconds/3600));
       if (finesse < 0) {
         finesse = '&infin;';
         deniv = '+' + deniv;
       }
-      flstats['finesse'] = `<a title="afficher la polaire pour la sélection" href="#" onclick="event.stopPropagation();showpolaire(${JSON.stringify(portion.map(p => ({'vx': p.vx, 'vz': p.vz}))).replaceAll("\"", "'")});">${finesse}</a><BR><i>(${deniv}m en ${dist}km à ${vxmoy}km/h, vz moy: ${vzmoy}m/s)</i>`;
+      //<a title="afficher la polaire pour la sélection" href="#" onclick="event.stopPropagation();showpolaire(${JSON.stringify(portion.map(p => ({'vx': p.vx, 'vz': p.vz}))).replaceAll("\"", "'")});">
+      let seltext = `<u>Finesse :</u> ${finesse} <i>(${deniv}m en ${dist}km à ${vxmoy}km/h, vz moy: ${vzmoy}m/s)<BR><u>Altitude de départ :</u> ${stpt.alt}m<BR><u>Vitesse sur parcours :</u> ${vmoy}km/h en ${elapsed}</i>`;
+      let csvbtn  = ` <a href="#" onclick="return dlPortion(event, ${graphsel[0]}, ${graphsel[1]});" title="télécharger la portion de vol en CSV">&#x1F4BE;CSV</a>`;
+      flstats['selection'] = seltext + csvbtn;
       updateTraceInfos();
+      window.selectionline = L.polyline(portion.map(pt => [pt.lat, pt.lon, pt.alt]),{
+          color: '#ff00ff',
+          weight: 6,
+          opacity: 0.85,
+          smoothFactor: 1
+        }).bindTooltip(seltext).addTo(map);
     }
   });
+  
+  function dlPortion(event, start, end) {
+    event.stopPropagation();
+    const separator = ';';
+    let csv = `time${separator}alt${separator}ground alt${separator}lat${separator}lon${separator}horizontal speed${separator}vertical speed${separator}bearing\n`;
+    let portion = fi.pts.slice(start, end);
+    csv += portion.map(pt => {
+      return pt.time.toISOString().replace('T',' ').replaceAll('-', '/').slice(0, -1)+separator+
+        pt.alt+separator+
+        pt.gndalt+separator+
+        pt.lat+separator+
+        pt.lon+separator+
+        pt.vx+separator+
+        pt.vz+separator+
+        pt.bearing;
+    }).join('\n');
+    let element = document.createElement('a');
+    element.setAttribute('href', 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv));
+    element.setAttribute('download', 'selection.csv');
+    element.style.display = 'none';
+    document.body.appendChild(element);
+    element.click();
+    document.body.removeChild(element);
+    return false;
+  }
+
+  function clickOnMap(latlng) {
+    if (typeof window.fi === 'undefined' || !Array.isArray(window.fi.pts)) return;
+    // slice pour éviter de modifier l'ordre du tableau originel
+    let nearest = window.fi.pts.slice().sort(function(a, b) {
+      let la = L.latLng(a.lat, a.lon);
+      let lb = L.latLng(b.lat, b.lon);
+      return la.distanceTo(latlng) - lb.distanceTo(latlng);
+    })[0];
+    let c1 = map.latLngToLayerPoint(latlng);
+    let c2 = map.latLngToLayerPoint(L.latLng(nearest.lat, nearest.lon));
+    let dist = Math.sqrt(Math.pow(c2.x-c1.x, 2) + Math.pow(c2.y-c1.y, 2));
+    if (dist>100) return;
+    //if (L.latLng(nearest.lat, nearest.lon).distanceTo(latlng)>5000) return;
+    marker.bindPopup(nearest.time.toLocaleString('fr-FR', { timeZone: 'UTC' }).substr(-8, 5)).setLatLng([nearest.lat, nearest.lon]).update();
+    graph.setPos(nearest);
+    updateIcon(nearest);
+  }
+
+  function updateIcon(pt) {
+    if (typeof window.fi === 'undefined' || !Array.isArray(window.fi.pts)) return;
+    let ratio = (pt.alt-window.fi.minalt)/(window.fi.maxalt-window.fi.minalt);
+    ratio += 0.75; // ratio est contenu dans [0.75, 1.75]
+    let icon = marker.options.icon;
+    icon.options.iconSize = origIconSize.map(s => s * ratio);
+    icon.options.iconAnchor = origIconAnchor.map((s,i) => s/origIconSize[i] * icon.options.iconSize[i]);
+    marker.setIcon(icon);
+  }
 
   function redrawFlight() {
     window.dispmode = typeof window.dispmode === 'string'?window.dispmode:'vz';
@@ -339,7 +440,8 @@
       date = fi.pts[0].time;
       date = ('0'+date.getDate()).slice(-2)+"/"+('0'+(date.getMonth()+1)).slice(-2)+"/"+date.getFullYear();
     }
-    let htmlinfos = '<div id="ctinfos"><p class="gras centre souligne">'+date+'</p>';
+    let dname = typeof window.pilotname === 'string' && window.pilotname.trim().length > 0 ? '<BR>'+window.pilotname:'';
+    let htmlinfos = '<div id="ctinfos"><p class="gras centre souligne">'+date+dname+'</p>';
     for (let prop in flstats)
       htmlinfos += "<p>"+(flstats[prop].length<=0?"<HR>":"<span class=\"gras\">"+prop+"</span>&nbsp;:&nbsp;"+flstats[prop])+"</p>";
     htmlinfos += '</div><p id="iinfos">&#9432;</p>';
@@ -413,37 +515,43 @@
     let lines = igccont.split(/\r?\n/);
     window.extensions = parseIRecord(lines.find(l => l.trim().startsWith('I')));
     let records = lines.filter(l => l.trim().startsWith('B'));
+    window.pilotname = lines.find(l => l.trim().startsWith('HFPLTPILOTINCHARGE'))?.split(':')[1];
     //0000000000111111111
     //0123456789012345678
     //HFDTEDATE:100522,01
-    let startdateline = lines.find(l => l.trim().startsWith('HFDTEDATE'));
     window.startdate = new Date();
-    if (startdateline) {
-      startdate.setDate(parseInt(startdateline.substr(10,2)));
-      startdate.setMonth(parseInt(startdateline.substr(12,2))-1);
-      let year = 2000+parseInt(startdateline.substr(14,2));
-      if (year > startdate.getFullYear()) year -= 100;
-      startdate.setFullYear(year);
-    }
-    if ((typeof tzoffset !== 'number' || tzoffset < 0) && cletimezonedb.length > 0 && records.length > 0) {
-      //http://api.timezonedb.com/v2.1/get-time-zone?key=cletimezonedb&format=xml&by=position&lat=45.5&lng=5.5&time=1680936096
-      // rajout "&time=" + Math.truncate(date.getTime()/1000)
-      // et on récupère gmtOffset (7200)
-      let p = parseBRecord(records[0]);
-      let url = `https://api.timezonedb.com/v2.1/get-time-zone?key=${cletimezonedb}&format=json&by=position&lat=${p.lat}&lng=${p.lon}&time=${Math.trunc(p.time.getTime()/1000)}`;
-      let data = await fetch(url).then(response => response.json()).catch(err => {});
-      //.then(response => response.text())
-      //.then(str => new window.DOMParser().parseFromString(str, "text/xml"))
-      tzoffset = data && typeof data.gmtOffset === 'number' ? data.gmtOffset : 0;
-      //tzoffset = parseInt(data.getElementsByTagName("gmtOffset")[0].textContent);
-    } else {
-      tzoffset = 0;
+    lines.filter(l => l.trim().startsWith('HFDTEDATE')).forEach(startdateline => {
+        let tmpstartdate = new Date();
+        if (startdateline) {
+          tmpstartdate.setDate(parseInt(startdateline.substr(10,2)));
+          tmpstartdate.setMonth(parseInt(startdateline.substr(12,2))-1);
+          let year = 2000+parseInt(startdateline.substr(14,2));
+          if (year > tmpstartdate.getFullYear()) year -= 100;
+          tmpstartdate.setFullYear(year);
+        }
+        if (tmpstartdate < startdate) startdate = tmpstartdate;
+    });
+    if (typeof tzoffset !== 'number' || tzoffset < 0) {
+        tzoffset = 0;
+        if (cletimezonedb.length > 0 && records.length > 0) {
+          //http://api.timezonedb.com/v2.1/get-time-zone?key=cletimezonedb&format=xml&by=position&lat=45.5&lng=5.5&time=1680936096
+          // rajout "&time=" + Math.truncate(date.getTime()/1000)
+          // et on récupère gmtOffset (7200)
+          let p = parseBRecord(records[0]);
+          let url = `https://api.timezonedb.com/v2.1/get-time-zone?key=${cletimezonedb}&format=json&by=position&lat=${p.lat}&lng=${p.lon}&time=${Math.trunc(p.time.getTime()/1000)}`;
+          let data = await fetch(url).then(response => response.json()).catch(err => {});
+          //.then(response => response.text())
+          //.then(str => new window.DOMParser().parseFromString(str, "text/xml"))
+          tzoffset = data && typeof data.gmtOffset === 'number' ? data.gmtOffset : 0;
+          //tzoffset = parseInt(data.getElementsByTagName("gmtOffset")[0].textContent);
+        }
     }
 
     window.points = [];
     records.forEach(r => {
       points.push(parseBRecord(r));
     });
+    points.sort((a, b) => a.time-b.time);
     let interval = Math.ceil((points[points.length - 1].time.getTime() - points[0].time.getTime())/points.length);
     let gap = 0;
     let j = 0, k = 0;

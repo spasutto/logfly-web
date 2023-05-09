@@ -47,14 +47,14 @@ function loadCarto(clegeoportail, disablescrollzoom, rootelem) {
         "&STYLE=normal" +
         "&TILEMATRIXSET=PM" +
         "&FORMAT=image/jpeg"+
-        "&LAYER=GEOGRAPHICALGRIDSYSTEMS.MAPS"+
-        //"&LAYER=GEOGRAPHICALGRIDSYSTEMS.MAPS.SCAN25TOUR"+
+        //"&LAYER=GEOGRAPHICALGRIDSYSTEMS.MAPS"+
+        "&LAYER=GEOGRAPHICALGRIDSYSTEMS.MAPS.SCAN25TOUR"+
       "&TILEMATRIX={z}" +
         "&TILEROW={y}" +
         "&TILECOL={x}",
       {
       minZoom : 0,
-      maxZoom : 18,
+      maxZoom : 16,//18 pour MAPS
         attribution : '<a target="_blank" href="https://www.geoportail.gouv.fr/">IGN-F/Geoportail</a>',
       tileSize : 256 // les tuiles du Géooportail font 256x256px
       }
@@ -136,7 +136,7 @@ function loadCarto(clegeoportail, disablescrollzoom, rootelem) {
       divinf.style.padding = '2px';
       divinf.style.display = 'none';
       divinf.style.cursor = 'pointer';
-      divinf.title = 'Informations sur la trace';
+      divinf.title = 'Informations sur la trace (cliquer pour réduire)';
 
       return divinf;
     },
