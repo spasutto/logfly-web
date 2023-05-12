@@ -109,9 +109,10 @@
   }
   #ctinfos a {
     text-decoration: none;
+    background: transparent;
   }
   #ctinfos a:hover {
-    text-decoration: underline;
+    background: #447adb;
   }
 </style>
 
@@ -250,7 +251,7 @@
     let s = (fi.pts[fi.pts.length-1].time.getTime() - fi.pts[0].time.getTime()) / 1000;
     let t = new Date(Date.UTC(1970, 0, 1));
     t.setUTCSeconds(s);
-    flstats['durée'] = `${t.toLocaleString('fr-FR', { timeZone: 'UTC' }).substr(-8, 5)}`,
+    flstats['durée'] = `${t.toLocaleString('fr-FR', { /*timeZone: 'UTC'*/ }).substr(-8, 5)}`,
     flstats['alt max'] = `${Math.round(fi.maxalt)}m`,
     flstats['alt min'] = `${Math.round(fi.minalt)}m`,
     flstats['vz max'] = `${Math.round(fi.maxvz*10)/10}m/s`,
@@ -261,7 +262,7 @@
     updateTraceInfos();
   });
   graph.addEventListener('onposchanged', function(e) {
-    marker.bindPopup(e.detail.time.toLocaleString('fr-FR', { timeZone: 'UTC' }).substr(-8, 5)).setLatLng([e.detail.lat, e.detail.lon]).update();
+    marker.bindPopup(e.detail.time.toLocaleString('fr-FR', { /*timeZone: 'UTC'*/ }).substr(-8, 5)).setLatLng([e.detail.lat, e.detail.lon]).update();
     let vz =  Math.min(maxvz, Math.abs(e.detail.vz));
     let dh = mapelem.offsetHeight/2;
     let hvz = vz * dh / maxvz;
@@ -334,8 +335,10 @@
       }
       //<a title="afficher la polaire pour la sélection" href="#" onclick="event.stopPropagation();showpolaire(${JSON.stringify(portion.map(p => ({'vx': p.vx, 'vz': p.vz}))).replaceAll("\"", "'")});">
       let seltext = `<u>Finesse :</u> ${finesse} <i>(${deniv}m en ${dist}km à ${vxmoy}km/h, vz moy: ${vzmoy}m/s)<BR><u>Altitude de départ :</u> ${stpt.alt}m<BR><u>Vitesse sur parcours :</u> ${vmoy}km/h en ${elapsed}</i>`;
-      let csvbtn  = ` <a href="#" onclick="return dlPortion(event, ${graphsel[0]}, ${graphsel[1]});" title="télécharger la portion de vol en CSV">&#x1F4BE;CSV</a>`;
-      flstats['selection'] = seltext + csvbtn;
+      let selinfos = {'finesse':finesse, 'deniv':deniv, 'dist':dist, 'vxmoy':vxmoy, 'vzmoy':vzmoy, 'altitude_depart':stpt.alt, 'vitesse_parcours':vmoy, 'elapsed':elapsed};
+      let csvinfosbtn  = ` <a href="#" onclick="return cpInfosPortion(event, ${JSON.stringify(selinfos).replaceAll("\"", "&quot;")});" title="copier les informations sur la sélection dans le presse-papier">&#x1F4CB;</a>`;
+      let csvportionbtn  = ` <a href="#" onclick="return dlPortion(event, ${graphsel[0]}, ${graphsel[1]});" title="télécharger la portion de vol en CSV">&#x1F4BE;</a>`;
+      flstats['selection'] = seltext + csvinfosbtn + csvportionbtn;
       updateTraceInfos();
       window.selectionline = L.polyline(portion.map(pt => [pt.lat, pt.lon, pt.alt]),{
           color: '#ff00ff',
@@ -345,20 +348,54 @@
         }).bindTooltip(seltext).addTo(map);
     }
   });
+
+  function fallbackCopyTextToClipboard(text, then, err) {
+    var textArea = document.createElement("textarea");
+    textArea.value = text;
+    
+    // Avoid scrolling to bottom
+    textArea.style.top = "0";
+    textArea.style.left = "0";
+    textArea.style.position = "fixed";
+    
+    document.body.appendChild(textArea);
+    textArea.focus();
+    textArea.select();
+    
+    try {
+      var successful = document.execCommand('copy');
+      successful ? then() : err();
+    } catch (e) {
+      err(e);
+    }
+    document.body.removeChild(textArea);
+  }
+  function copyTextToClipboard(text, then, err) {
+    if (!navigator.clipboard) return fallbackCopyTextToClipboard(text, then, err);
+    navigator.clipboard.writeText(text).then(then||(_=>{}), err||(_=>{}));
+  }
   
-  function dlPortion(event, start, end) {
+  function cpInfosPortion(event, infos) {
+    const csvsep = '\t';
     event.stopPropagation();
-    const separator = ';';
-    let csv = `time${separator}alt${separator}ground alt${separator}lat${separator}lon${separator}horizontal speed${separator}vertical speed${separator}bearing\n`;
+    let ks = Object.keys(infos);
+    let csv = ks.join(csvsep) + '\n' + ks.map(k => infos[k].toString().replaceAll('.', ',')).join(csvsep);
+    copyTextToClipboard(csv, _=>alert('infos copiées en CSV dans le presse papier'), _=>alert('impossible d\'accéder au presse papier'));
+  }
+
+  function dlPortion(event, start, end) {
+    const csvsep = ';';
+    event.stopPropagation();
+    let csv = `time${csvsep}alt${csvsep}ground alt${csvsep}lat${csvsep}lon${csvsep}horizontal speed${csvsep}vertical speed${csvsep}bearing\n`;
     let portion = fi.pts.slice(start, end);
     csv += portion.map(pt => {
-      return pt.time.toISOString().replace('T',' ').replaceAll('-', '/').slice(0, -1)+separator+
-        pt.alt+separator+
-        pt.gndalt+separator+
-        pt.lat+separator+
-        pt.lon+separator+
-        pt.vx+separator+
-        pt.vz+separator+
+      return pt.time.toISOString().replace('T',' ').replaceAll('-', '/').slice(0, -1)+csvsep+
+        pt.alt+csvsep+
+        pt.gndalt+csvsep+
+        pt.lat+csvsep+
+        pt.lon+csvsep+
+        pt.vx+csvsep+
+        pt.vz+csvsep+
         pt.bearing;
     }).join('\n');
     let element = document.createElement('a');
@@ -384,7 +421,7 @@
     let dist = Math.sqrt(Math.pow(c2.x-c1.x, 2) + Math.pow(c2.y-c1.y, 2));
     if (dist>100) return;
     //if (L.latLng(nearest.lat, nearest.lon).distanceTo(latlng)>5000) return;
-    marker.bindPopup(nearest.time.toLocaleString('fr-FR', { timeZone: 'UTC' }).substr(-8, 5)).setLatLng([nearest.lat, nearest.lon]).update();
+    marker.bindPopup(nearest.time.toLocaleString('fr-FR', { /*timeZone: 'UTC'*/ }).substr(-8, 5)).setLatLng([nearest.lat, nearest.lon]).update();
     graph.setPos(nearest);
     updateIcon(nearest);
   }
@@ -759,6 +796,5 @@
     }
   };
 </script>
-
 </body>
 </html>
