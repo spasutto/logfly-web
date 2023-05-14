@@ -158,10 +158,7 @@ exit(0);
   window.onload = function()
   {
     loadData();
-    if (id > 0) {
-      loadVol(id);
-      document.getElementById('calcbut').style.display = 'initial';
-    }
+    loadVol(id);
     calcheures();
     calcdate();
 
@@ -233,6 +230,17 @@ exit(0);
   }
 
   function loadVol(id) {
+    document.getElementById('zonescore').style.display = 'none';
+    document.getElementById('score').innerHTML = '';
+    if (id <= 0) return;
+    loadFlightScore(id).then(score => {
+      document.getElementById('zonescore').style.display = 'initial';
+      let scoreinfo = 'pas de score';
+      if (score && score.scoreInfo && typeof score.scoreInfo.distance === 'number' && typeof score.scoreInfo.score === 'number') {
+        scoreinfo = `score: ${score.scoreInfo.score}, distance : ${score.scoreInfo.distance}km`;
+      }
+      document.getElementById('score').innerHTML = scoreinfo;
+    }).catch(console.log);
     let xhttp = new XMLHttpRequest();
     xhttp.responseType = 'json';
     message("chargement...");
@@ -407,9 +415,7 @@ exit(0);
   function onVolChange(val)
   {
     id = val;
-    if (val > 0)
-      loadVol(val);
-    document.getElementById('calcbut').style.display = (val > 0)?'initial':'none';
+    loadVol(val);
   }
 
   function calcheures()
@@ -471,19 +477,6 @@ exit(0);
     }
     //window.location = "?del&id=" + document.getElementsByName("id")[0].value;
   }
-  function postFlightScore(id, score, onfinish) {
-    let xhttp = new XMLHttpRequest();
-    xhttp.responseType = 'text';
-    xhttp.onreadystatechange = function() {
-      if (this.readyState == 4 && this.status == 200) {
-        onfinish(this.responseText);
-      }
-    };
-    data = "flightscore="+escape(JSON.stringify(score));
-    xhttp.open("POST", "upload.php?id="+id, true);
-    xhttp.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');
-    xhttp.send(data);
-  }
   function calcFlightScore() {
     let xhttp = new XMLHttpRequest();
     message("chargement...");
@@ -495,7 +488,7 @@ exit(0);
             message("");
             if (confirm ("Le score calculé est de " + Math.round(score.score*10)/10 + " points pour "+Math.round(score.scoreInfo.distance*10)/10+"km, mettre à jour?")) {
               message("enregistrement...");
-              postFlightScore(id, score, (msg) => {message("");alert(msg == "OK"?"Fait!":"Il semble qu'il y'ai eu un problème : " + msg);});
+              postFlightScore(id, score).then((msg) => {message("");alert(msg == "OK"?"Fait!":"Il semble qu'il y'ai eu un problème : " + msg);});
             }
           });
         } catch(e) {alert(e);}
@@ -587,16 +580,19 @@ if ($id && !isset($_GET["del"]))
   <input type="hidden" name="lat" value="<?php echo $lat;?>">
   <input type="hidden" name="lon" value="<?php echo $lon;?>">
   <input type="hidden" name="alt" value="<?php echo $alt;?>">
- <p>Date : <input type="text" name="date" value="<?php echo date('d/m/Y');?>" onKeyUp="calcdate();"/>&nbsp;&nbsp;<span name="jrsem"></span>
- Heure : <input type="text" name="heure" value="<?php echo date('H:i:s');?>"/></p>
- <p>Durée : <input type="text" name="dureeheures" onKeyUp="calcsecondes()"/>(<span name="dureeHMS"></span>)&nbsp;soit&nbsp;<span name="duree">0</span>&nbsp;secondes</p>
- <p>Voile : <input type="text" name="voile" /></p>
- <p>Commentaire : <textarea name="commentaire" class="fullwidth" rows="10"></textarea></p>
- <p>
-   <input type="checkbox" name="deligc" id="cbdeligc" value="1"><label for="cbdeligc">supprimer le fichier IGC</label>
-   <a id="calcbut" href="#" onclick="calcFlightScore()" style="display:none;float:right">recalculer le score</a>
-  </p>
- <p><input id="btnSave" type="button" value="Enregistrer" onclick="saveVol()" style="float:right;"></p>
+  <p>Date : <input type="text" name="date" value="<?php echo date('d/m/Y');?>" onKeyUp="calcdate();"/>&nbsp;&nbsp;<span name="jrsem"></span>
+  Heure : <input type="text" name="heure" value="<?php echo date('H:i:s');?>"/></p>
+  <p>Durée : <input type="text" name="dureeheures" onKeyUp="calcsecondes()"/>(<span name="dureeHMS"></span>)&nbsp;soit&nbsp;<span name="duree">0</span>&nbsp;secondes</p>
+  <p>Voile : <input type="text" name="voile" /></p>
+  <p>Commentaire : <textarea name="commentaire" class="fullwidth" rows="10"></textarea></p>
+  <div style="height:40px">
+    <input type="checkbox" name="deligc" id="cbdeligc" value="1"><label for="cbdeligc">supprimer le fichier IGC</label>
+    <div id="zonescore" style="display:none;float:right">
+      <span id="score" style="display:block"></span>
+      <a href="#" onclick="calcFlightScore()">recalculer le score</a>
+    </div>
+  </div>
+  <p><input id="btnSave" type="button" value="Enregistrer" onclick="saveVol()" style="float:right"></p>
 </form>
 
 </body>

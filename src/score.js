@@ -22,6 +22,42 @@ function score(igccontent, cbk) {
     }, scoringrule, 60);
 }
 
+function loadFlightScore(id) {
+  return new Promise((success, err)=> {
+    let url = `Tracklogs/${id}.json`;
+    let xhttp = new XMLHttpRequest();
+    xhttp.responseType = 'json';
+    xhttp.onreadystatechange = function() {
+      if (this.readyState == 4) {
+        if (this.status == 200) {
+          try {
+            if (typeof this.response == 'object') {
+              success(this.response);
+            }
+          } catch(e) {err(e)}
+        } else err("status : " + this.status);
+      }
+    };
+    xhttp.open("GET", url, true);
+    xhttp.send();
+  });
+}
+
+function postFlightScore(id, score) {
+  return new Promise((success, err)=> {
+    let xhttp = new XMLHttpRequest();
+    xhttp.responseType = 'text';
+    xhttp.onreadystatechange = function() {
+      if (this.readyState == 4 && this.status == 200) {
+        success(this.responseText);
+      }
+    };
+    data = "flightscore="+escape(JSON.stringify(score));
+    xhttp.open("POST", "upload.php?id="+id, true);
+    xhttp.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');
+    xhttp.send(data);
+  });
+}
 /*
 
 

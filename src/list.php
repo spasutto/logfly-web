@@ -137,8 +137,15 @@ td.desc {
   text-align: center;
   border-radius: 5px;
 }
-.ppt_info:hover {
+.ppt_info > div {
+  user-select: none;
+  /*cursor: grab;*/
+}
+.ppt_info > a:hover,.ppt_info > div:hover {
   background : #efefef;
+  text-decoration: none;
+  /*filter: blur(1px);*/
+  font-weight: bolder;
 }
 .editsitetexte {
   position: absolute;
@@ -366,32 +373,6 @@ function getZoneImgTrace(zone) {
   return zone;
 }
 window.onload = function() {
-  const lignes = document.querySelectorAll('tr.lignevol,tr.lignecomm');
-  lignes.forEach(function(ligne) {
-    ligne.addEventListener('dblclick', function (e) {
-      e.preventDefault();
-      editvol(parseInt(e.target.closest("tr").querySelector("td").textContent));
-    });
-  });
-  document.addEventListener("scroll", (event) => {moveImageTrace();});
-  var zonesimgtrace = [...document.querySelectorAll('.zoneimgtrace')];
-  zonesimgtrace.forEach(z => {
-    let action = (hide, event) => {
-        let zone = event.target;
-        if (!zone.classList.contains('zoneimgtrace')) {
-          zone = zone.closest('.zoneimgtrace');
-          if (!zone) return;
-        }
-        afficheImageTrace(zone, hide);
-    };
-    let affi = action.bind(this, false);
-    let hide = action.bind(this, true);
-    z.addEventListener("mouseover", affi);
-    z.addEventListener("mouseleave", hide);
-    z.addEventListener("touchstart", affi);
-    z.addEventListener("touchend", hide);
-    z.addEventListener("touchmove", moveImageTrace);
-  });
 };
 </script>
 </head>
@@ -429,7 +410,8 @@ window.onload = function() {
   for ($i=0; $i<$nbpages; $i++) {
     $lnoffset = $i*$resperpage;
     $balise = ($lnoffset != $offset) ? "a":"div";
-    $lnpages .= "&nbsp;<".$balise." href=\"".url_with_parameter("offset", $lnoffset)."\">".($i+1)."</".$balise.">";
+    $titrepage = ($lnoffset != $offset) ? ('aller à la page '.($i+1)) : 'ceci est la page courante';
+    $lnpages .= "&nbsp;<".$balise." href=\"".url_with_parameter("offset", $lnoffset)."\" title=\"".$titrepage."\">".($i+1)."</".$balise.">";
   }
   $lnpages .= "</div>";
 ?>
@@ -554,5 +536,33 @@ window.onload = function() {
   echo $lnpages;
 ?>
 </div>
+<script>
+  const lignes = document.querySelectorAll('tr.lignevol,tr.lignecomm');
+  lignes.forEach(function(ligne) {
+    ligne.addEventListener('dblclick', function (e) {
+      e.preventDefault();
+      editvol(parseInt(e.target.closest("tr").querySelector("td").textContent));
+    });
+  });
+  document.addEventListener("scroll", (event) => {moveImageTrace();});
+  var zonesimgtrace = [...document.querySelectorAll('.zoneimgtrace')];
+  zonesimgtrace.forEach(z => {
+    let action = (hide, event) => {
+        let zone = event.target;
+        if (!zone.classList.contains('zoneimgtrace')) {
+          zone = zone.closest('.zoneimgtrace');
+          if (!zone) return;
+        }
+        afficheImageTrace(zone, hide);
+    };
+    let affi = action.bind(this, false);
+    let hide = action.bind(this, true);
+    z.addEventListener("mouseover", affi);
+    z.addEventListener("mouseleave", hide);
+    z.addEventListener("touchstart", affi);
+    z.addEventListener("touchend", hide);
+    z.addEventListener("touchmove", moveImageTrace);
+  });
+</script>
 </body>
 </html>
