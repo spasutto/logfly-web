@@ -14,6 +14,7 @@
     <script src='lib/Leaflet.fullscreen.js'></script>
     <link href='lib/leaflet.fullscreen.css' rel='stylesheet' />
     <script src='lib/leaflet.hotline.js'></script>
+    <script src="lib/leaflet.rotatedMarker.js"></script>
     <script src="carto.js"></script>
     <script src="graph.js"></script>
     <script src="anatrace.js"></script>
@@ -216,6 +217,7 @@
   //var svg = '<svg viewBox="0 0 24 24" height="32" width="32" fill="transparent" stroke="black" stroke-width="2" stroke-linecap="round" xmlns="http://www.w3.org/2000/svg"> <g> <path d="M1 1 l22 22"/> <path d="M1 23 l22 -22"/> </g> </svg>'; /* insert your own svg */
   //var iconUrl = 'data:image/svg+xml;base64,' + btoa(svg);
   let iconUrl = 'paraglider.svg';
+  //let iconUrl = 'crosshair.svg';
   origIconSize = [32, 32];
   origIconAnchor = [16, 22];
   var icon = L.icon({iconUrl: iconUrl, iconSize: origIconSize,iconAnchor: origIconAnchor});
@@ -251,7 +253,7 @@
     let s = (fi.pts[fi.pts.length-1].time.getTime() - fi.pts[0].time.getTime()) / 1000;
     let t = new Date(Date.UTC(1970, 0, 1));
     t.setUTCSeconds(s);
-    flstats['durée'] = `${t.toLocaleString('fr-FR', { /*timeZone: 'UTC'*/ }).substr(-8, 5)}`,
+    flstats['durée'] = `${dateToTime(t)}`,
     flstats['alt max'] = `${Math.round(fi.maxalt)}m`,
     flstats['alt min'] = `${Math.round(fi.minalt)}m`,
     flstats['vz max'] = `${Math.round(fi.maxvz*10)/10}m/s`,
@@ -262,7 +264,10 @@
     updateTraceInfos();
   });
   graph.addEventListener('onposchanged', function(e) {
-    marker.bindPopup(e.detail.time.toLocaleString('fr-FR', { /*timeZone: 'UTC'*/ }).substr(-8, 5)).setLatLng([e.detail.lat, e.detail.lon]).update();
+    let mktxt = e.detail.time.toLocaleString('fr-FR', { /*timeZone: 'UTC'*/ }).substr(-8, 5);
+    mktxt+='&nbsp;:&nbsp;'+e.detail.alt+'m';
+    mktxt+='<BR>' + e.detail.vz+'m/s&nbsp;&nbsp;&nbsp;'+e.detail.vx+'km/h';
+    marker.bindPopup(mktxt).setLatLng([e.detail.lat, e.detail.lon]).update();
     let vz =  Math.min(maxvz, Math.abs(e.detail.vz));
     let dh = mapelem.offsetHeight/2;
     let hvz = vz * dh / maxvz;
@@ -298,6 +303,9 @@
   graph.addEventListener('onselectionchanged', function(e) {
     let graphsel = e.detail;
     if (window.selectionline) map.removeLayer(window.selectionline);
+    delete flstats.selection;
+    updateTraceInfos();
+
     if (typeof graphsel == 'object' && Array.isArray(window.fi?.pts) && Array.isArray(graphsel) && graphsel.length === 2 && graphsel[1] < fi.pts.length && graphsel[0] != graphsel[1]) {
       let stpt = fi.pts[graphsel[0]],
         endpt = fi.pts[graphsel[1]];
@@ -305,7 +313,8 @@
       let prevpt = {lat: stpt.lat, lon: stpt.lon};
       let vxmoy = 0;
       let vzmoy = 0;
-      let dist = portion.reduce((total, currentValue, currentIndex, arr) => 
+      let dist = Math.round(GraphGPX.distance(stpt.lat, stpt.lon, endpt.lat, endpt.lon)/100)/10;
+      let totaldist = portion.reduce((total, currentValue, currentIndex, arr) => 
       {
         let tdist = total+GraphGPX.distance(prevpt.lat, prevpt.lon, currentValue.lat, currentValue.lon);
         vxmoy += currentValue.vx;
@@ -316,7 +325,7 @@
       vxmoy = Math.round(vxmoy/portion.length);
       vzmoy = Math.round(10*vzmoy/portion.length)/10;
       let deniv = stpt.alt - endpt.alt;
-      let finesse = Math.round(100*dist / deniv)/100;
+      let finesse = Math.round(100*totaldist / deniv)/100;
       let seconds = (endpt.time.getTime()-stpt.time.getTime())/1000;
       let elapsed = new Date(0);
       elapsed.setSeconds(seconds);
@@ -325,17 +334,17 @@
       let me = parseInt(elapsed.substring(3,5));
       let se = parseInt(elapsed.substring(6,8));
       elapsed = ((he>0?he+'h':'')+(me>0?me+'\'':'')+(se>0?se+'"':'')).trim();
-      dist /= 1000;
+      totaldist /= 1000;
       deniv *= -1;
-      dist = Math.round(dist*10)/10;
+      totaldist = Math.round(totaldist*10)/10;
       let vmoy = Math.round((GraphGPX.distance(endpt.lat, endpt.lon, stpt.lat, stpt.lon)/1000)/(seconds/3600));
       if (finesse < 0) {
         finesse = '&infin;';
         deniv = '+' + deniv;
       }
       //<a title="afficher la polaire pour la sélection" href="#" onclick="event.stopPropagation();showpolaire(${JSON.stringify(portion.map(p => ({'vx': p.vx, 'vz': p.vz}))).replaceAll("\"", "'")});">
-      let seltext = `<u>Finesse :</u> ${finesse} <i>(${deniv}m en ${dist}km à ${vxmoy}km/h, vz moy: ${vzmoy}m/s)<BR><u>Altitude de départ :</u> ${stpt.alt}m<BR><u>Vitesse sur parcours :</u> ${vmoy}km/h en ${elapsed}</i>`;
-      let selinfos = {'finesse':finesse, 'deniv':deniv, 'dist':dist, 'vxmoy':vxmoy, 'vzmoy':vzmoy, 'altitude_depart':stpt.alt, 'vitesse_parcours':vmoy, 'elapsed':elapsed};
+      let seltext = `<u>Finesse :</u> ${finesse} <i>(${deniv}m en ${totaldist}km à ${vxmoy}km/h, vz moy: ${vzmoy}m/s)<BR><u>Altitude de départ :</u> ${stpt.alt}m<BR><u>Vitesse sur parcours :</u> ${vmoy}km/h en ${elapsed}<BR><u>Distance linéaire :</u> ${dist}km</i>`;
+      let selinfos = {'finesse':finesse, 'deniv':deniv, 'distance_totale':totaldist, 'distance_lineaire':dist, 'vxmoy':vxmoy, 'vzmoy':vzmoy, 'altitude_depart':stpt.alt, 'vitesse_parcours':vmoy, 'elapsed':elapsed};
       let csvinfosbtn  = ` <a href="#" onclick="return cpInfosPortion(event, ${JSON.stringify(selinfos).replaceAll("\"", "&quot;")});" title="copier les informations sur la sélection dans le presse-papier">&#x1F4CB;</a>`;
       let csvportionbtn  = ` <a href="#" onclick="return dlPortion(event, ${graphsel[0]}, ${graphsel[1]});" title="télécharger la portion de vol en CSV">&#x1F4BE;</a>`;
       flstats['selection'] = seltext + csvinfosbtn + csvportionbtn;
@@ -421,7 +430,10 @@
     let dist = Math.sqrt(Math.pow(c2.x-c1.x, 2) + Math.pow(c2.y-c1.y, 2));
     if (dist>100) return;
     //if (L.latLng(nearest.lat, nearest.lon).distanceTo(latlng)>5000) return;
-    marker.bindPopup(nearest.time.toLocaleString('fr-FR', { /*timeZone: 'UTC'*/ }).substr(-8, 5)).setLatLng([nearest.lat, nearest.lon]).update();
+    let mktxt = nearest.time.toLocaleString('fr-FR', { /*timeZone: 'UTC'*/ }).substr(-8, 5);
+    mktxt+='&nbsp;:&nbsp;'+nearest.alt+'m';
+    mktxt+='<BR>' + nearest.vz+'m/s&nbsp;&nbsp;&nbsp;'+nearest.vx+'km/h';
+    marker.bindPopup(mktxt).setLatLng([nearest.lat, nearest.lon]).update();
     graph.setPos(nearest);
     updateIcon(nearest);
   }
@@ -434,6 +446,9 @@
     icon.options.iconSize = origIconSize.map(s => s * ratio);
     icon.options.iconAnchor = origIconAnchor.map((s,i) => s/origIconSize[i] * icon.options.iconSize[i]);
     marker.setIcon(icon);
+    //marker.setRotationOrigin("center");
+    marker.setRotationOrigin(icon.options.iconAnchor.map(v => v+"px").join(' '));
+    marker.setRotationAngle(pt.bearing+180);
   }
 
   function redrawFlight() {
@@ -446,7 +461,7 @@
       hotlineLayer.setStyle({'min':-5/*fi.minvz*/, 'max':5/*fi.maxvz*/});
     } else if (dispmode == 'vx') {
       hotlineLayer.setLatLngs(window.fi.pts.map(pt => ([pt.lat, pt.lon, pt.vx])));
-      hotlineLayer.setStyle({'min':0/*fi.minvx*/, 'max':55/*fi.maxvx*/});
+      hotlineLayer.setStyle({'min':0/*fi.minvx*/, 'max':fi.maxvx/*55*/});
     } else if (dispmode == 'altsol') {
       let pts = window.fi.pts.map(pt => ([pt.lat, pt.lon, pt.alt - pt.gndalt]));
       let ptsr = pts.map(p => p[2]);
@@ -590,6 +605,7 @@
     });
     points.sort((a, b) => a.time-b.time);
     let interval = Math.ceil((points[points.length - 1].time.getTime() - points[0].time.getTime())/points.length);
+    interval = Math.round(interval/1000)*1000;
     let gap = 0;
     let j = 0, k = 0;
     let clone = null;
@@ -772,6 +788,20 @@
     };
     Plotly.newPlot('graphPolaire', [ trace1 ], { title:'Polaire des vitesses pour la zone sélectionnée'});
     document.getElementById('popupPolaire').style.display='block';
+  }
+  function dateToTime(dt) {
+    let time = dt.toLocaleString('fr-FR', { timeZone: 'UTC' }).substr(-8, 8);
+    let hours = parseInt(time.substring(0,2));
+    let minutes = parseInt(time.substring(3,5));
+    let seconds = parseInt(time.substring(6,8));
+    time = '';
+    if (hours != 0) time += hours + 'h';
+    if (minutes >= 5 || (minutes > 0 && hours == 0)) time += minutes + 'm'; // si vol > 1h => pas de minutes en dessous de 5
+    if (hours == 0 && seconds != 0) time += seconds + 's';
+    return time;
+  }
+  function zeroPad(num, places) {
+    return String(num).padStart(places, '0');
   }
 
   window.onload = function() {

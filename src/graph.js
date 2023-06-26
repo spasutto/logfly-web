@@ -74,6 +74,11 @@ class GraphGPX {
     this.#analysers.push(analyser);
   }
 
+  setDebugMode() {
+    this.#DEBUG = true;
+    this.paint();
+  }
+
   resetInfos() {
     // à chaque changement impacter aussi fizoom dans updateZoom()
     this.fi = { 'pts': [], maxalt: -1000, minalt: 100000, maxvz:-1000, minvz:100000, maxvx:-1000, minvx:100000, minaltdiff:100000, maxaltdiff:-1000, start: new Date };
@@ -268,8 +273,21 @@ class GraphGPX {
         this.selection[1] = this.selection[0] = this.curidx;
       }
     }
-    if (e.type == "touchend" && this.endtouch - this.starttouch < 250) {
-      mouseEv = "click";
+    if (e.type == "touchend") {
+      this.selectionchanged(0, 0);
+      if (this.endtouch - this.starttouch < 250) {
+        mouseEv = "click";
+      }
+    }
+
+    if (e.touches.length > 0 && typeof e.touches[0].pageX === 'number') {
+      this.curidx = this.indexforx(e.touches[0].pageX);
+      if (this.curidx > this.fizoom.pts.length-1) {
+        this.curidx = this.fizoom.pts.length-1;
+      }
+      let curpt = this.fizoom.pts[this.curidx];
+      let event = new CustomEvent('onposchanged', {"detail": curpt});
+      this.elem.dispatchEvent(event);
     }
 
     let mouseEvent = document.createEvent("MouseEvent");
@@ -344,15 +362,11 @@ class GraphGPX {
       this.selection[0] = this.selection[1] = -1;
       this.zoomsel[1] = this.curidx;
       this.zoom();
-    } else {
-      if (this.selectionpossible)
-        this.selection[1] = this.curidx;
-      if (this.selectionpossible) {
-        let startx = Math.min(this.selection[0], this.selection[1]),
-          endx = Math.max(this.selection[0], this.selection[1]);
-        let event = new CustomEvent('onselectionchanged', {"detail": [startx, endx]});
-        this.elem.dispatchEvent(event);
-      }
+    } else if (this.selectionpossible) {
+      this.selection[1] = this.curidx;
+      let startx = Math.min(this.selection[0], this.selection[1]),
+        endx = Math.max(this.selection[0], this.selection[1]);
+      this.selectionchanged(startx, endx);
     }
     this.paintmouseinfos();
   }
@@ -363,6 +377,11 @@ class GraphGPX {
       this.selection[1] = this.selection[0] = -1;
       this.paintmouseinfos(this.curidx);
     }
+  }
+  
+  selectionchanged(startx, endx) {
+    let event = new CustomEvent('onselectionchanged', {"detail": [startx, endx]});
+    this.elem.dispatchEvent(event);
   }
 
   indexforx(x) {

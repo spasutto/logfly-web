@@ -1,23 +1,14 @@
 <?php
 require("config.php");
-
-$id=FALSE;
-if (isset($_POST['id']) && preg_match('/^\d+$/', $_POST['id']))
-  $id = intval($_POST['id']);
-else if (isset($_GET['id']) && preg_match('/^\d+$/', $_GET['id']))
-  $id = intval($_GET['id']);
-
-if (!$id || $id <= 0)
-{
-  exit(0);
-}
+require("logfilereader.php");
+require('Trackfile-Lib/TrackfileLoader.php');
 
 $force = $_GET['force'] === '1';
 $debug = $_GET['debug'] === '1';
 
 $TRACKLOGS = "Tracklogs".DIRECTORY_SEPARATOR;
 //array_map('unlink', glob( __DIR__.DIRECTORY_SEPARATOR."Tracklogs".DIRECTORY_SEPARATOR."*.jpg"));
-$fname = $TRACKLOGS.$id.".jpg";
+$fname = $TRACKLOGS."parcours.jpg";
 if (!$debug && !$force && file_exists($fname))
 {
   //header('Location: '.$fname);
@@ -27,7 +18,7 @@ if (!$debug && !$force && file_exists($fname))
   echo file_get_contents($fname);
   exit(0);
 }
-$MAXSIZE = 640;
+$MAXSIZE = 1280;
 
 /*
 require_once('elevation/ElevationService.php');
@@ -35,17 +26,28 @@ $es = new ElevationService("elevation/HGT");
 $es->getElevation(44.000423928572, 6.4993751666667);echo "<BR>";
 $es->getElevation(44.000230722912, 6.4379216666667);exit(0);
 */
-$pts = getTrack($id);
-// Coordonées max de la carte
-$trkmaxlat = -200;$trkminlat=200;$trkmaxlon = -200;$trkminlon=200;
-foreach ($pts as $pt)
-{
-  if ($pt->latitude > $trkmaxlat) $trkmaxlat = $pt->latitude;
-  if ($pt->latitude < $trkminlat) $trkminlat = $pt->latitude;
-  if ($pt->longitude > $trkmaxlon) $trkmaxlon = $pt->longitude;
-  if ($pt->longitude < $trkminlon) $trkminlon = $pt->longitude;
-}
 
+$trkmaxlat = -200;$trkminlat=200;$trkmaxlon = -200;$trkminlon=200;
+foreach(glob($TRACKLOGS.'*.igc', GLOB_NOSORT) as $trackfile)
+{
+  $trackfile = substr($trackfile, strlen($TRACKLOGS));
+  $id = substr($trackfile, 0, strpos($trackfile, '.'));
+  $id = intval($id);
+  if ($id <= 0) continue;
+  //$pts = array_merge($pts, getTrack($id));
+  $pts = getTrack($id);
+  // Coordonnées max de la carte
+  foreach ($pts as $pt)
+  {
+    if ($pt->latitude > $trkmaxlat) $trkmaxlat = $pt->latitude;
+    if ($pt->latitude < $trkminlat) $trkminlat = $pt->latitude;
+    if ($pt->longitude > $trkmaxlon) $trkmaxlon = $pt->longitude;
+    if ($pt->longitude < $trkminlon) $trkminlon = $pt->longitude;
+  }
+}
+/*header('Content-Type: text/plain');
+print_r($pts);
+exit(0);*/
 
 // Padding
 $add = ($trkmaxlat-$trkminlat)*0.15;
@@ -188,6 +190,7 @@ else if ($trkmaxlat-$trkminlat>0.4 || $trkmaxlon-$trkminlon>0.4)
   $zoom = 12;
 */
 $zoom = $maxzoom;//count($scaledenominators)-1;
+$zoom = 9;
 do {
     $TLxy = lngLatToTileXY($TL[0], $TL[1], $zoom);
     $BRxy = lngLatToTileXY($BR[0], $BR[1], $zoom);
@@ -266,7 +269,10 @@ for ($x=0; $x<$widthx; $x++)
     {
         $tilex = $TLxy[0]+$x;
         $tiley = $TLxy[1]+$y;
-        $imgtmp = imagecreatefromjpeg('https://wxs.ign.fr/'.$cle.'/geoportail/wmts?&REQUEST=GetTile&SERVICE=WMTS&VERSION=1.0.0&STYLE=normal&TILEMATRIXSET=PM&FORMAT=image/jpeg&LAYER='.$layer.'&TILEMATRIX='.$zoom.'&TILEROW='.$tiley.'&TILECOL='.$tilex);
+        //https://sampleserver6.arcgisonline.com/arcgis/rest/services/World_Street_Map/MapServer/tile/8/0/0
+        $url = 'https://wxs.ign.fr/'.$cle.'/geoportail/wmts?&REQUEST=GetTile&SERVICE=WMTS&VERSION=1.0.0&STYLE=normal&TILEMATRIXSET=PM&FORMAT=image/jpeg&LAYER='.$layer.'&TILEMATRIX='.$zoom.'&TILEROW='.$tiley.'&TILECOL='.$tilex;
+        $url = 'https://sampleserver6.arcgisonline.com/arcgis/rest/services/World_Street_Map/MapServer/tile/'.$zoom.'/'.$tiley.'/'.$tilex;
+        $imgtmp = imagecreatefromjpeg($url);
         if ($xfactor != 1 || $yfactor != 1)
             /*imagecopyresized*/imagecopyresampled($img, $imgtmp, $x*$tilewidth, $y*$tileheight, 0, 0, $tilewidth, $tileheight, 256, 256);
         else
@@ -274,13 +280,29 @@ for ($x=0; $x<$widthx; $x++)
     }
 }
 
-$blue = imagecolorallocate($img,0,0,255);
+//$color = imagecolorallocate($img,0,0,255);
+//$color = imagecolorallocate($img,255,155,0);
+$color = imagecolorallocate($img,255,0,255);
 $thickness = max($WIDTH, $HEIGHT)/4;
 //$thickness = $WIDTH/4;
-imagesetthickness($img,4);
-foreach ($pts as $pt)
+imagesetthickness($img,2);
+$lastx=-1;
+$lasty=-1;
+foreach(glob($TRACKLOGS.'*.igc', GLOB_NOSORT) as $trackfile)
 {
-  setPixelLatLon($pt->latitude, $pt->longitude);
+  $trackfile = substr($trackfile, strlen($TRACKLOGS));
+  $id = substr($trackfile, 0, strpos($trackfile, '.'));
+  $id = intval($id);
+  if ($id <= 0) continue;
+  //$pts = array_merge($pts, getTrack($id));
+  $pts = getTrack($id);
+  // Coordonnées max de la carte
+  foreach ($pts as $pt)
+  {
+    setPixelLatLon($pt->latitude, $pt->longitude);
+  }
+  $lastx=-1;
+  $lasty=-1;
 }
 
 //header('Content-Type: text/plain');exit(0);
@@ -295,33 +317,27 @@ $imagedata = ob_get_clean();
 file_put_contents($fname, $imagedata);
 echo $imagedata;
 
-$lastx=-1;
-$lasty=-1;
-$first = true;
 function setPixelLatLon($lat, $lon)
 {
-  global $img,$first, $blue, $HEIGHT, $WIDTH, $trkminlon, $trkmaxlon, $trkminlat, $trkmaxlat, $lastx, $lasty;
+  global $img, $color, $HEIGHT, $WIDTH, $trkminlon, $trkmaxlon, $trkminlat, $trkmaxlat, $lastx, $lasty;
   $x = $WIDTH*($lon-$trkminlon)/($trkmaxlon-$trkminlon);
   $y = $HEIGHT-($HEIGHT*($lat-$trkminlat)/($trkmaxlat-$trkminlat));
   if ($x == $lastx && $y == $lasty) return;
   /*if ($lastx+$lasty>0 && (abs($lastx - $x) > 3 || abs($lasty - $y) > 3))
-    imageline($img, $lastx, $lasty, $x, $y, $blue);
+    imageline($img, $lastx, $lasty, $x, $y, $color);
   else
-    imagesetpixel($img, $x, $y, $blue);*/
+    imagesetpixel($img, $x, $y, $color);*/
   if ($lastx+$lasty>0 && (abs($lastx - $x) > 0 || abs($lasty - $y) > 0))
   {
-    imageline($img, $lastx, $lasty, $x, $y, $blue);
+    imageline($img, $lastx, $lasty, $x, $y, $color);
   }
   $lastx=$x;
   $lasty=$y;
-  $first = false;
 }
 
 function getTrack($id)
 {
   global $TRACKLOGS;
-  require("logfilereader.php");
-  require('Trackfile-Lib/TrackfileLoader.php');
   try
   {
     $tfreader = TrackfileLoader::load($TRACKLOGS.$id.".igc");

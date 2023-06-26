@@ -89,6 +89,10 @@ header a {
 .main {
  padding: 3px;
 }
+footer {
+  text-align: center;
+  font-size: 9pt;
+}
 h1 {
   text-decoration: none;
   line-height: 0.9;
@@ -536,6 +540,7 @@ window.onload = function() {
   echo $lnpages;
 ?>
 </div>
+<footer><a href="parcours.php">carte des parcours</a></footer>
 <script>
   const lignes = document.querySelectorAll('tr.lignevol,tr.lignecomm');
   lignes.forEach(function(ligne) {

@@ -38,6 +38,7 @@ if (isset($_GET['extract_igc'])) {
   <li><a href="?extract_igc">extraire les fichiers igc de la base</a></li>
   <li><a href="?recalcul_igc">calculer les scores igc</a></li>
   <li><a href="?regen_img">regénérer les vignettes</a></li>
+  <li><a href="parcours.php?force=1">regénérer la carte globale des parcours</a></li>
   <li><a href="?genzip_tracklogs">générér un nouveau zip des tracklogs</a></li>
   <li><a href="?viewzip_tracklogs">voir les zips des tracklogs</a></li>
 </ul>
