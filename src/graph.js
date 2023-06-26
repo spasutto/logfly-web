@@ -98,14 +98,14 @@ class GraphGPX {
   updateZoom() {
     if (this.zoomsel[0]>-1 && this.zoomsel[1]>-1) {
       this.fizoom.pts = this.fi.pts.slice(this.zoomsel[0], this.zoomsel[1]);
-      //let fpt = this.fizoom.pts[0];
+      let fpt = this.fizoom.pts[0];
       //this.fizoom.minalt = this.fizoom.pts.reduce((prev, cur) => prev<cur.alt?prev:cur.alt, fpt.alt);
       //this.fizoom.maxalt = this.fizoom.pts.reduce((prev, cur) => prev>cur.alt?prev:cur.alt, fpt.alt);
       //this.fizoom.minvx = this.fizoom.pts.reduce((prev, cur) => prev<cur.vx?prev:cur.vx, fpt.vx);
       //this.fizoom.maxvx = this.fizoom.pts.reduce((prev, cur) => prev>cur.vx?prev:cur.vx, fpt.vx);
       //this.fizoom.minvz = this.fizoom.pts.reduce((prev, cur) => prev<cur.vx?prev:cur.vz, fpt.vz);
       //this.fizoom.maxvz = this.fizoom.pts.reduce((prev, cur) => prev>cur.vx?prev:cur.vz, fpt.vz);
-      //this.fizoom.start = fpt.time;
+      this.fizoom.start = fpt.time;
     } else {
       this.fizoom = {};
       Object.keys(this.fi).forEach((function(k)
@@ -444,7 +444,7 @@ class GraphGPX {
         this.ctx2.fillText(curpt.diffbearing+'°' , posx+rvxtextw+12, posy);
       }
       let t = new Date(Date.UTC(1970, 0, 1));
-      t.setUTCSeconds((curpt.time.getTime() - this.start.getTime()) / 1000);
+      t.setUTCSeconds((curpt.time.getTime() - this.fizoom.start.getTime()) / 1000);
       this.ctx2.fillStyle = this.options.colors.axis;
       this.ctx2.fillText(curpt.time.toLocaleString('fr-FR'/*, { timeZone: 'UTC' }*/).substr(-8, 5) + " ("+t.toLocaleString('fr-FR', { timeZone: 'UTC' }).substr(-8, 5)+")", posx, posy+=10);
     }
@@ -488,9 +488,9 @@ class GraphGPX {
     this.incr = Math.ceil(this.incr);
 
     // heures (barres)
-    let firsthour = new Date(this.start); firsthour.setMilliseconds(0); firsthour.setSeconds(0); firsthour.setMinutes(0);
-    firsthour = 3600 - ((this.start - firsthour) / 1000);
-    let secstotal = (this.fizoom.pts[this.fizoom.pts.length - 1].time - this.start) / 1000;
+    let firsthour = new Date(this.fizoom.start); firsthour.setMilliseconds(0); firsthour.setSeconds(0); firsthour.setMinutes(0);
+    firsthour = 3600 - ((this.fizoom.start - firsthour) / 1000);
+    let secstotal = (this.fizoom.pts[this.fizoom.pts.length - 1].time - this.fizoom.start) / 1000;
     let inct = (secstotal / (this.incx * this.fizoom.pts.length)) / this.incr;
     this.ctx.strokeStyle = this.options.colors.axissecondary;
     this.ctx.beginPath();
@@ -532,7 +532,7 @@ class GraphGPX {
     x = 0;
     for (t = firsthour; t < secstotal; t += 3600) {
       x = Math.round(inct * t);
-      let h = this.pad(new Date(this.start.getTime() + t*1000).getHours(), 2) + ':00';
+      let h = this.pad(new Date(this.fizoom.start.getTime() + t*1000).getHours(), 2) + ':00';
       this.ctx.fillText(h, x-11, this.canvas.height-1);
     }
     this.ctx.font = defaultfont;
@@ -799,7 +799,7 @@ class GraphGPX {
           'bearing': 0,
         });
       if (i == 0) {
-        this.start = new Date(time);
+        this.fi.start = new Date(time);
         latvx = lat;
         lonvx = lon;
       } else {
