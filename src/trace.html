@@ -216,12 +216,20 @@
   var marker = L.marker([0,0]).addTo(map);
   //var svg = '<svg viewBox="0 0 24 24" height="32" width="32" fill="transparent" stroke="black" stroke-width="2" stroke-linecap="round" xmlns="http://www.w3.org/2000/svg"> <g> <path d="M1 1 l22 22"/> <path d="M1 23 l22 -22"/> </g> </svg>'; /* insert your own svg */
   //var iconUrl = 'data:image/svg+xml;base64,' + btoa(svg);
-  let iconUrl = 'paraglider.svg';
-  //let iconUrl = 'crosshair.svg';
   origIconSize = [32, 32];
   origIconAnchor = [16, 22];
-  var icon = L.icon({iconUrl: iconUrl, iconSize: origIconSize,iconAnchor: origIconAnchor});
-  marker.setIcon(icon);
+  let iconUrl = 'paraglider.svg';
+  //let iconUrl = 'crosshair.svg';
+  fetch(iconUrl)
+  .then(response => response.text())
+  .then((svg) => {
+    //let iconUrl = 'data:image/svg+xml;base64,' + btoa(svg);
+    //var icon = L.icon({iconUrl: iconUrl, iconSize: origIconSize,iconAnchor: origIconAnchor});
+    let icon = L.divIcon({html: svg, className: "",iconSize: origIconSize,iconAnchor: origIconAnchor});
+    marker.setIcon(icon);
+  })
+  .catch(err => console.log(err));
+  //var icon = L.icon({iconUrl: iconUrl, iconSize: origIconSize,iconAnchor: origIconAnchor});marker.setIcon(icon);
 
   var graph = new GraphGPX(document.getElementById("graph"), {elevationservice:elevationservice, disablescrollzoom: disablescroll});
   graph.addAnalyser(new AnaTrace());
@@ -233,7 +241,10 @@
     }
   });
   map.on('click', function(e) {
-    clickOnMap(e.latlng);
+    setCursorFromMap(e.latlng);
+  });
+  map.on('mousemove', function(e) {
+    setCursorFromMap(e.latlng);
   });
   var flstats = {};
   var gpx_bounds = null;
@@ -417,7 +428,7 @@
     return false;
   }
 
-  function clickOnMap(latlng) {
+  function setCursorFromMap(latlng) {
     if (typeof window.fi === 'undefined' || !Array.isArray(window.fi.pts)) return;
     // slice pour éviter de modifier l'ordre du tableau originel
     let nearest = window.fi.pts.slice().sort(function(a, b) {
@@ -449,6 +460,7 @@
     //marker.setRotationOrigin("center");
     marker.setRotationOrigin(icon.options.iconAnchor.map(v => v+"px").join(' '));
     marker.setRotationAngle(pt.bearing+180);
+    document.getElementById('icon-paraglider-text').textContent = parseInt(pt.alt) + ' m';
   }
 
   function redrawFlight() {
