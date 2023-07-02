@@ -56,6 +56,6 @@ l27 80 3 4153 2 4153 108 -3 107 -3 5 -1555 c4 -1101 8 -1564 16 -1585 75
 <g>
     <path id="curve" d="M-40,250a190,190 0 0,1 380,0a190,190 0 1,0 -380,0" fill="red"></path>
     <text x="30" y="70" style="font-family:Verdana;font-size:5em;stroke-width:0;font-weight: 900;letter-spacing: -10px;fill:#fff;">
-    <textPath startOffset="155" textLength="220" href="#curve" id="icon-paraglider-text">1283 m</textPath></text>
+    <textPath startOffset="155" textLength="220" href="#curve" id="icon-paraglider-text"></textPath></text>
 </g>
   </svg>

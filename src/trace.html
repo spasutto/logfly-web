@@ -228,8 +228,11 @@
     let icon = L.divIcon({html: svg, className: "",iconSize: origIconSize,iconAnchor: origIconAnchor});
     marker.setIcon(icon);
   })
-  .catch(err => console.log(err));
-  //var icon = L.icon({iconUrl: iconUrl, iconSize: origIconSize,iconAnchor: origIconAnchor});marker.setIcon(icon);
+  .catch(err => {
+    console.log(err);
+    var icon = L.icon({iconUrl: iconUrl, iconSize: origIconSize,iconAnchor: origIconAnchor});
+    marker.setIcon(icon);
+  });
 
   var graph = new GraphGPX(document.getElementById("graph"), {elevationservice:elevationservice, disablescrollzoom: disablescroll});
   graph.addAnalyser(new AnaTrace());
@@ -460,7 +463,8 @@
     //marker.setRotationOrigin("center");
     marker.setRotationOrigin(icon.options.iconAnchor.map(v => v+"px").join(' '));
     marker.setRotationAngle(pt.bearing+180);
-    document.getElementById('icon-paraglider-text').textContent = parseInt(pt.alt) + ' m';
+    let iconText = document.getElementById('icon-paraglider-text');
+    if (iconText) iconText.textContent = parseInt(pt.alt) + ' m';
   }
 
   function redrawFlight() {
