@@ -200,8 +200,10 @@ exit(0);
         clearList(list);
         for (let i=0; i<this.response.length; i++)
           addOption(list, this.response[i].id+" ("+this.response[i].date+") " + this.response[i].site, this.response[i].id);
-        if (id > 0)
+        if (id > 0) {
           list.value = id;
+        }
+        document.getElementById('delbtn').style.display = id > 0 ? 'initial':'none';
         message("");
       }
     };
@@ -301,10 +303,10 @@ exit(0);
     let xhttp = new XMLHttpRequest();
     message("chargement...");
     xhttp.onreadystatechange = function() {
-      if (this.readyState == 4 && this.status == 200) {
+      if (this.readyState == 4) {
         message("");
-        if (this.responseText != "OK") {
-            alert("l'enregistrement semble avoir échoué ! " + this.responseText);
+        if (this.status != 200 || this.responseText != "OK") {
+            alert("l'enregistrement semble avoir échoué ! " + this.status + ' ' + this.responseText);
         }
         else {
             alert(params.id>0?"updated !!!":"new record ok !!! ");
@@ -415,6 +417,7 @@ exit(0);
   function onVolChange(val)
   {
     id = val;
+    document.getElementById('delbtn').style.display = id > 0 ? 'initial':'none';
     loadVol(val);
   }
 
@@ -563,8 +566,8 @@ vol à editer/créer :<BR><select name="vol" onchange="onVolChange(this.value);"
 ?>
 </select>
 <?php
-if ($id && !isset($_GET["del"]))
-  echo "  <input type=\"button\" id=\"delbtn\" value=\"Suppr\" onclick=\"delVol();\">";
+//if ($id && !isset($_GET["del"]))
+  echo "  <input type=\"button\" id=\"delbtn\" value=\"Suppr\" onclick=\"delVol();\" style=\"display:none\">";
 ?>
 <form action="<?php echo $_SERVER['REQUEST_URI'];?>" name="formvol" method="post" onsubmit="return onsubmitVol();">
  <p>Site : <select name="site" onchange="onSiteChange(this.value);">

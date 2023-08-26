@@ -8,12 +8,32 @@ if (isset($_GET['extract_igc'])) {
     $igc = $lgfr->getIGC($id, true);
     if (strlen(trim($igc)) <= 0) {
       echo "Rien à faire";
-      return;
+      exit(0);
     } else {
       echo $lgfr->setIGC($id, $igc) ? "OK" : "KO";
+      exit(0);
     }
   } else {
     extract_igc();
+  }
+} else if (isset($_GET['insert_igc'])) {
+  if (isset($_GET['id']) && preg_match('/^\d+$/', $_GET['id']) && isset($_GET['base']) && file_exists(get_temp_base_name($_GET['base']))) {
+    $id = intval($_GET['id']);
+    $lgfr = new LogflyReader(get_temp_base_name($_GET['base']));
+    $igc = $lgfr->getIGC($id, false);
+    if (strlen(trim($igc)) <= 0) {
+      echo "Rien à faire";
+      exit(0);
+    } else {
+      echo $lgfr->setIGC($id, $igc, true) ? "OK" : "KO";
+      exit(0);
+    }
+  } else if (isset($_GET['dl']) && isset($_GET['base']) && file_exists(get_temp_base_name($_GET['base']))) {
+    $lgfr = new LogflyReader(get_temp_base_name($_GET['base']));
+    $lgfr->downloadDB();
+    exit(0);
+  } else {
+    insert_igc();
   }
 } else if (isset($_GET['recalcul_igc'])) {
   if (isset($_GET['id']) && preg_match('/^\d+$/', $_GET['id'])) {
@@ -29,13 +49,15 @@ if (isset($_GET['extract_igc'])) {
   $end = isset($_GET['end']) ? intval($_GET['end']) : -1;
   regen_img($start, $end);
 } else if (isset($_GET['genzip_tracklogs'])) {
-    genzip_tracklogs();
+  genzip_tracklogs();
 } else if (isset($_GET['viewzip_tracklogs'])) {
-    viewzip_tracklogs();
+  viewzip_tracklogs();
 } else {
+  clean_tmp_files();
 ?>
 <ul>
   <li><a href="?extract_igc">extraire les fichiers igc de la base</a></li>
+  <li><a href="?insert_igc">insérer les fichiers igc dans une base temporaire</a></li>
   <li><a href="?recalcul_igc">calculer les scores igc</a></li>
   <li><a href="?regen_img">regénérer les vignettes</a></li>
   <li><a href="parcours.php?force=1">regénérer la carte globale des parcours</a></li>
@@ -43,6 +65,25 @@ if (isset($_GET['extract_igc'])) {
   <li><a href="?viewzip_tracklogs">voir les zips des tracklogs</a></li>
 </ul>
 <?php
+}
+
+function clean_tmp_files() {
+  foreach (glob(FOLDER_TL.DIRECTORY_SEPARATOR."Logfly_*.db") as $filename) {
+    @unlink($filename);
+  }
+}
+function get_temp_name($len = 8) {
+  $ret =  "";
+  $alphabet = "ABCDEFGHIJKLMNOPRQSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_-";
+  $alen = strlen($alphabet);
+  for ($i=0; $i<$len; $i++) {
+    $ret .= substr($alphabet, rand(0, $alen-1), 1);
+  }
+  return $ret;
+}
+function get_temp_base_name($base = null) {
+  if (!$base) $base = get_temp_name();
+  return FOLDER_TL.DIRECTORY_SEPARATOR."Logfly_".$base.".db";
 }
 
 function extract_igc()
@@ -64,6 +105,7 @@ function extract_igc()
       if (this.readyState == 4 && this.status == 200) {
         volstodo--;
         document.body.innerHTML += id + " : " + this.responseText + "<BR/>";
+        window.scrollTo(0, document.body.scrollHeight);
         if (volstodo <= 0)
           alert('tout est ok!');
       }
@@ -75,6 +117,58 @@ function extract_igc()
     for (let i=0; i < vols.length; i++) {
       extract_igc(vols[i])
     }
+  };
+</script>
+  <?php
+  }
+
+function insert_igc()
+{
+  clean_tmp_files();
+  $tmpbaseid = get_temp_name();
+  $base = get_temp_base_name($tmpbaseid);
+  if (!copy(LOGFLYDB, $base)) {
+    echo "impossible de créer la base temporaire";
+    exit(0);
+  }
+  $vols = [];
+  foreach ((new LogflyReader($base))->getRecords()->vols as $vol) {
+    if ($vol->igc)
+      $vols[] = $vol->id;
+  }
+  $vols = "[" . implode (",", $vols) . "]";
+?>
+insertion des IGC... <span id="inserperc"></span><BR>
+<script>
+  let vols = <?php echo $vols;?>;
+  let base = '<?php echo $tmpbaseid;?>';
+  let inserperc = document.getElementById('inserperc');
+  let cur = 0;
+  function insert_igc(id) {
+    return () => fetch("<?php echo $_SERVER['REQUEST_URI'];?>&base="+base+"&id="+id).then(res => res.text()).then(res => {
+      //document.body.innerHTML += id + " : " + res + "<BR/>";
+      window.scrollTo(0, document.body.scrollHeight);
+      inserperc.innerHTML = Math.round(100*(++cur)/vols.length)+'%';
+      return res;
+    });
+  }
+  Promise.allsync = async (arrp) => {
+    let results = [];
+    for (const p of arrp) {
+      let promise = p;
+      if (typeof p.then !== 'function') promise = p();
+      let r = await promise;
+      results.push(r);
+    }
+    return results;
+  }
+  window.onload = function() {
+    Promise.allsync(vols.map(insert_igc)).then(res => {
+      document.body.innerHTML += "<a href=\"<?php echo $_SERVER['REQUEST_URI'];?>&base="+base+"&dl\">télécharger la base</a>";
+      let errs = res.filter(r => r != 'OK');
+      if (errs.length > 0) alert("il semble qu'il y'ai eu une/des erreurs : "+errs.join('\n'));
+      else alert('tout est ok!');
+    }).catch(err => alert(err));
   };
 </script>
   <?php

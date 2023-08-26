@@ -1,5 +1,5 @@
 <?php
-exit(0);
+exit(0);return;
 require('tracklogmanager.php');
 $lgfr = new LogflyReader();
 $lgfr->permutVol(529, 527);

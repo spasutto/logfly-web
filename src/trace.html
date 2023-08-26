@@ -143,6 +143,7 @@
   <p class="gras centre souligne">Couleur trace :</p>
   <input type="radio" id="dmVz" name="dispmodes" value="vz" onclick="window.dispmode=this.value;redrawFlight();" checked><label for="dmVz">vz</label><BR>
   <input type="radio" id="dmVx" name="dispmodes" value="vx" onclick="window.dispmode=this.value;redrawFlight();"><label for="dmVx">vx</label><BR>
+  <input type="radio" id="dmGR" name="dispmodes" value="GR" onclick="window.dispmode=this.value;redrawFlight();"><label for="dmGR">finesse</label><BR>
   <input type="radio" id="dmAlt" name="dispmodes" value="alt" onclick="window.dispmode=this.value;redrawFlight();"><label for="dmAlt">altitude</label><BR>
   <input type="radio" id="dmAltSol" name="dispmodes" value="altsol" onclick="window.dispmode=this.value;redrawFlight();"><label for="dmAltSol">altitude sol</label><BR>
   <input type="radio" id="dmNone" name="dispmodes" value="none" onclick="window.dispmode=this.value;redrawFlight();"><label for="dmNone">aucune</label>
@@ -211,13 +212,17 @@
   var clegeoportail = getParameter("clegeoportail");
   var cletimezonedb = getParameter("cletimezonedb") || '';
   var elevationservice = getParameter("elevationservice") || 'elevation/getElevation.php';
+
+  var graph = new GraphGPX(document.getElementById("graph"), {elevationservice:elevationservice, disablescrollzoom: disablescroll});
+  graph.addAnalyser(new AnaTrace());
   var map = loadCarto(clegeoportail, disablescroll, document.getElementById('mapcont'));
+  var binfos = false;
 
   var marker = L.marker([0,0]).addTo(map);
-  //var svg = '<svg viewBox="0 0 24 24" height="32" width="32" fill="transparent" stroke="black" stroke-width="2" stroke-linecap="round" xmlns="http://www.w3.org/2000/svg"> <g> <path d="M1 1 l22 22"/> <path d="M1 23 l22 -22"/> </g> </svg>'; /* insert your own svg */
+  //var svg = '<svg viewBox="0 0 24 24" height="32" width="32" fill="transparent" stroke="black" stroke-width="2" stroke-linecap="round" xmlns="http://www.w3.org/2000/svg"> <g> <path d="M1 1 l22 22"/> <path d="M1 23 l22 -22"/> </g> </svg>';
   //var iconUrl = 'data:image/svg+xml;base64,' + btoa(svg);
   origIconSize = [32, 32];
-  origIconAnchor = [16, 22];
+  origIconAnchor = [16, 32];
   let iconUrl = 'paraglider.svg';
   //let iconUrl = 'crosshair.svg';
   fetch(iconUrl)
@@ -233,9 +238,12 @@
     var icon = L.icon({iconUrl: iconUrl, iconSize: origIconSize,iconAnchor: origIconAnchor});
     marker.setIcon(icon);
   });
-
-  var graph = new GraphGPX(document.getElementById("graph"), {elevationservice:elevationservice, disablescrollzoom: disablescroll});
-  graph.addAnalyser(new AnaTrace());
+  map.on('click', function(e) {
+    setCursorFromMap(e.latlng);
+  });
+  map.on('mousemove', function(e) {
+    setCursorFromMap(e.latlng);
+  });
   map.on('fullscreenchange', function () {
     if (map.isFullscreen()) {
         graph.disableScrollZoom = false;
@@ -243,12 +251,7 @@
         graph.disableScrollZoom = disablescroll;
     }
   });
-  map.on('click', function(e) {
-    setCursorFromMap(e.latlng);
-  });
-  map.on('mousemove', function(e) {
-    setCursorFromMap(e.latlng);
-  });
+
   var flstats = {};
   var gpx_bounds = null;
   var touchtimer = null;
@@ -478,6 +481,9 @@
     } else if (dispmode == 'vx') {
       hotlineLayer.setLatLngs(window.fi.pts.map(pt => ([pt.lat, pt.lon, pt.vx])));
       hotlineLayer.setStyle({'min':0/*fi.minvx*/, 'max':fi.maxvx/*55*/});
+    } else if (dispmode == 'GR') {
+      hotlineLayer.setLatLngs(window.fi.pts.map(pt => ([pt.lat, pt.lon, pt.gr])));
+      hotlineLayer.setStyle({'min':0/*fi.minvx*/, 'max':40/*55*/});
     } else if (dispmode == 'altsol') {
       let pts = window.fi.pts.map(pt => ([pt.lat, pt.lon, pt.alt - pt.gndalt]));
       let ptsr = pts.map(p => p[2]);
@@ -502,7 +508,6 @@
   }
   function updateTraceInfos() {
     let divTraceInfos = document.getElementById('divTraceInfos');
-    let binfos = true;
     let date = "?";
     if (typeof fi == 'object' && Array.isArray(fi.pts) && fi.pts.length > 0) {
       date = fi.pts[0].time;
@@ -515,11 +520,13 @@
     htmlinfos += '</div><p id="iinfos">&#9432;</p>';
     divTraceInfos.innerHTML = htmlinfos;
     divTraceInfos.style.display = 'block';
-    divTraceInfos.onclick = function() {
-      document.getElementById('ctinfos').style.display = binfos ? 'none':'block';
-      document.getElementById('iinfos').style.display = !binfos ? 'none':'block';
-      binfos = !binfos;
-    };
+    divTraceInfos.onclick = updateInfoVisibility;
+    updateInfoVisibility(true);
+  }
+  function updateInfoVisibility(notoggle) {
+    if (notoggle !== true) binfos = !binfos;
+    document.getElementById('ctinfos').style.display = binfos ? 'none':'block';
+    document.getElementById('iinfos').style.display = !binfos ? 'none':'block';
   }
   function parseIRecord(line) {
     const extensions = {};

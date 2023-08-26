@@ -37,8 +37,10 @@ class LogFlyDB extends SQLite3
 class LogflyReader
 {
   protected $db = FALSE;
+  protected $dbname = LOGFLYDB;
   function __construct($dbname = LOGFLYDB)
   {
+    $this->dbname = $dbname;
     $this->db = new LogFlyDB($dbname);
     if(!$this->db)
         throw new Exception($this->db->lastErrorMsg());
@@ -75,16 +77,38 @@ class LogflyReader
     @unlink($filename.".png");
   }
 
-  function existeVol($id)
+  function existeVolId($id)
   {
     $sql = "SELECT 1 FROM Vol WHERE V_ID=".$id.";";
     $ret = $this->db->query($sql);
     return $ret->fetchArray(SQLITE3_ASSOC);
   }
 
+  function existeVol($date, $lat, $lon)
+  {
+    $vols = array();
+    $sql = "SELECT V_ID FROM Vol WHERE V_Date='".$date->format('Y-m-d H:i:s')."';";
+    $ret = $this->db->query($sql);
+    while($row = $ret->fetchArray(SQLITE3_ASSOC))
+    {
+      $vols[] = $row['V_ID'];
+    }
+    foreach($vols as $vol) {
+      $igc = $this->getIGC($vol);
+      if ($igc == "") $igc = $this->getIGC($vol, true);
+      if ($igc == "") continue;
+      $igc = TrackfileLoader::load($igc, 'igc');
+      $fpt = $igc->getFirstRecord();
+      if ($fpt->latitude == $lat && $fpt->longitude == $lon) {
+        return $vol;
+      }
+    }
+    return -1;
+  }
+
   function updateVol($id, $nomsite, $date, $heure, $duree, $voile, $commentaire, $lat = 0.0, $lon = 0.0, $alt = 0.0)
   {
-    if (!$this->existeVol($id))
+    if (!$this->existeVolId($id))
       return $this->addVol($nomsite, $date, $heure, $duree, $voile, $commentaire, $id);
     $heureformat = "H:i:s";
     if (strlen($heure) != 8)
@@ -294,6 +318,11 @@ class LogflyReader
       return file_get_contents($fi_file);
     return "";
   }
+  
+  function getIGCFileName($id) 
+  {
+    return dirname(__FILE__) . DIRECTORY_SEPARATOR . FOLDER_TL . DIRECTORY_SEPARATOR . $id  .".igc";
+  }
 
   function getIGC($id, $fromdb=false)
   {
@@ -307,7 +336,7 @@ class LogflyReader
     }
     else
     {
-      $igc_file = dirname(__FILE__) . DIRECTORY_SEPARATOR . FOLDER_TL . DIRECTORY_SEPARATOR . $id  .".igc";
+      $igc_file = $this->getIGCFileName($id);
       if (file_exists($igc_file))
         $igc = file_get_contents($igc_file);
     }
@@ -352,7 +381,7 @@ class LogflyReader
     return $row['V_Commentaire'];
   }
 
-  function getRecords($id=null, $tritemps = FALSE, $maxres = null, $offset = null, $datemin=null, $datemax=null, $voile=null, $site=null)
+  function getRecords($id=null, $tritemps = FALSE, $maxres = null, $offset = null, $datemin=null, $datemax=null, $voile=null, $site=null, $text=null)
   {
     //$this->db->query("delete from SITE where s_nom=''");
     $unvol = FALSE;
@@ -382,6 +411,24 @@ class LogflyReader
       $cond .= " AND V_Engin='".str_replace("'", "''", $voile)."'";
     if ($site !== null)
       $cond .= " AND V_Site='".str_replace("'", "''", $site)."'";
+    if ($text !== null) {
+      $text = $this->db->escapeString($text);
+      $text = str_replace("*", "", $text);
+      $text = str_replace("%", "", $text);
+      $text = str_replace("'", "", $text);
+      $text = str_replace("\\", "", $text);
+      $texts = explode(" ", $text);
+      if (count($texts)>0) {
+        $cond .= " AND (";
+        $first = true;
+        foreach ($texts as &$text) {
+          if (!$first) $cond .= " AND "; // OR
+          $cond .= "V_Commentaire LIKE '%".$text."%'";
+          $first = false;
+        }
+        $cond .= " )";
+      }
+    }
     if (strlen($cond)>3)
       $sql .= " WHERE ".$cond;
     if ($tritemps)
@@ -529,7 +576,7 @@ class LogflyReader
 
   function downloadDB()
   {
-    $readableStream = fopen(LOGFLYDB, 'rb');
+    $readableStream = fopen($this->dbname, 'rb');
     $writableStream = fopen('php://output', 'wb');
 
     header('Content-Type: application/octet-stream');

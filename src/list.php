@@ -20,6 +20,7 @@ $datemin=NULL;
 $datemax=NULL;
 $resperpage=25;
 $offset=0;
+$text=NULL;
 //TODO : WEAK
 if (isset($_GET['voile'])) {
   $voile = $_GET['voile'];
@@ -37,14 +38,17 @@ if (isset($_GET['datemax'])) {
   $datemax = $_GET['datemax'];
   $datemax = DateTime::createFromFormat('Y-m-d', $datemax);
   if (!($datemax instanceof DateTime) || $datemax == FALSE)
-  $datemax = FALSE;
+    $datemax = FALSE;
   else
-  $datemax->add(new DateInterval('P1D'));
+    $datemax->add(new DateInterval('P1D'));
 }
 if (isset($_GET['offset'])) {
   $offset = @intval($_GET['offset']);
   if (!is_int($offset) || $offset < 0)
   $offset = 0;
+}
+if (isset($_GET['text'])) {
+  $text = $_GET['text'];
 }
 
 $gdrive_upload_script = "gdrive/upload.php";
@@ -323,7 +327,7 @@ function affichComment(id) {
       let url = document.getElementById('traceurl_'+id).value;
       if (url.trim().length > 0) {
         url += "&disablescroll=1";
-        zonecarto.innerHTML += "<iframe src=\""+url+"\" width=\"100%\" height=\"648px\"></iframe>";
+        zonecarto.innerHTML += "<iframe src=\""+url+"\" width=\"99%\" height=\"648px\"></iframe>";
       }
     }
     ligne.style.display = 'table-row';
@@ -384,14 +388,17 @@ window.onload = function() {
 <body>
 
 <?php
-  $vols = $lgfr->getRecords(NULL, FALSE, $resperpage, $offset, $datemin, $datemax, $voile, $site);
-  $titrevoile = "";
+  $vols = $lgfr->getRecords(NULL, FALSE, $resperpage, $offset, $datemin, $datemax, $voile, $site, $text);
+  $titrefiltre = "";
   if (strlen($voile)>0)
-    $titrevoile .= " pour \"".$voile."\"";
+    $titrefiltre .= " pour \"".$voile."\"";
   if (strlen($site)>0) {
-    if (strlen($titrevoile)>0)
-      $titrevoile .= " et";
-    $titrevoile .= " pour \"".$site."\"";
+    if (strlen($titrefiltre)>0)
+      $titrefiltre .= " et";
+    $titrefiltre .= " pour \"".$site."\"";
+  }
+  if ($text) {
+    $titrefiltre .= " filtré par mot clé";
   }
   $titredate = "";
   if ($datemin && $datemax) {
@@ -421,7 +428,7 @@ window.onload = function() {
 ?>
 <header>
     <div class="bloctitre">
-        <h1><a href="<?php echo $_SERVER["SCRIPT_NAME"];?>">Carnet<?php echo $titrevoile;?></a></h1>
+        <h1><a href="<?php echo $_SERVER["SCRIPT_NAME"];?>">Carnet<?php echo $titrefiltre;?></a></h1>
     </div>
     <div class="bloctitre">
         <a href="download.php" title="télécharger la base logfly"><img src="download.svg" width="32px" class="filter-imgcolor"></a><a href="download.php?csv"><img src="csv.svg" width="32px" title="télécharger un fichier csv"></a>

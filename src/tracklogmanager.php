@@ -27,14 +27,15 @@ class TrackLogManager
     return ["nom"=> $site->nom, "site"=> $site, "dist"=>$dist];
   }
 
-  public function uploadIGCs($tmpfnames, $id = null, &$destname, &$fpt) {
+  public function uploadIGCs($tmpfnames, $id = null, $concat) {//ret &$destname, &$fpt
+    $ret = array();
     if (count($tmpfnames)<=0) return;
     $arrigc = array();
     for ($i=0; $i<count($tmpfnames); $i++) {
       $igc = TrackfileLoader::load($tmpfnames[$i], 'igc');
-      $igc->setDetails();
-      if ($igc->datetime instanceof DateTime) {
-        $arrigc[] = array($tmpfnames[$i], $igc->datetime->getTimestamp());
+      $fpt = $igc->getFirstRecord();
+      if ($fpt->date instanceof DateTime) {
+        $arrigc[] = array($tmpfnames[$i], $igc->datetime->getTimestamp(), $i);
       }
     }
     if (count($arrigc)<=0) return;
@@ -51,19 +52,34 @@ class TrackLogManager
       $bduration = !is_int($igcb->duration) || $igcb->duration<0 ? 0 : $igcb->duration;
       return $bduration-$aduration;
     });*/
-    $firstfile = fopen($arrigc[0][0], 'a+');
-    for ($i=1; $i<count($arrigc); $i++) {
-      $file2 = file_get_contents($arrigc[$i][0]);
-      fwrite($firstfile, $file2);
+    if ($concat) {
+      $firstfile = fopen($arrigc[0][0], 'a+');
+      for ($i=1; $i<count($arrigc); $i++) {
+        $file2 = file_get_contents($arrigc[$i][0]);
+        // suppression des lignes autres que B sinon le fichier IGC résultant aura éventuellement une mauvaise date.
+        // cas peu probable car il faut concaténer deux IGC de deux jours différents 
+        $file2 = implode("\n", array_filter(explode("\n", $file2), function($val) {return substr(strtoupper(trim($val)), 0, 1) == 'B';}));
+        fwrite($firstfile, $file2);
+      }
+      $curret = $this->uploadIGC($arrigc[0][0], $id);
+      $curret->indice = 0;
+      $ret[] = $curret;
+    } else {
+      for ($i=0; $i<count($arrigc); $i++) {
+        $curret = $this->uploadIGC($arrigc[$i][0], $id);
+        $curret->indice = $arrigc[$i][2];
+        $ret[] = $curret;
+      }
     }
-    return $this->uploadIGC($arrigc[0][0], $id, $destname, $fpt);
+    return $ret;
   }
 
-  public function uploadIGC($tmpfname, $id = null, &$destname, &$fpt) {
+  public function uploadIGC($tmpfname, $id = null) {
+    $ret = null;
+    $fpt = null;
     $tfreader = TrackfileLoader::load($tmpfname, 'igc');
     if (!$tfreader || !($fpt = $tfreader->getFirstRecord())) {
-      echo "bad IGC file!!!";
-      return FALSE;
+      return (object) ['error' => 'bad IGC file!!!'];
     } else {
       $zone = 'Europe/Paris';
       try
@@ -78,24 +94,29 @@ class TrackLogManager
       try
       {
         $lgfr = new LogflyReader();
+        $previd = $lgfr->existeVol($fpt->date, $fpt->latitude, $fpt->longitude);
+        if ($previd > 0) {
+          $igcfname = $lgfr->getIGCFileName($previd);
+          return (object) ['error' => "vol ".$previd." déjà existant", 'id' => $previd, 'fpt' => $fpt, 'newvol'=> 0, 'igcfname' => $igcfname];
+        }
         $duree = 0;
         if (isset($tfreader->duration))
           $duree = $tfreader->duration;
-          $osite = $lgfr->getSite($fpt->latitude, $fpt->longitude);
-          if (!$osite)
-            $osite = TrackLogManager::getSiteFFVL($fpt->latitude, $fpt->longitude);
-          $dist = 0;
-          $sitenom = NULL;
-          $site = NULL;
-          if ($osite) {
-            $dist = $osite['dist'];
-            $site = $osite['site'];
-            $sitenom = $osite['nom'];
-          }
-          if ($sitenom && $lgfr->getInfoSite($sitenom) === FALSE) {
-            $lgfr->createSite($sitenom);
-            $lgfr->editSite($sitenom, $sitenom, $site->lat, $site->lon, $site->alt);
-          }
+        $osite = $lgfr->getSite($fpt->latitude, $fpt->longitude);
+        if (!$osite)
+          $osite = TrackLogManager::getSiteFFVL($fpt->latitude, $fpt->longitude);
+        $dist = 0;
+        $sitenom = NULL;
+        $site = NULL;
+        if ($osite) {
+          $dist = $osite['dist'];
+          $site = $osite['site'];
+          $sitenom = $osite['nom'];
+        }
+        if ($sitenom && $lgfr->getInfoSite($sitenom) === FALSE) {
+          $lgfr->createSite($sitenom);
+          $lgfr->editSite($sitenom, $sitenom, $site->lat, $site->lon, $site->alt);
+        }
         if (!$id) {
           $id = $lgfr->addVol($sitenom, $fpt->date->format("d/m/Y"), $fpt->date->format("H:i:s"), $duree, "", "");
         } else {
@@ -103,8 +124,7 @@ class TrackLogManager
           $lgfr->updateVol($id, $sitenom, $fpt->date->format("d/m/Y"), $fpt->date->format("H:i:s"), $duree, $vol->voile, $vol->commentaire);
         }
         if (!$id) {
-            echo "Probleme de mise à jour de la trace avec l'igc. Supprimer le dernier vol et réessayer";
-            return FALSE;
+            return (object) ['error' => "Probleme de mise à jour de la trace avec l'igc. Supprimer le dernier vol et réessayer"];
         } else {
           //$igc = file_get_contents($destname);
           //if (!$lgfr->setIGC($id, $igc)) {
@@ -114,18 +134,17 @@ class TrackLogManager
           if (file_exists($basepath.".json")) @unlink($basepath.".json");
           if (file_exists($basepath.".jpg")) @unlink($basepath.".jpg");
           if (!move_uploaded_file($tmpfname, $destname)) {
-            echo "Probleme de mise à jour de la trace avec l'igc. Supprimer le dernier vol et réessayer";
-            return FALSE;
+            return (object) ['error' => "Probleme de mise à jour de la trace avec l'igc. Supprimer le dernier vol et réessayer"];
           }
-          return $id;
+          $ret = (object) ['id' => $id, 'newvol'=> $id>0, 'igcfname' => $destname, 'fpt' => $fpt];
         }
       }
       catch(Exception $e)
       {
-        echo "error!!! : ".$e->getMessage();
-        return FALSE;
+        return (object) ['error' => "error!!! : ".$e->getMessage()];
       }
     }
+    return $ret;
   }
 
   public function getIGC($date) {
