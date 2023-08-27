@@ -13,6 +13,9 @@
 
   if (isset($_GET['csv'])) {
     $lgfr->downloadCSV(FALSE);
+  } else if (isset($_GET['fulldb'])) {
+    header("Location: admin.php?insert_igc");
+    exit(0);
   } else {
     $lgfr->downloadDB();
   }

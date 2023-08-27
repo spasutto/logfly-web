@@ -17,12 +17,17 @@ if (isset($_GET['extract_igc'])) {
     extract_igc();
   }
 } else if (isset($_GET['insert_igc'])) {
-  if (isset($_GET['id']) && preg_match('/^\d+$/', $_GET['id']) && isset($_GET['base']) && file_exists(get_temp_base_name($_GET['base']))) {
+  if (isset($_GET['id']) && preg_match('/^\d+$/', $_GET['id'])) {
+    if (!isset($_GET['base']) || !file_exists(get_temp_base_name($_GET['base']))) {
+      echo "KO (base inexistante)";
+      exit(0);
+    }
+    //if ($id < 560) {echo "ploupi";exit(0);}
     $id = intval($_GET['id']);
     $lgfr = new LogflyReader(get_temp_base_name($_GET['base']));
     $igc = $lgfr->getIGC($id, false);
     if (strlen(trim($igc)) <= 0) {
-      echo "Rien à faire";
+      echo "OK (rien à faire)";
       exit(0);
     } else {
       echo $lgfr->setIGC($id, $igc, true) ? "OK" : "KO";
@@ -57,7 +62,7 @@ if (isset($_GET['extract_igc'])) {
 ?>
 <ul>
   <li><a href="?extract_igc">extraire les fichiers igc de la base</a></li>
-  <li><a href="?insert_igc">insérer les fichiers igc dans une base temporaire</a></li>
+  <li><a href="?insert_igc">télécharger le fichier LogFly.db avec les traces intégrées</a></li>
   <li><a href="?recalcul_igc">calculer les scores igc</a></li>
   <li><a href="?regen_img">regénérer les vignettes</a></li>
   <li><a href="parcours.php?force=1">regénérer la carte globale des parcours</a></li>
@@ -135,6 +140,7 @@ function insert_igc()
   foreach ((new LogflyReader($base))->getRecords()->vols as $vol) {
     if ($vol->igc)
       $vols[] = $vol->id;
+    //if ($vol->id < 550) break;
   }
   $vols = "[" . implode (",", $vols) . "]";
 ?>
@@ -162,12 +168,19 @@ insertion des IGC... <span id="inserperc"></span><BR>
     }
     return results;
   }
+  Array.prototype.groupByCount = function() {
+    return this.reduce(function(rv, cv) {
+      rv[cv] = (rv[cv] || 0) + 1;
+      return rv;
+    }, {});
+  };
   window.onload = function() {
     Promise.allsync(vols.map(insert_igc)).then(res => {
-      document.body.innerHTML += "<a href=\"<?php echo $_SERVER['REQUEST_URI'];?>&base="+base+"&dl\">télécharger la base</a>";
-      let errs = res.filter(r => r != 'OK');
-      if (errs.length > 0) alert("il semble qu'il y'ai eu une/des erreurs : "+errs.join('\n'));
-      else alert('tout est ok!');
+      let errs = Object.entries(res.filter(r => typeof r!=='string' || !r.startsWith('OK')).groupByCount()).map(v => `${v[0]} (${v[1]} fois)`).join('\n') || '';
+      if (errs.length > 0) alert("il semble qu'il y'ai eu une/des erreurs : "+errs);
+      setTimeout(() => {document.body.innerHTML += "<a href=\"<?php echo $_SERVER['REQUEST_URI'];?>&base="+base+"&dl\">télécharger la base</a>";}, 1000);
+      window.open('<?php echo $_SERVER['REQUEST_URI'];?>&base='+base+'&dl','MyWindow','width=320,height=120')
+      setTimeout(() => {window.close();}, 1500);
     }).catch(err => alert(err));
   };
 </script>

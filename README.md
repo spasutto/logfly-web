@@ -13,6 +13,8 @@ Le serveur web doit disposer du [module PHP permettant de lire les bases de donn
 Pour pouvoir utiliser la cartographie IGN il faut éditer le fichier config.php pour remplacer la chaîne "VOTRECLEGEOPORTAIL" par votre clé API Géoportail. Pour la génération des aperçus de traces côté serveur on peut aussi spécifier une clé sans protection (par exemple sans referer) dans la constante CLEGEOPORTAIL2.
 De même, pour pouvoir utiliser la détermination du fuseau horaire IGC via [timezonedb.com](https://timezonedb.com/) il faut aussi remplacer la chaîne "CLETIMEZONEDB" par votre clé API timezonedb.
 
+Pour plus de rapidité à l'affichage il est recommandé d'extraire les traces IGC du fichier `LogFly.db`. Pour ce faire aller sur la page `admin.php` et cliquer sur le lien _extraire les fichiers igc de la base_
+
 # sécurité
 Pour protéger en écriture le carnet de vol on peut placer un fichier ".htaccess" à la racine du répertoire LogFly et y mettre le contenu suivant :
 ```ApacheConf

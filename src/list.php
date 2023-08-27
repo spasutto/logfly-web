@@ -431,7 +431,7 @@ window.onload = function() {
         <h1><a href="<?php echo $_SERVER["SCRIPT_NAME"];?>">Carnet<?php echo $titrefiltre;?></a></h1>
     </div>
     <div class="bloctitre">
-        <a href="download.php" title="télécharger la base logfly"><img src="download.svg" width="32px" class="filter-imgcolor"></a><a href="download.php?csv"><img src="csv.svg" width="32px" title="télécharger un fichier csv"></a>
+        <a href="#" onclick="if (confirm('télécharger une version complète?')) window.open('download.php?fulldb','MyWindow','width=320,height=120'); else window.location='download.php';" title="télécharger la base logfly"><img src="download.svg" width="32px" class="filter-imgcolor"></a><a href="download.php?csv"><img src="csv.svg" width="32px" title="télécharger un fichier csv"></a>
         &nbsp;<a href="#" onClick="MyWindow=window.open('stats.php','MyWindow','width=900,height=380'); return false;" title="Statistiques de vol"><img src="stats.svg" width="32px" class="filter-imgcolor"></a>
         &nbsp;<a href="#" onClick="MyWindow=window.open('map.php','MyWindow','width=900,height=380'); return false;" title="Carte des sites de vol"><img src="map.svg" width="32px" class="filter-imgcolor"></a>
         &nbsp;<a href="#" onClick="MyWindow=window.open('upload.php','EditVol','width=900,height=380'); return false;" title="Uploader un fichier IGC pour créer/mettre à jour un vol"><img src="upload.svg" width="32px" class="filter-imgcolor"></a>
