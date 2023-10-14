@@ -1,3 +1,81 @@
+function py2_round(value) {
+  // Google's polyline algorithm uses the same rounding strategy as Python 2, which is different from JS for negative values
+  return Math.floor(Math.abs(value) + 0.5) * (value >= 0 ? 1 : -1);
+}
+function encodept(current, previous, factor) {
+  current = py2_round(current * factor);
+  previous = py2_round(previous * factor);
+  var coordinate = (current - previous) * 2;
+  if (coordinate < 0) {
+    coordinate = -coordinate - 1
+  }
+  var output = '';
+  while (coordinate >= 0x20) {
+    output += String.fromCharCode((0x20 | (coordinate & 0x1f)) + 63);
+    coordinate /= 32;
+  }
+  output += String.fromCharCode((coordinate | 0) + 63);
+  return output;
+}
+function encode(coordinates, precision) {
+  if (!coordinates.length) { return ''; }
+
+  var factor = Math.pow(10, Number.isInteger(precision) ? precision : 5),
+    output = encodept(coordinates[0][0], 0, factor) + encodept(coordinates[0][1], 0, factor);
+
+  for (var i = 1; i < coordinates.length; i++) {
+    var a = coordinates[i], b = coordinates[i - 1];
+    output += encodept(a[0], b[0], factor);
+    output += encodept(a[1], b[1], factor);
+  }
+
+  return output;
+}
+function decode(encodedPath, precision = 5) {
+  const factor = Math.pow(10, precision);
+
+  const len = encodedPath.length;
+
+  // For speed we preallocate to an upper bound on the final length, then
+  // truncate the array before returning.
+  const path = new Array(Math.floor(encodedPath.length / 2));
+  let index = 0;
+  let lat = 0;
+  let lng = 0;
+  let pointIndex = 0;
+
+  // This code has been profiled and optimized, so don't modify it without
+  // measuring its performance.
+  for (; index < len; ++pointIndex) {
+    // Fully unrolling the following loops speeds things up about 5%.
+    let result = 1;
+    let shift = 0;
+    let b = 0;
+    do {
+      // Invariant: "result" is current partial result plus (1 << shift).
+      // The following line effectively clears this bit by decrementing "b".
+      b = encodedPath.charCodeAt(index++) - 63 - 1;
+      result += b << shift;
+      shift += 5;
+    } while (b >= 0x1f); // See note above.
+    lat += result & 1 ? ~(result >> 1) : result >> 1;
+
+    result = 1;
+    shift = 0;
+    do {
+      b = encodedPath.charCodeAt(index++) - 63 - 1;
+      result += b << shift;
+      shift += 5;
+    } while (b >= 0x1f);
+    lng += result & 1 ? ~(result >> 1) : result >> 1;
+
+    path[pointIndex] = [lat / factor, lng / factor];
+  }
+  // truncate array
+  path.length = pointIndex;
+
+  return path;
+}
 
 class GraphGPX {
   #analysers = [];
@@ -94,7 +172,7 @@ class GraphGPX {
 
   resetInfos() {
     // à chaque changement impacter aussi fizoom dans updateZoom()
-    this.fi = { 'pts': [], maxalt: -1000, minalt: 100000, maxvz:-1000, minvz:100000, maxvx:-1000, minvx:100000, maxgr:-1000, mingr:100000, minaltdiff:100000, maxaltdiff:-1000, start: new Date };
+    this.fi = { 'pts': [], maxalt: -1000, minalt: 100000, totaltgain: 0, maxvz:-1000, minvz:100000, maxvx:-1000, minvx:100000, maxgr:-1000, mingr:100000, minaltdiff:100000, maxaltdiff:-1000, minlat:190, maxlat:-190, minlon:190, maxlon:-190, start: new Date };
     //this.fizoom = JSON.parse(JSON.stringify(this.fi)); // clone ne fonctionne pas pour la date
     this.elevcalls = 0;
     this.starttouch = 0;
@@ -112,12 +190,18 @@ class GraphGPX {
     if (this.zoomsel[0]>-1 && this.zoomsel[1]>-1) {
       this.fizoom.pts = this.fi.pts.slice(this.zoomsel[0], this.zoomsel[1]);
       let fpt = this.fizoom.pts[0];
-      //this.fizoom.minalt = this.fizoom.pts.reduce((prev, cur) => prev<cur.alt?prev:cur.alt, fpt.alt);
-      //this.fizoom.maxalt = this.fizoom.pts.reduce((prev, cur) => prev>cur.alt?prev:cur.alt, fpt.alt);
-      //this.fizoom.minvx = this.fizoom.pts.reduce((prev, cur) => prev<cur.vx?prev:cur.vx, fpt.vx);
-      //this.fizoom.maxvx = this.fizoom.pts.reduce((prev, cur) => prev>cur.vx?prev:cur.vx, fpt.vx);
-      //this.fizoom.minvz = this.fizoom.pts.reduce((prev, cur) => prev<cur.vx?prev:cur.vz, fpt.vz);
-      //this.fizoom.maxvz = this.fizoom.pts.reduce((prev, cur) => prev>cur.vx?prev:cur.vz, fpt.vz);
+      this.fizoom.minalt = this.fizoom.pts.reduce((prev, cur) => prev<cur.alt?prev:cur.alt, fpt.alt);
+      this.fizoom.maxalt = this.fizoom.pts.reduce((prev, cur) => prev>cur.alt?prev:cur.alt, fpt.alt);
+      this.fizoom.minaltdiff = this.fizoom.pts.reduce((prev, cur) => prev<(cur.alt-cur.gndalt)?prev:cur.alt-cur.gndalt, fpt.alt-fpt.gndalt);
+      this.fizoom.maxaltdiff = this.fizoom.pts.reduce((prev, cur) => prev>(cur.alt-cur.gndalt)?prev:cur.alt-cur.gndalt, fpt.alt-fpt.gndalt);
+      this.fizoom.minvx = this.fizoom.pts.reduce((prev, cur) => prev<cur.vx?prev:cur.vx, fpt.vx);
+      this.fizoom.maxvx = this.fizoom.pts.reduce((prev, cur) => prev>cur.vx?prev:cur.vx, fpt.vx);
+      this.fizoom.minvz = this.fizoom.pts.reduce((prev, cur) => prev<cur.vz?prev:cur.vz, fpt.vz);
+      this.fizoom.maxvz = this.fizoom.pts.reduce((prev, cur) => prev>cur.vz?prev:cur.vz, fpt.vz);
+      this.fizoom.minlat = this.fizoom.pts.reduce((prev, cur) => prev<cur.lat?prev:cur.lat, fpt.lat);
+      this.fizoom.maxlat = this.fizoom.pts.reduce((prev, cur) => prev>cur.lat?prev:cur.lat, fpt.lat);
+      this.fizoom.minlon = this.fizoom.pts.reduce((prev, cur) => prev<cur.lon?prev:cur.lon, fpt.lon);
+      this.fizoom.maxlon = this.fizoom.pts.reduce((prev, cur) => prev>cur.lon?prev:cur.lon, fpt.lon);
       this.fizoom.start = fpt.time;
     } else {
       this.fizoom = {};
@@ -159,7 +243,7 @@ class GraphGPX {
     this.canvas2.addEventListener('mouseleave', this.mouseleave.bind(this));
     this.canvas2.addEventListener('click', this.click.bind(this, false));
     this.canvas2.addEventListener('dblclick', this.click.bind(this, true));
-    this.canvas2.addEventListener('wheel', this.wheel.bind(this));
+    this.canvas2.addEventListener('wheel', this.wheel.bind(this), {capture: false});
     if ('ontouchstart' in document.documentElement) {
       this.canvas2.addEventListener("touchstart", this.touchevts.bind(this), true);
       this.canvas2.addEventListener("touchmove", this.touchevts.bind(this), true);
@@ -200,7 +284,9 @@ class GraphGPX {
     elem.appendChild(elem2);
     elem2 = document.createElement("label");
     elem2.setAttribute('for', 'grphshowvz');
-    elem2.appendChild(document.createTextNode('vz'));
+    elem2.setAttribute('title', 'vario');
+    elem2.setAttribute('style', 'font-weight: bold;color: '+this.options.colors.vz);
+    elem2.appendChild(document.createTextNode('Vz'));
     elem.appendChild(elem2);
     this.elem.appendChild(elem);
 
@@ -217,7 +303,9 @@ class GraphGPX {
     elem.appendChild(elem2);
     elem2 = document.createElement("label");
     elem2.setAttribute('for', 'grphshowvx');
-    elem2.appendChild(document.createTextNode('vx'));
+    elem2.setAttribute('title', 'vitesse sol');
+    elem2.setAttribute('style', 'font-weight: bold;color: '+this.options.colors.vx);
+    elem2.appendChild(document.createTextNode('Vx'));
     elem.appendChild(elem2);
     this.elem.appendChild(elem);
 
@@ -235,6 +323,7 @@ class GraphGPX {
     elem2 = document.createElement("label");
     elem2.setAttribute('for', 'grphshowgr');
     elem2.setAttribute('title', 'finesse/glide ratio');
+    elem2.setAttribute('style', 'font-weight: bold;color: '+this.options.colors.gr);
     elem2.appendChild(document.createTextNode('GR'));
     elem.appendChild(elem2);
     this.elem.appendChild(elem);
@@ -252,6 +341,8 @@ class GraphGPX {
     elem.appendChild(elem2);
     elem2 = document.createElement("label");
     elem2.setAttribute('for', 'grphshowgndalt');
+    elem2.setAttribute('title', 'altitude au dessus du sol');
+    elem2.setAttribute('style', 'font-weight: bold;color: '+this.options.colors.gndalt);
     elem2.appendChild(document.createTextNode('alt AGL'));
     elem.appendChild(elem2);
     this.elem.appendChild(elem);
@@ -260,7 +351,7 @@ class GraphGPX {
   }
 
   addEventListener(evtname, fct) {
-    this.elem.addEventListener(evtname, fct, false);
+    this.elem.addEventListener(evtname, fct, {passive: true});
   }
 
   fitCanvas() {
@@ -877,6 +968,14 @@ class GraphGPX {
     this.updateZoom();
     this.paint();
     this.paintmouseinfos();
+    let fpt = this.fizoom.pts[0];
+    let event = new CustomEvent('onzoom', { "detail": {
+      'minlat' : this.fizoom.minlat,
+      'maxlat' : this.fizoom.maxlat,
+      'minlon' : this.fizoom.minlon,
+      'maxlon' : this.fizoom.maxlon
+    } });
+    this.elem.dispatchEvent(event);
   }
 
   setData(points) {
@@ -945,14 +1044,22 @@ class GraphGPX {
         }
         this.fi.pts[i].gr = gr;
       }
-      if (alt != 0 && alt < this.fi.minalt) this.fi.minalt = alt;
-      if (alt != 0 && alt > this.fi.maxalt) this.fi.maxalt = alt;
+      if (alt != 0) {
+        if (alt < this.fi.minalt) this.fi.minalt = alt;
+        if (alt > this.fi.maxalt) this.fi.maxalt = alt;
+        let diffalt = 0;
+        if (i > 0 && (diffalt=(alt - this.fi.pts[i - 1].alt)) > 0) this.fi.totaltgain += diffalt;
+      }
       if (vz < this.fi.minvz) this.fi.minvz = vz;
       if (vz > this.fi.maxvz) this.fi.maxvz = vz;
       if (vx < this.fi.minvx) this.fi.minvx = vx;
       if (vx > this.fi.maxvx) this.fi.maxvx = vx;
       if (gr < this.fi.mingr) this.fi.mingr = gr;
       if (gr > this.fi.maxgr) this.fi.maxgr = gr;
+      if (lat < this.fi.minlat) this.fi.minlat = lat;
+      if (lat > this.fi.maxlat) this.fi.maxlat = lat;
+      if (lon < this.fi.minlon) this.fi.minlon = lon;
+      if (lon > this.fi.maxlon) this.fi.maxlon = lon;
     }
     // TODO : faire mieux (évaluer vz?)
     this.fi.minalt = Math.max(0, this.fi.minalt);
@@ -967,8 +1074,8 @@ class GraphGPX {
       for (let i = 0; i < this.fi.pts.length; i++) {
         locations.push(this.fi.pts[i].lat);
         locations.push(this.fi.pts[i].lon);
-        if (i && i % 4999 == 0) {
-          this.getElevation(locations, curelev, 5000);
+        if (i && i % 9999 == 0) {
+          this.getElevation(locations, curelev, 10000);
           curelev = i + 1;
           locations = [];
         }
@@ -990,26 +1097,38 @@ class GraphGPX {
 
   getElevation(locations, index, count) {
     var xhttp = new XMLHttpRequest();
-    let data = { "locations": locations, "doInfills": false, "interpolate": false };
+    /*locations = locations.reduce((arr, cur, i) => {if (i%2==0) arr.push([cur]); else arr[arr.length-1].push(cur); return arr;}, []);
+    let data = {
+      //"locations": locations,
+      "locations": encode(locations, 6),
+      "doInfills": false,
+      "interpolate": false
+    };*/
+    // Float64Array pour double float
+    // attention au conflits d'endianness, getElevation.php décode en little endian
+    let data = new Float32Array(locations);
     xhttp.responseType = 'text';
     let minusalt = 0;
     xhttp.onreadystatechange = function() {
       if (xhttp.readyState == 4 && xhttp.status == 200) {
         if (!xhttp.responseText) return;
         try {
-          let alts = eval(xhttp.responseText);
-          let j = 0;
+          //let dv = (new DataView(new Uint8Array(xhttp.responseText.split('').map(v => v.charCodeAt(0))).buffer));
+          //let alts = JSON.parse(xhttp.responseText);
           let altdiff = 0;
-          for (let i = index; i < index+count; i++) {
-            this.fi.pts[i].gndalt = alts[j++];
+          for (let i=index,j=0; i < index+count; i++,j+=2) {
+            //this.fi.pts[i].gndalt = alts[j++];
+            //this.fi.pts[i].gndalt = (j+2>dv.byteLength) ? 0 : dv.getInt16(j, true);
+            this.fi.pts[i].gndalt = (j+2>xhttp.responseText.length) ? 0 : (new DataView(new Uint8Array([xhttp.responseText.charCodeAt(j), xhttp.responseText.charCodeAt(j+1)]).buffer)).getInt16(0, true);
             if (this.fi.pts[i].alt == 0)
               this.fi.pts[i].alt = this.fi.pts[i].gndalt;
             altdiff = this.fi.pts[i].alt - this.fi.pts[i].gndalt;
             if (altdiff < this.fi.minaltdiff) this.fi.minaltdiff = altdiff;
             if (altdiff > this.fi.maxaltdiff) this.fi.maxaltdiff = altdiff;
           }
-          if (typeof this.fi.pts[this.fi.pts.length-1].gndalt == 'number')
-            minusalt = this.fi.pts[this.fi.pts.length-1].alt - this.fi.pts[this.fi.pts.length-1].gndalt;
+          // réalignement sur l'altitude d'atterissage ; dangereux si la trace est coupée, on se retrouve avec tout le vol sous terre
+          //if (typeof this.fi.pts[this.fi.pts.length-1].gndalt == 'number')
+          //  minusalt = this.fi.pts[this.fi.pts.length-1].alt - this.fi.pts[this.fi.pts.length-1].gndalt;
         }
         catch (e) { console.log("error \"" + e + "\" while eval " + xhttp.responseText); }
         if (minusalt != 0)
@@ -1030,8 +1149,10 @@ class GraphGPX {
       }
     }.bind(this);
     xhttp.open("POST", this.options.elevationservice, true);
-    xhttp.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');
-    xhttp.send(JSON.stringify(data));
+    //xhttp.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');
+    //xhttp.send(JSON.stringify(data));
+    xhttp.overrideMimeType("text/plain; charset=x-user-defined");
+    xhttp.send(data);
     this.elevcalls++;
   }
   
@@ -1090,7 +1211,7 @@ class GraphGPX {
   // Converts from degrees to radians.
   static toRadians(degrees) {
     return degrees * Math.PI / 180;
-  };
+  }
    
   // Converts from radians to degrees.
   static toDegrees(radians) {

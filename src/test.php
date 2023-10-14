@@ -1,5 +1,25 @@
 <?php
 exit(0);return;
+require("config.php");
+      try
+      {
+        $latitude = 45.5;
+        $longitude = 5.5;
+        $date = new DateTime('2000-01-01', new DateTimeZone('Pacific/Nauru'));
+        if (defined('CLETIMEZONEDB')) {
+          $url = "http://api.timezonedb.com/v2.1/get-time-zone?key=".CLETIMEZONEDB."&format=xml&by=position&lat=".$latitude."&lng=".$longitude."&time=".$date->getTimestamp();
+          echo $url." ";
+          $xml = new SimpleXMLElement($url, 0, true);
+          echo "<pre>".str_replace("<", "&lt;", str_replace(">", "&gt;", (string)$xml->asXML()))."</pre>";
+          echo " done";
+        } else echo "oups";
+      } catch (Exception $e) {print_r($e);}
+//echo json_encode("bonjour");
+exit(0);return;
+$mavar = (object) ['id' => 12, 'libelle' => 'Bonjour'];
+$mavar->indice = 29;
+print_r($mavar);
+exit(0);return;
 require('tracklogmanager.php');
 $lgfr = new LogflyReader();
 $lgfr->permutVol(529, 527);

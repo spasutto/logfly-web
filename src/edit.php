@@ -233,6 +233,8 @@ exit(0);
 
   function loadVol(id) {
     document.getElementById('zonescore').style.display = 'none';
+    if (id > 0) document.getElementById('vignette').src = 'image.php?id='+id;
+    document.getElementById('zonevignette').style.display = id > 0 ? 'initial' : 'none';
     document.getElementById('score').innerHTML = '';
     if (id <= 0) return;
     loadFlightScore(id).then(score => {
@@ -500,6 +502,16 @@ exit(0);
     xhttp.open("GET", "<?php echo strtok($_SERVER["REQUEST_URI"], '?');?>?igc&id="+id, true);
     xhttp.send();
   }
+  function regenVignette() {
+    document.getElementById('vigntext').innerHTML = "chargement...";
+    document.getElementById('zonevignette').style.display = 'none';
+    fetch("image.php?id="+id+"&force=1").then(r=>r.blob()).then(img => {
+      document.getElementById('vignette').src = URL.createObjectURL(img);
+      document.getElementById('zonevignette').style.display = 'initial';
+    }).finally(() => {
+      document.getElementById('vigntext').innerHTML = "";
+    }).catch(()=>alert('oups'));
+  }
 
   String.prototype.toHMS = function () {
     let sec_num = parseInt(this, 10);
@@ -589,7 +601,12 @@ vol à editer/créer :<BR><select name="vol" onchange="onVolChange(this.value);"
   <p>Voile : <input type="text" name="voile" /></p>
   <p>Commentaire : <textarea name="commentaire" class="fullwidth" rows="10"></textarea></p>
   <div style="height:40px">
-    <input type="checkbox" name="deligc" id="cbdeligc" value="1"><label for="cbdeligc">supprimer le fichier IGC</label>
+    <input type="checkbox" name="deligc" id="cbdeligc" value="1"><label for="cbdeligc">supprimer le fichier IGC</label><BR>
+    <span id="vigntext"></span>
+    <div id="zonevignette" style="display:none">
+      <a href="#" onclick="regenVignette()">regénérer la vignette</a><BR>
+      <img id="vignette" style="max-width:256px;max-height:256px" src="image.php?id=<?php echo $id;?>"></div>
+    </div>
     <div id="zonescore" style="display:none;float:right">
       <span id="score" style="display:block"></span>
       <a href="#" onclick="calcFlightScore()">recalculer le score</a>

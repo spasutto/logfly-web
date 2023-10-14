@@ -72,6 +72,9 @@
   .souligne {
     text-decoration: underline;
   }
+  .clickable {
+    cursor: pointer;
+  }
   #iinfos {
     display: none;
     margin : 5px;
@@ -115,6 +118,25 @@
   #ctinfos a:hover {
     background: #447adb;
   }
+  #dispmodes>#dispmodes_closed {
+    display:none;
+  }
+  #dispmodes.replie>#dispmodes_closed {
+    display:initial;
+  }
+  #dispmodes>#dispmodes_open {
+    display:initial;
+  }
+  #dispmodes.replie>#dispmodes_open {
+    display:none;
+  }
+  #dispmodes_closed {
+    font-weight: bolder;
+    font-size: 15pt;
+  }
+  #dispmodes_closed p {
+    width: 30px;
+  }
 </style>
 
 </head>
@@ -139,14 +161,22 @@
 </form>
 </div>
 
-<div id="dispmodes">
-  <p class="gras centre souligne">Couleur trace :</p>
-  <input type="radio" id="dmVz" name="dispmodes" value="vz" onclick="window.dispmode=this.value;redrawFlight();" checked><label for="dmVz">vz</label><BR>
-  <input type="radio" id="dmVx" name="dispmodes" value="vx" onclick="window.dispmode=this.value;redrawFlight();"><label for="dmVx">vx</label><BR>
-  <input type="radio" id="dmGR" name="dispmodes" value="GR" onclick="window.dispmode=this.value;redrawFlight();"><label for="dmGR">finesse</label><BR>
-  <input type="radio" id="dmAlt" name="dispmodes" value="alt" onclick="window.dispmode=this.value;redrawFlight();"><label for="dmAlt">altitude</label><BR>
-  <input type="radio" id="dmAltSol" name="dispmodes" value="altsol" onclick="window.dispmode=this.value;redrawFlight();"><label for="dmAltSol">altitude sol</label><BR>
-  <input type="radio" id="dmNone" name="dispmodes" value="none" onclick="window.dispmode=this.value;redrawFlight();"><label for="dmNone">aucune</label>
+<div id="dispmodes" class="replie">
+  <div id="dispmodes_closed">
+    <p class="clickable gras centre" onclick="dispmodes.classList.toggle('replie')">+</p>
+  </div>
+  <div id="dispmodes_open">
+    <p class="clickable gras centre souligne" onclick="dispmodes.classList.toggle('replie')">Couleur trace :</p>
+    <input type="radio" id="dmVz" name="dispmodes" value="vz" onclick="window.dispmode=this.value;redrawFlight();" checked><label for="dmVz">vz</label><BR>
+    <input type="radio" id="dmVx" name="dispmodes" value="vx" onclick="window.dispmode=this.value;redrawFlight();"><label for="dmVx">vx</label><BR>
+    <input type="radio" id="dmGR" name="dispmodes" value="GR" onclick="window.dispmode=this.value;redrawFlight();"><label for="dmGR">finesse</label><BR>
+    <input type="radio" id="dmAlt" name="dispmodes" value="alt" onclick="window.dispmode=this.value;redrawFlight();"><label for="dmAlt">altitude</label><BR>
+    <input type="radio" id="dmAltSol" name="dispmodes" value="altsol" onclick="window.dispmode=this.value;redrawFlight();"><label for="dmAltSol">altitude sol</label><BR>
+    <input type="radio" id="dmNone" name="dispmodes" value="none" onclick="window.dispmode=this.value;redrawFlight();"><label for="dmNone">aucune</label>
+    <p class="clickable gras centre souligne" onclick="dispmodes.classList.toggle('replie')">Mode altitude :</p>
+    <input type="radio" id="dmGpsAlt" name="dispmodesalt" value="gps" onclick="window.dispmodealt=this.value;redrawAltData();" checked><label for="dmGpsAlt">GPS</label><BR>
+    <input type="radio" id="dmBaroAlt" name="dispmodesalt" value="baro" onclick="window.dispmodealt=this.value;redrawAltData();"><label for="dmBaroAlt">Barométrique</label><BR>
+  </div>
 </div>
 
 <div id="popupPolaire">
@@ -207,6 +237,8 @@
   var igc = getParameter("igc");
   var tzoffset = parseInt(getParameter("tzoffset", true));
   tzoffset = typeof tzoffset === 'number' && !isNaN(tzoffset) ? tzoffset : null;
+  var launchtime = parseInt(getParameter("start", true));
+  launchtime = typeof launchtime === 'number' && !isNaN(launchtime) ? new Date(launchtime*1000) : null;
   var finfo = getParameter("finfo");
   var disablescroll = getParameter("disablescroll", true);disablescroll = disablescroll == "true" || disablescroll == "1";
   var clegeoportail = getParameter("clegeoportail");
@@ -238,19 +270,24 @@
     var icon = L.icon({iconUrl: iconUrl, iconSize: origIconSize,iconAnchor: origIconAnchor});
     marker.setIcon(icon);
   });
+  let closegraphcfg = function() {graph.opencfg(true);};
   map.on('click', function(e) {
     setCursorFromMap(e.latlng);
+    closegraphcfg();
   });
   map.on('mousemove', function(e) {
     setCursorFromMap(e.latlng);
   });
   map.on('fullscreenchange', function () {
+    closegraphcfg();
     if (map.isFullscreen()) {
         graph.disableScrollZoom = false;
     } else {
         graph.disableScrollZoom = disablescroll;
     }
   });
+  map.on('movestart', closegraphcfg);
+  map.on('zoomstart', closegraphcfg);
 
   var flstats = {};
   var gpx_bounds = null;
@@ -270,14 +307,22 @@
     let s = (fi.pts[fi.pts.length-1].time.getTime() - fi.pts[0].time.getTime()) / 1000;
     let t = new Date(Date.UTC(1970, 0, 1));
     t.setUTCSeconds(s);
-    flstats['durée'] = `${dateToTime(t)}`,
-    flstats['alt max'] = `${Math.round(fi.maxalt)}m`,
-    flstats['alt min'] = `${Math.round(fi.minalt)}m`,
-    flstats['vz max'] = `${Math.round(fi.maxvz*10)/10}m/s`,
-    flstats['vz min'] = `${Math.round(fi.minvz*10)/10}m/s`,
-    flstats['vx max'] = `${Math.round(fi.maxvx)}km/h`,
-    flstats['deniv'] = `${Math.round(fi.pts[0].alt-fi.pts[fi.pts.length-1].alt)}m`,
-      //flstats['vx min'] = `${Math.round(fi.minvx)}km/h`,
+    flstats['durée'] = `${dateToTime(t)}`;
+    flstats['alt max'] = `${Math.round(fi.maxalt)}m`;
+    flstats['alt min'] = `${Math.round(fi.minalt)}m`;
+    flstats['vz max'] = `${Math.round(fi.maxvz*10)/10}m/s`;
+    flstats['vz min'] = `${Math.round(fi.minvz*10)/10}m/s`;
+    flstats['vx max'] = `${Math.round(fi.maxvx)}km/h`;
+    flstats['deniv'] = [`${Math.round(fi.pts[0].alt-fi.pts[fi.pts.length-1].alt)}m`, 'dénivelé entre le décollage et l\'atterissage'];
+    let totaltgain = Math.round(fi.totaltgain);
+    if (totaltgain > 10000) {
+      totaltgain = Math.round(fi.totaltgain/100)/10;
+      totaltgain = `${totaltgain}km`;
+    } else {
+      totaltgain = `${totaltgain}m`;
+    }
+    flstats['d+'] = [totaltgain, 'gain total en altitude'];
+      //flstats['vx min'] = `${Math.round(fi.minvx)}km/h`;
     updateTraceInfos();
   });
   graph.addEventListener('onposchanged', function(e) {
@@ -373,6 +418,9 @@
           smoothFactor: 1
         }).bindTooltip(seltext).addTo(map);
     }
+  });
+  graph.addEventListener('onzoom', function(e) {
+    map.fitBounds(L.latLngBounds(L.latLng(e.detail.minlat, e.detail.minlon), L.latLng(e.detail.maxlat, e.detail.maxlon))/*, {padding: [35,35]}*/);
   });
 
   function fallbackCopyTextToClipboard(text, then, err) {
@@ -506,6 +554,31 @@
     });*/
     hotlineLayer.redraw();
   }
+  function redrawAltData() {
+    window.dispmodealt = typeof window.dispmodealt === 'string'?window.dispmodealt:'baro';
+    if (dispmodealt == 'baro') {
+      points = points.map(pt => {pt.alt=pt.altbaro;return pt})
+    } else {
+      points = points.map(pt => {pt.alt=pt.altgps;return pt})
+    }
+    let pointshotline = points.map(pt => [pt.lat, pt.lon, pt.alt]);
+    if (window.hotlineLayer) hotlineLayer.remove(map);
+    window.hotlineLayer = L.hotline(pointshotline, {
+      min: -5,//Math.min.apply(null, pointshotline.map(pt => pt[2])),
+      max: 8,//Math.max.apply(null, pointshotline.map(pt => pt[2])),
+      'palette': {
+        0.0: '#0000ff',
+        0.4: '#00ff00',
+        0.7: '#ffff00',
+        1.0: '#ff0000'
+      },
+      weight: 2,
+      outlineColor: '#000000',
+      outlineWidth: 0.5
+    });
+    graph.setData(points);
+    hotlineLayer.addTo(map);
+  }
   function updateTraceInfos() {
     let divTraceInfos = document.getElementById('divTraceInfos');
     let date = "?";
@@ -515,8 +588,21 @@
     }
     let dname = typeof window.pilotname === 'string' && window.pilotname.trim().length > 0 ? '<BR>'+window.pilotname:'';
     let htmlinfos = '<div id="ctinfos"><p class="gras centre souligne">'+date+dname+'</p>';
-    for (let prop in flstats)
-      htmlinfos += "<p>"+(flstats[prop].length<=0?"<HR>":"<span class=\"gras\">"+prop+"</span>&nbsp;:&nbsp;"+flstats[prop])+"</p>";
+    for (let prop in flstats) {
+      let propval = flstats[prop];
+      htmlinfos += "<p";
+      if (Array.isArray(propval) && propval.length > 1) {
+        htmlinfos += " title=\""+propval[1]+"\"";
+        propval = propval[0];
+      }
+      htmlinfos += ">";
+      if (flstats[prop].length == 0) {
+        htmlinfos += "<HR>";
+      } else {
+        htmlinfos += "<span class=\"gras\">"+prop+"</span>&nbsp;:&nbsp;"+propval;
+      }
+      htmlinfos += "</p>";
+    }
     htmlinfos += '</div><p id="iinfos">&#9432;</p>';
     divTraceInfos.innerHTML = htmlinfos;
     divTraceInfos.style.display = 'block';
@@ -555,7 +641,8 @@
     date.setMinutes(parseInt(r.substr(3,2)));
     date.setSeconds(parseInt(r.substr(5,2))+tzoffset);
     let alt = parseInt(r.substr(25,5));
-    if (alt == 0) alt = parseInt(r.substr(30,5));
+    let altgps = parseInt(r.substr(30,5));
+    //if (alt == 0) alt = parseInt(r.substr(30,5));
     let lat = parseFloat(r.substr(7,2));
     let mmmext = 0;
     if (extensions.hasOwnProperty('LAD')) {
@@ -578,7 +665,9 @@
         baro: parseInt(r.substr(25,5)),
         gps: parseInt(r.substr(30,5))
       },*/
-      alt: alt
+      alt: window.dispmodealt!='baro'?altgps:alt,
+      altbaro: alt,
+      altgps: altgps
     };
   }
   async function loadIGC(igccont, calcfs) {
@@ -596,22 +685,24 @@
     //HFDTEDATE:100522,01
     window.startdate = new Date();
     lines.filter(l => l.trim().startsWith('HFDTEDATE')).forEach(startdateline => {
-        let tmpstartdate = new Date();
-        if (startdateline) {
-          tmpstartdate.setDate(parseInt(startdateline.substr(10,2)));
-          tmpstartdate.setMonth(parseInt(startdateline.substr(12,2))-1);
-          let year = 2000+parseInt(startdateline.substr(14,2));
-          if (year > tmpstartdate.getFullYear()) year -= 100;
-          tmpstartdate.setFullYear(year);
-        }
-        if (tmpstartdate < startdate) startdate = tmpstartdate;
+      let tmpstartdate = new Date();
+      if (startdateline) {
+        tmpstartdate.setDate(parseInt(startdateline.substr(10,2)));
+        tmpstartdate.setMonth(parseInt(startdateline.substr(12,2))-1);
+        let year = 2000+parseInt(startdateline.substr(14,2));
+        if (year > tmpstartdate.getFullYear()) year -= 100;
+        tmpstartdate.setFullYear(year);
+      }
+      if (tmpstartdate < startdate) startdate = tmpstartdate;
     });
     if (typeof tzoffset !== 'number' || tzoffset < 0) {
-        tzoffset = 0;
-        if (cletimezonedb.length > 0 && records.length > 0) {
-          //http://api.timezonedb.com/v2.1/get-time-zone?key=cletimezonedb&format=xml&by=position&lat=45.5&lng=5.5&time=1680936096
-          // rajout "&time=" + Math.truncate(date.getTime()/1000)
-          // et on récupère gmtOffset (7200)
+      window.tzoffset = 0;
+      if (records.length > 0) {
+        // si le décalage horaire n'a pas été fourni on essaie de le deviner à partir de la date de décollage
+        if (typeof launchtime.getMonth === 'function') {
+          let fpt = parseBRecord(records[0]);
+          tzoffset = (launchtime.getTime()-fpt.time.getTime())/1000;
+        } else if (cletimezonedb.length > 0) { // sinon on essaie de le trouver via l'api timezonedb
           let p = parseBRecord(records[0]);
           let url = `https://api.timezonedb.com/v2.1/get-time-zone?key=${cletimezonedb}&format=json&by=position&lat=${p.lat}&lng=${p.lon}&time=${Math.trunc(p.time.getTime()/1000)}`;
           let data = await fetch(url).then(response => response.json()).catch(err => {});
@@ -620,6 +711,7 @@
           tzoffset = data && typeof data.gmtOffset === 'number' ? data.gmtOffset : 0;
           //tzoffset = parseInt(data.getElementsByTagName("gmtOffset")[0].textContent);
         }
+      }
     }
 
     window.points = [];
@@ -647,24 +739,9 @@
         }
       }
     }
-    let pointshotline = points.map(pt => [pt.lat, pt.lon, pt.alt]);
-    window.hotlineLayer = L.hotline(pointshotline, {
-      min: -5,//Math.min.apply(null, pointshotline.map(pt => pt[2])),
-      max: 8,//Math.max.apply(null, pointshotline.map(pt => pt[2])),
-      'palette': {
-        0.0: '#0000ff',
-        0.4: '#00ff00',
-        0.7: '#ffff00',
-        1.0: '#ff0000'
-      },
-      weight: 2,
-      outlineColor: '#000000',
-      outlineWidth: 0.5
-    });
-    graph.setData(points);
+    redrawAltData();
     window.gpx_bounds = hotlineLayer.getBounds();
     map.fitBounds(gpx_bounds/*, {padding: [35,35]}*/);
-    hotlineLayer.addTo(map);
 
     let btndl = document.getElementById('btnDlTrace');
     btndl.onclick = function() {downloadIGC(igccont, startdate);/*window.location = "data:application/octet-stream,"+encodeURI(igccont);*/};

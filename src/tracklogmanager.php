@@ -85,8 +85,9 @@ class TrackLogManager
       try
       {
         if (defined('CLETIMEZONEDB')) {
-          $xml = new SimpleXMLElement("http://api.timezonedb.com/v2.1/get-time-zone?key=".CLETIMEZONEDB."&format=xml&by=position&lat=".$fpt->latitude."&lng=".$fpt->longitude, 0, true);
+          $xml = new SimpleXMLElement("http://api.timezonedb.com/v2.1/get-time-zone?key=".CLETIMEZONEDB."&format=xml&by=position&lat=".$fpt->latitude."&lng=".$fpt->longitude."&time=".$fpt->date->getTimestamp(), 0, true);
           $zone = (string)$xml->zoneName;
+          //gmtOffset
         }
       } catch (Exception $e) {}
       $fpt->date->setTimeZone(new DateTimeZone($zone));
@@ -118,7 +119,7 @@ class TrackLogManager
           $lgfr->editSite($sitenom, $sitenom, $site->lat, $site->lon, $site->alt);
         }
         if (!$id) {
-          $id = $lgfr->addVol($sitenom, $fpt->date->format("d/m/Y"), $fpt->date->format("H:i:s"), $duree, "", "");
+          $id = $lgfr->addVol($sitenom, $fpt->date->format("d/m/Y"), $fpt->date->format("H:i:s"), $duree, $tfreader->glider_type, "");
         } else {
           $vol = $lgfr->getRecords($id);
           $lgfr->updateVol($id, $sitenom, $fpt->date->format("d/m/Y"), $fpt->date->format("H:i:s"), $duree, $vol->voile, $vol->commentaire);
@@ -192,7 +193,7 @@ class TrackLogManager
         try
         {
           if (defined('CLETIMEZONEDB')) {
-            $xml = new SimpleXMLElement("http://api.timezonedb.com/v2.1/get-time-zone?key=".CLETIMEZONEDB."&format=xml&by=position&lat=".$fpt->latitude."&lng=".$fpt->longitude, 0, true);
+            $xml = new SimpleXMLElement("http://api.timezonedb.com/v2.1/get-time-zone?key=".CLETIMEZONEDB."&format=xml&by=position&lat=".$fpt->latitude."&lng=".$fpt->longitude."&time=".$fpt->date->getTimestamp(), 0, true);
             $zone = (string)$xml->zoneName;
           }
         } catch (Exception $e) {}

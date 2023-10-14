@@ -352,8 +352,8 @@ echo "],legends:dataTime.labels";
 
 <?php
 //echo "<pre>";print_r($lgfr->getStats());echo "</pre>";
-$sites = array_map(function($s) {return "'".str_replace("'", "\\'", $s->nom)."'";}, $vols->sites);
-$count = array_map(function($s) {return $s->tempsvol/3600;}, $vols->sites);
+$sites = array_slice(array_map(function($s) {return "'".str_replace("'", "\\'", $s->nom)."'";}, $vols->sites),0,10);
+$count = array_slice(array_map(function($s) {return $s->tempsvol/3600;}, $vols->sites),0,10);
 ?>
   window.addEventListener('load', function(){
     var data = {
@@ -379,8 +379,8 @@ function sort_sites_tempsvol($a, $b)
   return ($a > $b) ? -1 : 1;
 }
 usort($vols->sites, "sort_sites_tempsvol");
-$sites = array_map(function($s) {return "'".str_replace("'", "\\'", $s->nom)."'";}, $vols->sites);
-$count = array_map(function($s) {return ($s->tempsvol/$s->nombrevols)/3600;}, $vols->sites);
+$sites = array_slice(array_map(function($s) {return "'".str_replace("'", "\\'", $s->nom)."'";}, $vols->sites),0,10);
+$count = array_slice(array_map(function($s) {return ($s->tempsvol/$s->nombrevols)/3600;}, $vols->sites),0,10);
 ?>
 <script type="text/javascript">
   window.addEventListener('load', function(){

@@ -15,6 +15,11 @@ class ElevationService
     {
       @fclose($this->fp);
     }
+    
+    public function getOffset()
+    {
+      return 1/self::HGT_SIZE;
+    }
 
     public function getElevation($lat, $lon)
     {

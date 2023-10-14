@@ -170,6 +170,9 @@ class LogflyReader
   
   function permutVol($id1, $id2)
   {
+    $this->updateVolId($id1, -1);
+    $this->updateVolId($id2, $id1);
+    $this->updateVolId(-1, $id2);
     unlink("Tracklogs/".$id1.".jpg");
     unlink("Tracklogs/".$id2.".jpg");
     rename("Tracklogs/".$id1.".json", "Tracklogs/tempid.json");
@@ -178,9 +181,6 @@ class LogflyReader
     rename("Tracklogs/".$id1.".igc", "Tracklogs/tempid.igc");
     rename("Tracklogs/".$id2.".igc", "Tracklogs/".$id1.".igc");
     rename("Tracklogs/tempid.igc", "Tracklogs/".$id2.".igc");
-    $this->updateVolId($id1, -1);
-    $this->updateVolId($id2, $id1);
-    $this->updateVolId(-1, $id2);
   }
 
   function getSites()

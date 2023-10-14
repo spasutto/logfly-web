@@ -11,8 +11,23 @@ function loadCarto(clegeoportail, disablescrollzoom, rootelem) {
     options.touchzoom = true;
   }
   var map = L.map('map', options).setView([45.182471, 5.725589], 13);
+  L.control.scale().addTo(map);
   map.on('dragstart', function (e) { window.usermoved = true; });
   map.on('zoomend', function (e) { if (firstzoom) { firstzoom = false; return; } window.usermoved = true; });
+
+  if (typeof L.Control.Fullscreen == 'function') {
+    let options = {'element' : rootelem};
+    map.on('fullscreenchange', function () {
+        if (map.isFullscreen()) {
+            map.scrollWheelZoom.enable();
+            map.dragging.enable();
+        } else {
+            map.scrollWheelZoom.disable();
+            isTouchDevice()?map.dragging.disable():map.dragging.enable();
+        }
+    });
+    map.addControl(new L.Control.Fullscreen(options));
+  }
 
   var mapbox = L.tileLayer('https://api.mapbox.com/styles/v1/{id}/tiles/{z}/{x}/{y}?access_token=pk.eyJ1IjoibWFwYm94IiwiYSI6ImNpejY4NXVycTA2emYycXBndHRqcmZ3N3gifQ.rJcFIG214AriISLbB6B5aw', {
     maxZoom: 18,
@@ -75,21 +90,7 @@ function loadCarto(clegeoportail, disablescrollzoom, rootelem) {
   for (let basemap in baseMaps) {
     baseMaps[basemap].addTo(map);
   }
-  L.control.layers(baseMaps).addTo(map);
-
-  if (typeof L.Control.Fullscreen == 'function') {
-    let options = {'element' : rootelem};
-    map.on('fullscreenchange', function () {
-        if (map.isFullscreen()) {
-            map.scrollWheelZoom.enable();
-            map.dragging.enable();
-        } else {
-            map.scrollWheelZoom.disable();
-            isTouchDevice()?map.dragging.disable():map.dragging.enable();
-        }
-    });
-    map.addControl(new L.Control.Fullscreen(options));
-  }
+  L.control.layers(baseMaps, null, {position: 'topleft'}).addTo(map);
 
   L.Control.DlIGC = L.Control.extend({
     onAdd: function(map) {

@@ -21,8 +21,7 @@ $fname = $TRACKLOGS.$id.".jpg";
 if (!$debug && !$force && file_exists($fname))
 {
   //header('Location: '.$fname);
-  header('Content-Type: image/jpeg');
-  header('Expires: '.gmdate('D, d M Y H:i:s \G\M\T', time() + (365 * 24 * 60 * 60)));
+  printHeaders();
   //header("Access-Control-Allow-Origin: https://*.pasutto.net/");
   echo file_get_contents($fname);
   exit(0);
@@ -266,7 +265,8 @@ for ($x=0; $x<$widthx; $x++)
     {
         $tilex = $TLxy[0]+$x;
         $tiley = $TLxy[1]+$y;
-        $imgtmp = imagecreatefromjpeg('https://wxs.ign.fr/'.$cle.'/geoportail/wmts?&REQUEST=GetTile&SERVICE=WMTS&VERSION=1.0.0&STYLE=normal&TILEMATRIXSET=PM&FORMAT=image/jpeg&LAYER='.$layer.'&TILEMATRIX='.$zoom.'&TILEROW='.$tiley.'&TILECOL='.$tilex);
+        $imgtmp = @imagecreatefromjpeg('https://wxs.ign.fr/'.$cle.'/geoportail/wmts?&REQUEST=GetTile&SERVICE=WMTS&VERSION=1.0.0&STYLE=normal&TILEMATRIXSET=PM&FORMAT=image/jpeg&LAYER='.$layer.'&TILEMATRIX='.$zoom.'&TILEROW='.$tiley.'&TILECOL='.$tilex);
+        if (!$imgtmp) continue;
         if ($xfactor != 1 || $yfactor != 1)
             /*imagecopyresized*/imagecopyresampled($img, $imgtmp, $x*$tilewidth, $y*$tileheight, 0, 0, $tilewidth, $tileheight, 256, 256);
         else
@@ -287,8 +287,7 @@ foreach ($pts as $pt)
 /*header('Content-Type: image/png');
 ob_start();
 imagepng($img);*/
-header('Expires: '.gmdate('D, d M Y H:i:s \G\M\T', time() + (365 * 24 * 60 * 60)));
-header('Content-Type: image/jpeg');
+printHeaders();
 ob_start();
 imagejpeg($img);
 $imagedata = ob_get_clean();
@@ -329,8 +328,17 @@ function getTrack($id)
   }
   catch(Exception $e)
   {
-    echo "error!!! : ".$e->getMessage();
+    header("HTTP/1.0 404 Not Found");
+    //echo "error!!! : ".$e->getMessage();
   }
   exit(0);
+}
+
+function printHeaders()
+{
+  $is_secure = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || $_SERVER['SERVER_PORT'] == 443;
+  @header('Access-Control-Allow-Origin: http'.($is_secure?'s':'').'://montagne.pasutto.net');
+  @header('Expires: '.gmdate('D, d M Y H:i:s \G\M\T', time() + (365 * 24 * 60 * 60)));
+  @header('Content-Type: image/jpeg');
 }
 ?>

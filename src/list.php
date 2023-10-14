@@ -327,7 +327,7 @@ function affichComment(id) {
       let url = document.getElementById('traceurl_'+id).value;
       if (url.trim().length > 0) {
         url += "&disablescroll=1";
-        zonecarto.innerHTML += "<iframe src=\""+url+"\" width=\"99%\" height=\"648px\"></iframe>";
+        zonecarto.innerHTML += "<iframe src=\""+url+"\" width=\"99%\" height=\"658px\"></iframe>";
       }
     }
     ligne.style.display = 'table-row';
@@ -483,10 +483,6 @@ window.onload = function() {
   echo "</TR>";*/
   foreach ($vols->vols as $vol)
   {
-    $gmtoffset = 0;
-    try {
-      $gmtoffset = @$vol->date->getTimezone()->getOffset($vol->date);
-    } catch (Exception $e) {}
     echo "<TR class=\"lignevol\">";
     echo "<TD><a id=\"v".$vol->id."\" href=\"#v".$vol->id."\">". $vol->id."</a>";
     echo "</TD>";
@@ -511,11 +507,16 @@ window.onload = function() {
     $url = "";
     if ($vol->igc) {
       $tracefileprefix = urlencode((defined('FOLDER_TL')?FOLDER_TL:"")."/" . $vol->id);
-      $url = "trace.html?igc=".$tracefileprefix.".igc&tzoffset=".$gmtoffset."&finfo=".$tracefileprefix.".json&elevationservice=".(defined('ELEVATIONSERVICE')?urlencode(ELEVATIONSERVICE):"")."&clegeoportail=".(defined('CLEGEOPORTAIL')?urlencode(CLEGEOPORTAIL):"")."&cletimezonedb=".(defined('CLETIMEZONEDB')?urlencode(CLETIMEZONEDB):"");
+      $url = "trace.html?igc=".$tracefileprefix.".igc&start=".$vol->date->getTimestamp()."&finfo=".$tracefileprefix.".json&elevationservice=".(defined('ELEVATIONSERVICE')?urlencode(ELEVATIONSERVICE):"")."&clegeoportail=".(defined('CLEGEOPORTAIL')?urlencode(CLEGEOPORTAIL):"")."&cletimezonedb=".(defined('CLETIMEZONEDB')?urlencode(CLETIMEZONEDB):"");
       echo " class=\"zoneimgtrace\" data-id=\"".$vol->id."\"";
       echo " onClick=\"openTrace(this);return false;\" title=\"voir la trace GPS de ce vol\" style=\"cursor: pointer\"";
       echo "><a href=\"".$url."\"><img src=\"map.svg\" width=\"18px\"></a>";
-      echo " <div name=\"imgTrace\" id=\"imgTrace".$vol->id."\" data-id=\"".$vol->id."\" style=\"display:none;position:fixed;max-width:320px;border: solid 1px grey;\"><img src=\"image.php?id=".$vol->id."\" style=\"float:right;max-width:320px;max-height:320px;\"></div>";
+      $url_image = "image.php?id=".$vol->id;
+      $fname = "Tracklogs".DIRECTORY_SEPARATOR.$vol->id.".jpg";
+      if (file_exists($fname)) {
+        $url_image = $fname."?".filemtime($fname);
+      }
+      echo " <div name=\"imgTrace\" id=\"imgTrace".$vol->id."\" data-id=\"".$vol->id."\" style=\"display:none;position:fixed;max-width:320px;border: solid 1px grey;\"><img src=\"".$url_image."\" style=\"float:right;max-width:320px;max-height:320px;\"></div>";
     }
     else {
       echo ">";

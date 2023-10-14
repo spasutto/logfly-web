@@ -113,6 +113,22 @@ return;*/
     xhttp.send();
     igcs.addEventListener('change', handleFileSelect, false);
   }
+  function addOption(list, nom, value, selected)
+  {
+    var option = document.createElement("option");
+    option.text = nom;
+    option.value = value;
+    if (selected)
+      option.selected = true;
+    list.add(option);
+  }
+  function clearList(list)
+  {
+    let length = list.options.length;
+    for (let i=length; i>=0; i--)
+      list.options[i] = null;
+    addOption(list, 'Nouveau...', -1, false);
+  }
   function handleFileSelect(evt) {
     let btnsubmit = document.getElementById('submit');
     let files = evt.target.files;
@@ -124,7 +140,11 @@ return;*/
     [...files].forEach(file => {
       const reader = new FileReader();
       reader.onload = (e) => {
-        filestoupload.push(e.target.result);
+        if (e.target.result.split('\n').length <= 10) {
+          alert('le fichier semble invalide !');
+        } else {
+          filestoupload.push(e.target.result);
+        }
         totfiles--;
         if (totfiles <= 0) btnsubmit.disabled = evt.target.files.length > window.filestoupload.length;
       };
@@ -231,22 +251,6 @@ return;*/
         xhttp.send(data);
       } catch(e) {console.log(e);alert('attention, le score n\'a pas pu être calculé');resolve();}
     });
-  }
-  function addOption(list, nom, value, selected)
-  {
-    var option = document.createElement("option");
-    option.text = nom;
-    option.value = value;
-    if (selected)
-      option.selected = true;
-    list.add(option);
-  }
-  function clearList(list)
-  {
-    let length = list.options.length;
-    for (let i=length; i>=0; i--)
-      list.options[i] = null;
-    addOption(list, 'Nouveau...', -1, false);
   }
 
   window.onload = loadVols;
