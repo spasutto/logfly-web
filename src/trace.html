@@ -174,8 +174,8 @@
     <input type="radio" id="dmAltSol" name="dispmodes" value="altsol" onclick="window.dispmode=this.value;redrawFlight();"><label for="dmAltSol">altitude sol</label><BR>
     <input type="radio" id="dmNone" name="dispmodes" value="none" onclick="window.dispmode=this.value;redrawFlight();"><label for="dmNone">aucune</label>
     <p class="clickable gras centre souligne" onclick="dispmodes.classList.toggle('replie')">Mode altitude :</p>
-    <input type="radio" id="dmGpsAlt" name="dispmodesalt" value="gps" onclick="window.dispmodealt=this.value;redrawAltData();" checked><label for="dmGpsAlt">GPS</label><BR>
-    <input type="radio" id="dmBaroAlt" name="dispmodesalt" value="baro" onclick="window.dispmodealt=this.value;redrawAltData();"><label for="dmBaroAlt">Barométrique</label><BR>
+    <input type="radio" id="dmGpsAlt" name="dispmodesalt" value="gps" onclick="redrawAltData(this.value);" checked><label for="dmGpsAlt">GPS</label><BR>
+    <input type="radio" id="dmBaroAlt" name="dispmodesalt" value="baro" onclick="redrawAltData(this.value);"><label for="dmBaroAlt">Barométrique</label><BR>
   </div>
 </div>
 
@@ -554,8 +554,10 @@
     });*/
     hotlineLayer.redraw();
   }
-  function redrawAltData() {
+  function redrawAltData(dmalt) {
     window.dispmodealt = typeof window.dispmodealt === 'string'?window.dispmodealt:'baro';
+    if (dmalt === dispmodealt) return;
+    else dispmodealt = dmalt ?? 'gps';
     if (dispmodealt == 'baro') {
       points = points.map(pt => {pt.alt=pt.altbaro;return pt})
     } else {
@@ -640,9 +642,9 @@
     date.setHours(parseInt(r.substr(1,2)));
     date.setMinutes(parseInt(r.substr(3,2)));
     date.setSeconds(parseInt(r.substr(5,2))+tzoffset);
-    let alt = parseInt(r.substr(25,5));
+    let altbaro = parseInt(r.substr(25,5));
     let altgps = parseInt(r.substr(30,5));
-    //if (alt == 0) alt = parseInt(r.substr(30,5));
+    //if (alt == 0) alt = altgps;
     let lat = parseFloat(r.substr(7,2));
     let mmmext = 0;
     if (extensions.hasOwnProperty('LAD')) {
@@ -665,8 +667,8 @@
         baro: parseInt(r.substr(25,5)),
         gps: parseInt(r.substr(30,5))
       },*/
-      alt: window.dispmodealt!='baro'?altgps:alt,
-      altbaro: alt,
+      alt: window.dispmodealt!='baro'?altgps:altbaro,
+      altbaro: altbaro,
       altgps: altgps
     };
   }
@@ -718,6 +720,9 @@
     records.forEach(r => {
       points.push(parseBRecord(r));
     });
+    if (!points.some(p => p.altbaro != 0)) {
+      points = points.map(pt => {pt.alt=pt.altbaro=pt.altgps;return pt})
+    }
     points.sort((a, b) => a.time-b.time);
     let interval = Math.ceil((points[points.length - 1].time.getTime() - points[0].time.getTime())/points.length);
     interval = Math.round(interval/1000)*1000;
