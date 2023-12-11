@@ -128,6 +128,13 @@ if (isset($_GET['dl'])) {
 <script type="text/javascript">
   function init() {
   }
+  function closeWindow() {
+    try {
+      var daddy = window.self;
+      daddy.opener = window.self;
+      daddy.close();
+    }catch(err) {}
+  }
   </script>
 
 </head>
@@ -147,6 +154,10 @@ if (isset($_GET['dl'])) {
   $monthsdiff = 1;
   echo "<h1>Statistiques de vol (".$nbrvols." vols, ".Utils::timeFromSeconds($vols->tempstotalvol, TRUE).") :<a href=\"?dl\"><img src=\"csv.svg\" width=\"32px\" title=\"télécharger un fichier csv\"></a></h1>";
   echo "moyenne : ".round($nbrvols/$monthsdiff)." vols par mois, ".Utils::timeFromSeconds($vols->tempstotalvol/$nbrvols, TRUE)." par vol<BR>";
+  $longer = array_reduce($vols->vols, function($a, $b){
+    return $a->duree > $b->duree ? $a : $b;
+  });
+  echo "plus long vol : ".$longer->sduree." en ".$longer->voile." à ".$longer->site." le <a href=\"".dirname($_SERVER['PHP_SELF'])."/vol/".$longer->id."#v".$longer->id."\" onclick=\"if (window.opener) {window.opener.location.href=this.href;closeWindow();return false;}\">".$longer->date->format('d/m/Y')."</a> (n°".$longer->id.")<BR>";
 
   //echo "<pre>";print_r($vols);echo "</pre>";exit(0);
   //echo "<pre>";print_r($lgfr->getStats());echo "</pre>";exit(0);

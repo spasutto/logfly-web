@@ -233,12 +233,13 @@ exit(0);
 
   function loadVol(id) {
     document.getElementById('zonescore').style.display = 'none';
-    if (id > 0) document.getElementById('vignette').src = 'image.php?id='+id;
-    document.getElementById('zonevignette').style.display = id > 0 ? 'initial' : 'none';
+    if (id > 0) getVignette(id);// document.getElementById('vignette').src = 'image.php?id='+id;
+    else document.getElementById('zonevignette').style.display = 'none';
+    //document.getElementById('zonevignette').style.display = id > 0 ? 'initial' : 'none';
     document.getElementById('score').innerHTML = '';
     if (id <= 0) return;
     loadFlightScore(id).then(score => {
-      document.getElementById('zonescore').style.display = 'initial';
+      document.getElementById('zonescore').style.display = 'inline-block';
       let scoreinfo = 'pas de score';
       if (score && score.scoreInfo && typeof score.scoreInfo.distance === 'number' && typeof score.scoreInfo.score === 'number') {
         scoreinfo = `score: ${score.scoreInfo.score}, distance : ${score.scoreInfo.distance}km`;
@@ -503,9 +504,12 @@ exit(0);
     xhttp.send();
   }
   function regenVignette() {
-    document.getElementById('vigntext').innerHTML = "chargement...";
+    getVignette(id, true);
+  }
+  function getVignette(id, regen=false) {
+    document.getElementById('vigntext').innerHTML = "chargement de la vignette...";
     document.getElementById('zonevignette').style.display = 'none';
-    fetch("image.php?id="+id+"&force=1").then(r=>r.blob()).then(img => {
+    fetch("image.php?id="+id+(regen?"&force=1":""), {cache: "reload"}).then(r => r.blob()).then(img => {
       document.getElementById('vignette').src = URL.createObjectURL(img);
       document.getElementById('zonevignette').style.display = 'initial';
     }).finally(() => {
@@ -600,14 +604,14 @@ vol à editer/créer :<BR><select name="vol" onchange="onVolChange(this.value);"
   <p>Durée : <input type="text" name="dureeheures" onKeyUp="calcsecondes()"/>(<span name="dureeHMS"></span>)&nbsp;soit&nbsp;<span name="duree">0</span>&nbsp;secondes</p>
   <p>Voile : <input type="text" name="voile" /></p>
   <p>Commentaire : <textarea name="commentaire" class="fullwidth" rows="10"></textarea></p>
-  <div style="height:40px">
+  <div style="/*height:40px*/display:inline-block;">
     <input type="checkbox" name="deligc" id="cbdeligc" value="1"><label for="cbdeligc">supprimer le fichier IGC</label><BR>
     <span id="vigntext"></span>
     <div id="zonevignette" style="display:none">
       <a href="#" onclick="regenVignette()">regénérer la vignette</a><BR>
-      <img id="vignette" style="max-width:256px;max-height:256px" src="image.php?id=<?php echo $id;?>"></div>
+      <img id="vignette" style="max-width:256px;max-height:256px" src=""></div>
     </div>
-    <div id="zonescore" style="display:none;float:right">
+    <div id="zonescore" style="display:none;vertical-align:top;/*float:right*/text-align: right;background-color: #d4ffc9;padding:2px">
       <span id="score" style="display:block"></span>
       <a href="#" onclick="calcFlightScore()">recalculer le score</a>
     </div>

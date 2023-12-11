@@ -31,6 +31,11 @@
           if ($ret && $ret[0]=='0')
             $ret = substr($ret, 1);
           break;
+        case 3:
+          if ($hours>0)
+            $ret = sprintf('%d heure%s, ', $hours, $hours>1?'s':'');
+          $ret = sprintf('%s%2d minute%s et %2d seconde%s', $ret, $mins, $mins>1?'s':'', $secs, $secs>1?'s':'');
+          break;
       }
       return $ret;
     }

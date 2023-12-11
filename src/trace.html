@@ -238,7 +238,7 @@
   var tzoffset = parseInt(getParameter("tzoffset", true));
   tzoffset = typeof tzoffset === 'number' && !isNaN(tzoffset) ? tzoffset : null;
   var launchtime = parseInt(getParameter("start", true));
-  launchtime = typeof launchtime === 'number' && !isNaN(launchtime) ? new Date(launchtime*1000) : null;
+  launchtime = !!launchtime && typeof launchtime === 'number' && !isNaN(launchtime) ? new Date(launchtime*1000) : null;
   var finfo = getParameter("finfo");
   var disablescroll = getParameter("disablescroll", true);disablescroll = disablescroll == "true" || disablescroll == "1";
   var clegeoportail = getParameter("clegeoportail");
@@ -701,7 +701,7 @@
       window.tzoffset = 0;
       if (records.length > 0) {
         // si le décalage horaire n'a pas été fourni on essaie de le deviner à partir de la date de décollage
-        if (typeof launchtime.getMonth === 'function') {
+        if (typeof launchtime?.getMonth === 'function') {
           let fpt = parseBRecord(records[0]);
           tzoffset = (launchtime.getTime()-fpt.time.getTime())/1000;
         } else if (cletimezonedb.length > 0) { // sinon on essaie de le trouver via l'api timezonedb

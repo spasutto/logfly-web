@@ -1,0 +1,15 @@
+Options -Indexes
+
+<IfModule mod_rewrite.c>
+RewriteEngine On
+RewriteBase /repertoire/racine/
+
+# don't rewrite anything that really exists (https://stackoverflow.com/a/1784482/1346098)
+RewriteCond %{REQUEST_FILENAME} -f
+RewriteRule .* - [L]
+#RewriteCond %{SERVER_PORT} 80
+#RewriteRule ^(.*)$ https://www.domain.tld/$1 [R,L]
+RewriteRule "^(\d{4})$" "list.php?datemin=$1-01-01" [L]
+RewriteRule ^vol/(\d+)$  "list.php?vol=$1"  [L,QSA]
+
+</IfModule>

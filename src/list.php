@@ -2,6 +2,9 @@
 require("config.php");
 require("logfilereader.php");
 
+$url =  "//{$_SERVER['HTTP_HOST']}".dirname($_SERVER['PHP_SELF'])."/";
+$root_url = htmlspecialchars( $url, ENT_QUOTES, 'UTF-8' );
+
 try
 {
   $lgfr = new LogflyReader();
@@ -14,6 +17,7 @@ catch(Exception $e)
 
 parse_str($_SERVER["QUERY_STRING"]  , $get_array);//print_r($get_array);
 //phpinfo();return;
+$volid=null;
 $voile=null;
 $site=null;
 $datemin=NULL;
@@ -42,10 +46,12 @@ if (isset($_GET['datemax'])) {
   else
     $datemax->add(new DateInterval('P1D'));
 }
-if (isset($_GET['offset'])) {
+if (isset($_GET['vol'])) {
+  $volid = @intval($_GET['vol']);
+  if (!is_int($volid) || $volid < 0) $volid = 0;
+} else if (isset($_GET['offset'])) {
   $offset = @intval($_GET['offset']);
-  if (!is_int($offset) || $offset < 0)
-  $offset = 0;
+  if (!is_int($offset) || $offset < 0) $offset = 0;
 }
 if (isset($_GET['text'])) {
   $text = $_GET['text'];
@@ -74,6 +80,7 @@ function url_with_parameter($paramname, $paramvalue, $paramtoremove = null) {
   <meta charset="UTF-8">
   <title>Carnet de vol</title>
   <meta name="viewport" content="initial-scale=0.75, maximum-scale=1.0, user-scalable=no" />
+  <base href="<?php echo $root_url;?>">
 <style type="text/css">
 body {
   line-height:22px;
@@ -112,6 +119,16 @@ tr {
   margin:0;
   padding:0;
   border-bottom: solid 1px #e0e0e0;
+}
+tr.lignevol {
+  -webkit-transition: all 0.3s ease-out;
+  -moz-transition: all 0.3s ease-out;
+  -o-transition: all 0.3s ease-out;
+  transition: all 0.3s ease-out;
+}
+
+tr.lignevol.flash {
+  background: #B4E50F;
 }
 /*.lignevol:nth-child(even)   {background: #CCC}
 tr.lignevol:nth-child(n) {background: #FFF}*/
@@ -203,6 +220,7 @@ a:hover {
 
 <script>
 var showComment = true;
+var volid = <?php echo $volid??0;?>;
 function editvol(id, lat, lon, altitude) {
   let url = 'edit.php';
   if (id > 0)
@@ -258,11 +276,7 @@ function onchangevoilesite(nom, voile) {
     rooturl += "?" + url;
   window.location = rooturl;
 }
-function parseSmileys(text) {
-  /*document.body.innerHTML = '';
-  Array.from(Array(0xde4f-0xde00+1)).forEach((x, i) => {
-    document.body.innerHTML += String.fromCharCode(0xd83d,i+0xde00)+" : 0x"+(i+0xde00).toString(16).padStart(4,0)+"<BR>";
-  });*/
+/*function parseSmileys(text) {
   let smileys = [
     [':)', 0x0a],
     [':)', 0x0a],
@@ -279,7 +293,7 @@ function parseSmileys(text) {
   ];
   smileys.forEach(s => {text = text.replaceAll(s[0], String.fromCharCode(0xd83d,s[1]+0xde00));});
   return text;
-}
+}*/
 function loadComment(id) {
   let ligne = document.getElementById('comm'+id).parentElement;
   let zonecomm = document.getElementById('zonecomm'+id);
@@ -299,7 +313,7 @@ function loadComment(id) {
               btncomm.title="afficher le commentaire";
             }
           } else {
-            zonecomm.innerHTML = parseSmileys(this.response);
+            zonecomm.innerHTML = this.response;//parseSmileys(this.response);
             if (btncomm.previousElementSibling.innerHTML && this.response.trim().length <= 0) {
               zonecomm.innerHTML = '';
             }
@@ -380,7 +394,15 @@ function getZoneImgTrace(zone) {
   }
   return zone;
 }
+function scrollToVol(id) {
+  window.location = 'vol/'+id+'#v'+id;
+  window.scrollBy(0,-85);
+  let tr = document.getElementById('v'+id).closest("tr");
+  tr.classList.toggle("flash");
+  window.setTimeout(function(){tr.classList.toggle("flash");},250);
+}
 window.onload = function() {
+  if (volid) scrollToVol(volid);
 };
 </script>
 </head>
@@ -388,6 +410,10 @@ window.onload = function() {
 <body>
 
 <?php
+  if ($volid > 0) {
+    $offset = max(0, intval(($lgfr->getNbrVols() - $volid)/$resperpage)*$resperpage);
+    //echo "<h1><a href=\"".$root_url."vol/$volid\">intval((".$lgfr->getNbrVols()." - $volid)/25)*25 = ".$offset."</a></h1>";
+  }
   $vols = $lgfr->getRecords(NULL, FALSE, $resperpage, $offset, $datemin, $datemax, $voile, $site, $text);
   $titrefiltre = "";
   if (strlen($voile)>0)
@@ -422,7 +448,7 @@ window.onload = function() {
     $lnoffset = $i*$resperpage;
     $balise = ($lnoffset != $offset) ? "a":"div";
     $titrepage = ($lnoffset != $offset) ? ('aller à la page '.($i+1)) : 'ceci est la page courante';
-    $lnpages .= "&nbsp;<".$balise." href=\"".url_with_parameter("offset", $lnoffset)."\" title=\"".$titrepage."\">".($i+1)."</".$balise.">";
+    $lnpages .= "&nbsp;<".$balise." href=\"".url_with_parameter("offset", $lnoffset, ['vol'])."\" title=\"".$titrepage."\">".($i+1)."</".$balise.">";
   }
   $lnpages .= "</div>";
 ?>
@@ -484,7 +510,7 @@ window.onload = function() {
   foreach ($vols->vols as $vol)
   {
     echo "<TR class=\"lignevol\">";
-    echo "<TD><a id=\"v".$vol->id."\" href=\"#v".$vol->id."\">". $vol->id."</a>";
+    echo "<TD><a id=\"v".$vol->id."\" href=\"".$root_url."vol/".$vol->id."\">". $vol->id."</a>";
     echo "</TD>";
     $nom_parametredate = "datemin";
     $texte_parametredate = "depuis";
@@ -499,7 +525,7 @@ window.onload = function() {
     $vol->duree = is_int($vol->duree) && $vol->duree > 0 ? $vol->duree : 0;
     $datefin = $datefin->add(new DateInterval("PT".$vol->duree."S"));
     echo "<TD><span title=\"heure de décollage\">&#8613;&nbsp;". $vol->date->format('H:i')."</span><p class=\"small\" title=\"heure de posé\">&#8615;&nbsp;".$datefin->format('H:i')."</p></TD>";
-    echo "<TD>". Utils::timeFromSeconds($vol->duree > 900 ? round($vol->duree/60)*60 : $vol->duree, 2)."</TD>";
+    echo "<TD title=\"".Utils::timeFromSeconds($vol->duree, 3)."\">". Utils::timeFromSeconds($vol->duree > 900 ? round($vol->duree/60)*60 : $vol->duree, 2)."</TD>";
     //echo "<TD>". $vol->sduree."</TD>";
     echo "<TD><a href=\"".url_with_parameter("site", $vol->site, "offset")."\" title=\"filtrer les vols pour ce site\">".$vol->site."</a>&nbsp;<a href=\"https://maps.google.com/?q=".$vol->latdeco.",".$vol->londeco."\" target=\"_Blank\" class=\"lien_gmaps\" title=\"google maps\">&#9936;</a></TD>";
     echo "<TD><a href=\"".url_with_parameter("voile", $vol->voile, "offset")."\" title=\"filtrer les vols pour cette voile\">".$vol->voile."</a></TD>";
@@ -507,7 +533,7 @@ window.onload = function() {
     $url = "";
     if ($vol->igc) {
       $tracefileprefix = urlencode((defined('FOLDER_TL')?FOLDER_TL:"")."/" . $vol->id);
-      $url = "trace.html?igc=".$tracefileprefix.".igc&start=".$vol->date->getTimestamp()."&finfo=".$tracefileprefix.".json&elevationservice=".(defined('ELEVATIONSERVICE')?urlencode(ELEVATIONSERVICE):"")."&clegeoportail=".(defined('CLEGEOPORTAIL')?urlencode(CLEGEOPORTAIL):"")."&cletimezonedb=".(defined('CLETIMEZONEDB')?urlencode(CLETIMEZONEDB):"");
+      $url = "trace.html?igc=".$tracefileprefix.".igc&start=".$vol->date->getTimestamp()."&finfo=".$tracefileprefix.".json&elevationservice=".(defined('ELEVATIONSERVICE')?urlencode(ELEVATIONSERVICE):"")."&clegeoportail=".(defined('CLEGEOPORTAIL')?urlencode(CLEGEOPORTAIL):"");
       echo " class=\"zoneimgtrace\" data-id=\"".$vol->id."\"";
       echo " onClick=\"openTrace(this);return false;\" title=\"voir la trace GPS de ce vol\" style=\"cursor: pointer\"";
       echo "><a href=\"".$url."\"><img src=\"map.svg\" width=\"18px\"></a>";
@@ -542,7 +568,7 @@ window.onload = function() {
     echo " / <a href=\"http://78.207.28.106/mto/auto/".$date->format('y').$date->format('m').$date->format('d')."GFS/frog.html\">Caplain</a>";
     echo " / <a href=\"https://www.infoclimat.fr/fr/cartes/observations-meteo/archives/vent_moyen/".$vol->date->format('j')."/".$libmois[intval($vol->date->format('n'))-1]."/".$vol->date->format('Y')."/14h/carte-interactive.html\">relevés</a>";
     echo "</div><div id=\"zonecarto".$vol->id."\"></div></TD></TR>";
-    echo "</TR>";
+    echo "</TR>\n";
   }
   echo "</TABLE>";
   echo $lnpages;

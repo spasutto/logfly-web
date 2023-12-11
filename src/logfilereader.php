@@ -120,7 +120,7 @@ class LogflyReader
     if (!$site)
       $site = $this->createSite($nomsite, $lat, $lon, $alt);
     //echo "<pre>".print_r($site)."</pre>";
-    $sduree = Utils::timeFromSeconds($duree, TRUE);
+    $sduree = Utils::timeFromSeconds($duree, 1);
     //echo print_r($site);
     $sql = "UPDATE Vol SET V_Score=NULL,V_League=NULL,V_Engin='".$voile."',V_CFD=NULL,UTC=0,V_Photos=NULL,V_Commentaire='".str_replace("'", "''", htmlspecialchars_decode($commentaire))."',V_Pays='FRANCE',V_Site='".str_replace("'", "''", $site->nom)."',V_AltDeco='".$site->altitude."',V_LongDeco='".$site->longitude."',V_LatDeco='".$site->latitude."',V_sDuree='".$sduree."',V_Duree=".$duree.",V_Date='".$date->format('Y-m-d H:i:s')."' WHERE V_ID=".$id.";";
     //echo $sql."<BR>\n";
@@ -155,7 +155,7 @@ class LogflyReader
     } else {
       $nomsite = "";
     }
-    $sduree = Utils::timeFromSeconds($duree, TRUE);
+    $sduree = Utils::timeFromSeconds($duree, 1);
     $sql = "INSERT INTO Vol (V_Score,V_League,V_Engin,V_CFD,UTC,V_Photos,V_IGC,V_Commentaire,V_Pays,V_Site,V_AltDeco,V_LongDeco,V_LatDeco,V_sDuree,V_Duree,V_Date,V_ID)\n";
     $sql .= "VALUES (NULL,NULL,'".$voile."',NULL,0,NULL,NULL,'".str_replace("'", "''", htmlspecialchars_decode($commentaire))."','FRANCE','".str_replace("'", "''", $nomsite)."','".$sitealt."','".$sitelon."','".$sitelat."','".$sduree."',".$duree.",'".$date->format('Y-m-d H:i:s')."',".$id.");";
     //echo $sql."<BR>\n";
@@ -536,7 +536,7 @@ class LogflyReader
       $CSV .= ($vol->voile.$CSVSEP);
       $CSV .= ($vol->site.$CSVSEP);
       $CSV .= ($vol->duree.$CSVSEP);
-      $CSV .= (Utils::timeFromSeconds($vol->duree, TRUE).$CSVSEP);
+      $CSV .= (Utils::timeFromSeconds($vol->duree, 1).$CSVSEP);
       $CSV .= ($tempvol.$CSVSEP);
       $fi = json_decode($this->getFlightsInfos($vol->id));
       if ($fi)
@@ -586,6 +586,14 @@ class LogflyReader
     flush();
   }
 
+  function getNbrVols()
+  {
+    $sql = "SELECT COUNT(1) AS NombreVols from VOL v";
+    $ret = $this->db->query($sql);
+    if($row = $ret->fetchArray(SQLITE3_ASSOC))
+      return intval($row['NombreVols']);
+    return null;
+  }
   function getStats()
   {
     $stats = array();
