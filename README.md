@@ -14,7 +14,7 @@ Visualiseur/editeur rudimentaire de carnet LogFly
 RewriteBase /logfly/
 ...
 ```
-voir aussi la section [sécurité](-sécurité) pour configurer un accès protégé à la base pour éviter que n'importe qui puisse éditer les vols
+voir aussi la section [sécurité](#sécurité) pour configurer un accès protégé à la base pour éviter que n'importe qui puisse éditer les vols
 
  - Renommer le fichier _config.php en config.php
 
