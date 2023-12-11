@@ -454,7 +454,7 @@ window.onload = function() {
 ?>
 <header>
     <div class="bloctitre">
-        <h1><a href="<?php echo $_SERVER["SCRIPT_NAME"];?>">Carnet<?php echo $titrefiltre;?></a></h1>
+        <h1><a href="<?php echo $root_url;?>">Carnet<?php echo $titrefiltre;?></a></h1>
     </div>
     <div class="bloctitre">
         <a href="#" onclick="if (confirm('télécharger une version complète?')) window.open('download.php?fulldb','MyWindow','width=320,height=120'); else window.location='download.php';" title="télécharger la base logfly"><img src="download.svg" width="32px" class="filter-imgcolor"></a><a href="download.php?csv"><img src="csv.svg" width="32px" title="télécharger un fichier csv"></a>
