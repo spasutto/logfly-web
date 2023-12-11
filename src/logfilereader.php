@@ -576,14 +576,18 @@ class LogflyReader
 
   function downloadDB()
   {
+    $dbsize = filesize($this->dbname);
     $readableStream = fopen($this->dbname, 'rb');
     $writableStream = fopen('php://output', 'wb');
 
     header('Content-Type: application/octet-stream');
     header('Content-Disposition: attachment; filename="'.LOGFLYDB.'"');
+    header('Content-Length: '.$dbsize);
     stream_copy_to_stream($readableStream, $writableStream);
     ob_flush();
     flush();
+    @fclose($readableStream);
+    @fclose($writableStream);
   }
 
   function getNbrVols()
