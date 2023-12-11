@@ -1,5 +1,6 @@
 <?php
 include("logfilereader.php");
+//for ($i=0;$i<29;$i++){$pwd = get_temp_base_name();echo strlen($pwd)." ".$pwd."<BR>";}return;
 
 if (isset($_GET['extract_igc'])) {
   if (isset($_GET['id']) && preg_match('/^\d+$/', $_GET['id'])) {
@@ -98,10 +99,9 @@ function extract_igc()
     if ($vol->igc)
       $vols[] = $vol->id;
   }
-  $vols = "[" . implode (",", $vols) . "]";
 ?>
 <script>
-  var vols = <?php echo $vols;?>;
+  var vols = <?php echo "[" . implode (",", $vols) . "]";?>;
   var volstodo = vols.length;
   function extract_igc(id) {
     var xhttp = new XMLHttpRequest();
@@ -142,11 +142,10 @@ function insert_igc()
       $vols[] = $vol->id;
     //if ($vol->id < 550) break;
   }
-  $vols = "[" . implode (",", $vols) . "]";
 ?>
 insertion des IGC... <span id="inserperc"></span><BR>
 <script>
-  let vols = <?php echo $vols;?>;
+  let vols = <?php echo "[" . implode (",", $vols) . "]";?>;
   let base = '<?php echo $tmpbaseid;?>';
   let inserperc = document.getElementById('inserperc');
   let cur = 0;
@@ -196,12 +195,11 @@ insertion des IGC... <span id="inserperc"></span><BR>
         $vols[] = $vol->id;
       //if ($i++ > 10) break;
     }
-    $vols = "[" . implode (",", $vols) . "]";
   ?>
   <script src="lib/igc-xc-score.js"></script>
   <script src="score.js"></script>
   <script>
-    var vols = <?php echo $vols;?>;
+    var vols = <?php echo "[" . implode (",", $vols) . "]";?>;
     var volscore = [];
     var volstodo = vols.length;
     function postFlightScore(id, score) {
@@ -281,10 +279,9 @@ insertion des IGC... <span id="inserperc"></span><BR>
         $vols[] = $vol->id;
       //if ($i++ > 10) break;
     }
-    $vols = "[" . implode (",", $vols) . "]";
   ?>
   <script>
-    var vols = <?php echo $vols;?>;
+    var vols = <?php echo "[" . implode (",", $vols) . "]";?>;
     var volstodo = vols.length;
     function regen_img(id) {
       return new Promise((res,rej) => {
