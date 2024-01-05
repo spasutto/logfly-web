@@ -117,8 +117,9 @@ exit(0);
   }
   #infobox {
     position: absolute;
-    background-color: #98D8E8E0;
+    background-color: #98d8e896;
     width: 100%;
+    /*height: 100%;*/
     top: 0px;
     left: 0px;
     margin: 0px;
@@ -155,10 +156,19 @@ exit(0);
         window.opener.location.reload();
     }
   }
+  function message(mesg)
+  {
+    let msgzone = document.getElementsByName("infobox")[0];
+    msgzone.innerHTML = mesg;
+    msgzone.style.display = (mesg.trim().length == 0)?'none':'block';
+  }
+  function loading(ld=true) {
+    message(ld?"chargement...":"");
+  }
   window.onload = function()
   {
-    loadData();
-    loadVol(id);
+    loading();
+    Promise.all([loadVols(), loadSites(), loadVol(id)]).then(_=>loading(false));
     calcheures();
     calcdate();
 
@@ -184,104 +194,109 @@ exit(0);
     addOption(list, 'Nouveau...', -1, false);
   }
 
-  function loadData() {
-    loadVols();
-    loadSites();
-  }
-
   function loadVols() {
-    let xhttp = new XMLHttpRequest();
-    xhttp.responseType = 'json';
-    message("chargement...");
-    xhttp.onreadystatechange = function() {
-      if (this.readyState == 4 && this.status == 200) {
-        if (!this.response) return;
-        let list = document.getElementsByName('vol')[0];
-        clearList(list);
-        for (let i=0; i<this.response.length; i++)
-          addOption(list, this.response[i].id+" ("+this.response[i].date+") " + this.response[i].site, this.response[i].id);
-        if (id > 0) {
-          list.value = id;
+    return new Promise((res, rej) => {
+      let xhttp = new XMLHttpRequest();
+      xhttp.responseType = 'json';
+      xhttp.onreadystatechange = function() {
+        if (this.readyState == 4 && this.status == 200) {
+          if (!this.response) return;
+          let list = document.getElementsByName('vol')[0];
+          clearList(list);
+          this.response.forEach(vol => addOption(list, vol.id+" ("+vol.date+") " + vol.site, vol.id));
+          if (id > 0) {
+            list.value = id;
+          }
+          document.getElementById('delbtn').style.display = id > 0 ? 'initial':'none';
+          res();
         }
-        document.getElementById('delbtn').style.display = id > 0 ? 'initial':'none';
-        message("");
-      }
-    };
-    xhttp.open("GET", "<?php echo strtok($_SERVER["REQUEST_URI"], '?');?>?listevols", true);
-    xhttp.send();
+      };
+      xhttp.open("GET", "<?php echo strtok($_SERVER["REQUEST_URI"], '?');?>?listevols", true);
+      xhttp.send();
+    });
   }
 
   function loadSites() {
-    let xhttp = new XMLHttpRequest();
-    xhttp.responseType = 'json';
-    message("chargement...");
-    xhttp.onreadystatechange = function() {
-      if (this.readyState == 4 && this.status == 200) {
-        if (!this.response) return;
-        let list = document.getElementsByName('site')[0];
-        clearList(list);
-        for (let i=0; i<this.response.length; i++)
-          addOption(list, this.response[i].site, this.response[i].site);
-        if (id > 0)
-          list.value = cursite;
-        message("");
-      }
-    };
-    xhttp.open("GET", "<?php echo strtok($_SERVER["REQUEST_URI"], '?');?>?listesites", true);
-    xhttp.send();
+    return new Promise((res) => {
+      let xhttp = new XMLHttpRequest();
+      xhttp.responseType = 'json';
+      xhttp.onreadystatechange = function() {
+        if (this.readyState == 4 && this.status == 200) {
+          if (!this.response) {
+            res();
+            return;
+          }
+          let list = document.getElementsByName('site')[0];
+          clearList(list);
+          this.response.forEach(site => addOption(list, site.site, site.site));
+          if (id > 0)
+            list.value = cursite;
+          res();
+        }
+      };
+      xhttp.open("GET", "<?php echo strtok($_SERVER["REQUEST_URI"], '?');?>?listesites", true);
+      xhttp.send();
+    });
   }
 
   function loadVol(id) {
-    document.getElementById('zonescore').style.display = 'none';
-    if (id > 0) getVignette(id);// document.getElementById('vignette').src = 'image.php?id='+id;
-    else document.getElementById('zonevignette').style.display = 'none';
-    //document.getElementById('zonevignette').style.display = id > 0 ? 'initial' : 'none';
-    document.getElementById('score').innerHTML = '';
-    if (id <= 0) return;
-    loadFlightScore(id).then(score => {
-      document.getElementById('zonescore').style.display = 'inline-block';
-      let scoreinfo = 'pas de score';
-      if (score && score.scoreInfo && typeof score.scoreInfo.distance === 'number' && typeof score.scoreInfo.score === 'number') {
-        scoreinfo = `score: ${score.scoreInfo.score}, distance : ${score.scoreInfo.distance}km`;
-      }
-      document.getElementById('score').innerHTML = scoreinfo;
-    }).catch(console.log);
-    let xhttp = new XMLHttpRequest();
-    xhttp.responseType = 'json';
-    message("chargement...");
-    xhttp.onreadystatechange = function() {
-      if (this.readyState == 4 && this.status == 200) {
-        if (!this.response) return;
-        message("");
-        document.getElementsByName("date")[0].value = this.response.date;
-        document.getElementsByName("heure")[0].value = this.response.heure;
-        document.getElementsByName("duree")[0].innerText = this.response.duree;
-        document.getElementsByName("dureeheures")[0].value = this.response.duree.toString().toHHMMSS();//this.response.sduree;
-        document.getElementsByName("dureeHMS")[0].innerText = this.response.duree.toString().toHMS();//this.response.sduree;
-        document.getElementsByName("voile")[0].value = this.response.voile;
-        document.getElementsByName("commentaire")[0].value = this.response.commentaire;
-        cursite = this.response.site;
-        if (this.response.site.trim().length > 0)
-            document.getElementsByName("site")[0].value = this.response.site;
-        else
-            document.getElementsByName("site")[0].selectedIndex  = 0;
-        if (this.response.latdeco && this.response.londeco) {
-            document.getElementsByName("lat")[0].value = this.response.latdeco;
-            document.getElementsByName("lon")[0].value = this.response.londeco;
-            document.getElementsByName("alt")[0].value = this.response.altdeco;
+    return new Promise((res) => {
+      document.getElementById('zonescore').style.display = 'none';
+      if (id > 0) getVignette(id);// document.getElementById('vignette').src = 'image.php?id='+id;
+      else document.getElementById('zonevignette').style.display = 'none';
+      //document.getElementById('zonevignette').style.display = id > 0 ? 'initial' : 'none';
+      document.getElementById('score').innerHTML = '';
+      if (id <= 0) return;
+      loadFlightScore(id).then(score => {
+        document.getElementById('zonescore').style.display = 'inline-block';
+        let scoreinfo = 'pas de score';
+        if (score && score.scoreInfo && typeof score.scoreInfo.distance === 'number' && typeof score.scoreInfo.score === 'number') {
+          scoreinfo = `score: ${score.scoreInfo.score}, distance : ${score.scoreInfo.distance}km`;
         }
-        onSiteChange(document.getElementsByName("site")[0].value);
-        document.getElementsByName("vol")[0].value = id;
-      }
-    };
-    xhttp.open("GET", "<?php echo strtok($_SERVER["REQUEST_URI"], '?');?>?vol&id="+id, true);
-    xhttp.send();
+        document.getElementById('score').innerHTML = scoreinfo;
+      }).catch(console.log);
+      let xhttp = new XMLHttpRequest();
+      xhttp.responseType = 'json';
+      xhttp.onreadystatechange = function() {
+        if (this.readyState == 4 && this.status == 200) {
+          if (!this.response) {
+            res();
+            return;
+          }
+          document.getElementsByName("date")[0].value = this.response.date;
+          document.getElementsByName("heure")[0].value = this.response.heure;
+          document.getElementsByName("duree")[0].innerText = this.response.duree;
+          document.getElementsByName("dureeheures")[0].value = this.response.duree.toString().toHHMMSS();//this.response.sduree;
+          document.getElementsByName("dureeHMS")[0].innerText = this.response.duree.toString().toHMS();//this.response.sduree;
+          document.getElementsByName("voile")[0].value = this.response.voile;
+          document.getElementsByName("commentaire")[0].value = this.response.commentaire;
+          cursite = this.response.site;
+          if (this.response.site.trim().length > 0)
+              document.getElementsByName("site")[0].value = this.response.site;
+          else
+              document.getElementsByName("site")[0].selectedIndex  = 0;
+          if (this.response.latdeco && this.response.londeco) {
+              document.getElementsByName("lat")[0].value = this.response.latdeco;
+              document.getElementsByName("lon")[0].value = this.response.londeco;
+              document.getElementsByName("alt")[0].value = this.response.altdeco;
+          }
+          onSiteChange(document.getElementsByName("site")[0].value);
+          document.getElementsByName("vol")[0].value = id;
+          res();
+        }
+      };
+      xhttp.open("GET", "<?php echo strtok($_SERVER["REQUEST_URI"], '?');?>?vol&id="+id, true);
+      xhttp.send();
+    });
   }
 
   function saveVol()
   {
-    if (!onsubmitVol())
+    btnSave.disabled = true;
+    if (!onsubmitVol()) {
+      btnSave.disabled = false;
       return false;
+    }
     let params = new Object();
     params.id = document.getElementsByName("vol")[0].value;
     params.date = document.getElementsByName("date")[0].value;
@@ -310,9 +325,11 @@ exit(0);
         message("");
         if (this.status != 200 || this.responseText != "OK") {
             alert("l'enregistrement semble avoir échoué ! " + this.status + ' ' + this.responseText);
+            btnSave.disabled = false;
         }
         else {
             alert(params.id>0?"updated !!!":"new record ok !!! ");
+            btnSave.disabled = false;
 
             if (window.opener) {
                 window.opener.location.reload();
@@ -403,11 +420,6 @@ exit(0);
     }
   }
 
-  function message(mesg)
-  {
-    document.getElementsByName("infobox")[0].innerHTML = mesg;
-  }
-
   function onSiteChange(val)
   {
     let champautresite = document.getElementsByName("autresite")[0];
@@ -421,7 +433,8 @@ exit(0);
   {
     id = val;
     document.getElementById('delbtn').style.display = id > 0 ? 'initial':'none';
-    loadVol(val);
+    loading();
+    loadVol(val).then(_=>loading(false));
   }
 
   function calcheures()
@@ -574,7 +587,7 @@ exit(0);
   }
 </script>
 <h3 id="infobox" name="infobox"></h3>
-vol à editer/créer :<BR><select name="vol" onchange="onVolChange(this.value);">
+vol à editer/créer :<BR><select name="vol" onchange="onVolChange(this.value)">
   <option value="-1" selected>Chargement...</option>
 <?php
   //foreach ($lgfr->getRecords()->vols as $vol)
@@ -616,7 +629,7 @@ vol à editer/créer :<BR><select name="vol" onchange="onVolChange(this.value);"
       <a href="#" onclick="calcFlightScore()">recalculer le score</a>
     </div>
   </div>
-  <p><input id="btnSave" type="button" value="Enregistrer" onclick="saveVol()" style="float:right"></p>
+  <p style="text-align:right;padding-bottom:32px"><input id="btnSave" type="button" value="Enregistrer" onclick="saveVol()"></p>
 </form>
 
 </body>
