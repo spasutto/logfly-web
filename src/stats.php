@@ -152,8 +152,11 @@ if (isset($_GET['dl'])) {
   $monthsdiff = $d1->diff($d2)->m + ($d1->diff($d2)->y*12);
   if ($monthsdiff <= 0)
   $monthsdiff = 1;
+  $nbjoursparan=365.25;
+  // en dessous d'une année de pratique on affiche le nombre total comme nombre par an
+  $nbvolsparan = round($nbjoursparan*$nbrvols/(max($nbjoursparan, ($d2->getTimestamp()-$d1->getTimestamp())/(60*60*24))));
   echo "<h1>Statistiques de vol (".$nbrvols." vols, ".Utils::timeFromSeconds($vols->tempstotalvol, TRUE).") :<a href=\"?dl\"><img src=\"csv.svg\" width=\"32px\" title=\"télécharger un fichier csv\"></a></h1>";
-  echo "moyenne : ".round($nbrvols/$monthsdiff)." vols par mois, ".Utils::timeFromSeconds($vols->tempstotalvol/$nbrvols, TRUE)." par vol<BR>";
+  echo "moyenne : ".$nbvolsparan." vols par ans, ".round($nbrvols/$monthsdiff)." vols par mois, ".Utils::timeFromSeconds($vols->tempstotalvol/$nbrvols, TRUE)." par vol<BR>";
   $longer = array_reduce($vols->vols, function($a, $b){
     return $a->duree > $b->duree ? $a : $b;
   });

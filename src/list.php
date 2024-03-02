@@ -82,11 +82,16 @@ function url_with_parameter($paramname, $paramvalue, $paramtoremove = null) {
   <meta name="viewport" content="initial-scale=0.75, maximum-scale=1.0, user-scalable=no" />
   <base href="<?php echo $root_url;?>">
   <style type="text/css">
+  html {
+    background-color: #1a88a71f;
+  }
   body {
     line-height:22px;
     font-family: sans-serif, monospace;
     margin:0;
     padding:0;
+    max-width: 1024px;
+    background-color: white;
   }
   header {
     background-color: #1a73a7;
@@ -99,6 +104,13 @@ function url_with_parameter($paramname, $paramvalue, $paramtoremove = null) {
   }
   .main {
    padding: 3px;
+   overflow-y: auto;
+  }
+  @media only screen and ((min-width: 1024px) and (min-height: 950px)) {
+  /*@media only screen and (min-width: 1024px) {*/
+    .main {
+      max-height: 768px;
+    }
   }
   footer {
     text-align: center;
@@ -263,6 +275,30 @@ function url_with_parameter($paramname, $paramvalue, $paramtoremove = null) {
     $lnpages .= "&nbsp;<".$balise." href=\"".url_with_parameter("offset", $lnoffset, ['vol'])."\" title=\"".$titrepage."\">".($i+1)."</".$balise.">";
   }
   $lnpages .= "</div>";
+
+  /*$lnpages = "<div class=\"ppt_info\">page";
+  echo "";
+    $pagecourante = ($offset/$resperpage)+1;
+    //var_dump($pages);
+  for ($i=0; $i<$nbpages; $i++) {
+    $lnoffset = $i*$resperpage;
+    $balise = ($lnoffset != $offset) ? "a":"div";
+    if ($nbpages>15 && $i > 0 && $i < $nbpages-1) {
+      //$i = $nbpages-2;
+      $lnpages .= "&nbsp;<select onchange=\"window.location='list.php?offset='+this.value\">";
+      //$lnpages .= "&nbsp;<select onchange=\"console.log('list.php?offset='+this.value)\">";
+      for (;$i<$nbpages-1; $i++){
+        $lnoffset = $i*$resperpage;
+        $lnpages .= "<option value=\"".$lnoffset."\" ".(($lnoffset != $offset) ? '':'selected').">".($i+1)."</option>";
+      }
+      $i--;
+      $lnpages .= "</select>";
+    } else {
+      $titrepage = ($lnoffset != $offset) ? ('aller à la page '.($i+1)) : 'ceci est la page courante';
+      $lnpages .= "&nbsp;<".$balise." href=\"".url_with_parameter("offset", $lnoffset, ['vol'])."\" title=\"".$titrepage."\">".($i+1)."</".$balise.">";
+    }
+  }
+  $lnpages .= "</div>";*/
 ?>
 <header>
     <div class="bloctitre">
@@ -288,7 +324,7 @@ function url_with_parameter($paramname, $paramvalue, $paramtoremove = null) {
 //<p>".implode(", ", array_map(function($x) { return "<a href="".url_with_parameter("voile", $x->nom, "offset")."" class="ppt_info">".$x->nom." (".$x->nombrevols." vols, ".Utils::timeFromSeconds($x->tempsvol, 1).")</a> }, $vols->voiles))."</p>
 ?>
 <h2>Voiles (<?php echo count($vols->voiles);?>) : </h2>
-<select class="ppt_info" onchange="onchangevoilesite(this.value, true);"><option value="-1">Aucun filtre de voile</option>
+<select class="ppt_info" onchange="onchangevoilesite(this.value, true);"><option value="-1"><b>Aucun filtre de voile</b></option>
 <?php
   echo implode("\n", array_map(function($x) {global $voile; return "<option value=\"".$x->nom."\" ".((strlen($voile)>0 && $voile==$x->nom)?" selected":"").">".$x->nom." (".$x->nombrevols." vol".($x->nombrevols>1?"s":"").", ".Utils::timeFromSeconds($x->tempsvol, 1).")</option>"; }, $vols->voiles));
 ?>
@@ -347,7 +383,7 @@ function url_with_parameter($paramname, $paramvalue, $paramtoremove = null) {
       $tracefileprefix = urlencode((defined('FOLDER_TL')?FOLDER_TL:"")."/" . $vol->id);
       $url = "trace.html?igc=".$tracefileprefix.".igc&start=".$vol->date->getTimestamp()."&finfo=".$tracefileprefix.".json&elevationservice=".(defined('ELEVATIONSERVICE')?urlencode(ELEVATIONSERVICE):"")."&clegeoportail=".(defined('CLEGEOPORTAIL')?urlencode(CLEGEOPORTAIL):"");
       echo " class=\"zoneimgtrace\" data-id=\"".$vol->id."\"";
-      echo " onClick=\"openTrace(this);return false;\" title=\"voir la trace GPS de ce vol\" style=\"cursor: pointer\"";
+      echo " onClick=\"openTrace(this);return false;\" title=\"voir la trace GPS de ce vol\n(ctrl-click pour ouvrir dans un nouvel onglet)\" style=\"cursor: pointer\"";
       echo "><a href=\"".$url."\"><img src=\"map.svg\" width=\"18px\"></a>";
       $url_image = "image.php?id=".$vol->id;
       $fname = "Tracklogs".DIRECTORY_SEPARATOR.$vol->id.".jpg";

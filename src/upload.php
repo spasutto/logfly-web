@@ -1,4 +1,5 @@
 <?php
+const MAX_FILE_SIZE = 10000000;
 if (isset($_POST['flightscore']) && isset($_GET['id']) && preg_match('/^\d+$/', $_GET['id'])) {
   $id = intval($_GET['id']);
   //echo $_POST['flightscore'];
@@ -42,6 +43,21 @@ return;*/
     $fpt = false;
     $igcs = $_FILES['userfile']['tmp_name'];
     if (!is_array($igcs)) $igcs = array($igcs);
+    $totsize = 0;
+    foreach ($igcs as $igc) {
+      $igcsize = @filesize($igc);
+      $totsize += $igcsize;
+      if ($igcsize > MAX_FILE_SIZE) {
+        header($_SERVER['SERVER_PROTOCOL'] . ' 500 Internal Server Error', true, 500);
+        echo "fichier uploadé trop gros";
+        die();
+      }
+    }
+    if ($concat && $totsize > MAX_FILE_SIZE) {
+      header($_SERVER['SERVER_PROTOCOL'] . ' 500 Internal Server Error', true, 500);
+      echo "fichier concaténé trop gros";
+      die();
+    }
     $tracks = $mgr->uploadIGCs($igcs, $id, $concat);
     if (!$tracks) {
 ?>
@@ -94,24 +110,137 @@ return;*/
   <title>Upload de vol</title>
   <script src="lib/igc-xc-score.js"></script>
   <script src="score.js"></script>
+  <style>
+    * {
+      font-family: sans-serif;
+    }
+    input, select {
+      height:50px;
+    }
+    input[type='button'] {
+      margin-top: 10px;
+    }
+    #zoneigc {
+      text-align:center;
+    }
+    @media (min-width: 768px) {
+      ul {
+        max-width: 650px;
+      }
+      li>span {
+        width: 450px;
+      }
+    }
+    @media (max-width: 768px) {
+      ul {
+        width: 100%;
+      }
+      li>span {
+        width: 80%;
+      }
+    }
+    ul {
+      display: inline-block;
+      list-style-type: none;
+      padding : 0;
+      font-weight: bold;
+    }
+    li {
+      padding: 5px 0px;
+    }
+    li:not(:last-child) {
+      border-bottom: solid 1px black;
+    }
+    li:hover {
+      background-color: #ebebeb;
+    }
+    li>span {
+      display: inline-block;
+    }
+    li::before {
+      content: '\1F4DF ';
+    }
+    li.ok::after {
+      content: ' \2705';
+    }
+    li.ko::after {
+      content: ' \274C';
+    }
+    .wrong {
+      text-decoration: line-through;
+      color: red;
+      font-weight: bolder;
+    }
+  </style>
 </head>
 <body>
 <script>
+  const browseForFile = () => {
+    let lock = false
+    return new Promise((resolve, reject) => {
+      // create input file
+      const el = document.createElement('input');
+      el.id = +new Date();
+      el.style.display = 'none';
+      el.setAttribute('type', 'file');
+      el.setAttribute('multiple', '');
+      el.setAttribute('accept', '.igc');// accept=".gif,.jpg,.jpeg,.png,.doc,.docx"
+      document.body.appendChild(el)
+
+      el.addEventListener('change', () => {
+        lock = true
+        resolve(el.files)
+        // remove dom
+        document.body.removeChild(document.getElementById(el.id))
+      }, { once: true });
+
+      // open file select box
+      el.click();
+
+      // file blur
+      window.addEventListener('focus', () => {
+        setTimeout(() => {
+          if (!lock && document.getElementById(el.id)) {
+            try {
+              //reject(new Error('onblur'))
+              resolve(null);
+              // remove dom
+              document.body.removeChild(document.getElementById(el.id))
+            } catch(err){resolve(null);}
+          }
+        }, 300);
+      }, { once: true })
+    })
+  }
+  function trygetigcinfos(igc) {
+    let ret = {'date': null};
+    if (typeof igc === 'string') {
+      igc = igc.split(/\r?\n/g).map(l => l.trim());
+      let dte = null, fp = null;
+      if (dte = igc.find(l => l[0]=='H' && l.substring(2,5)=='DTE')) {
+        if (/\d{6}/.test(dte.substring(5, 11))) dte = dte.substring(5, 11);
+        else if (/\d{6}/.test(dte.substring(10, 16))) dte = dte.substring(10, 16);
+        else dte = null;
+        if (dte && (fp = igc.find(l => l[0]=='B')) && /\d{6}/.test(fp.substring(1, 7))) {
+          ret.date = new Date(2000+parseInt(dte.substring(4, 6)), parseInt(dte.substring(2, 4))-1, dte.substring(0, 2), fp.substring(1, 3), fp.substring(3, 5), fp.substring(5, 7));
+        }
+      }
+    }
+    return ret;
+  }
+
   function loadVols() {
     var xhttp = new XMLHttpRequest();
     xhttp.responseType = 'json';
     xhttp.onreadystatechange = function() {
       if (this.readyState == 4 && this.status == 200) {
         if (!this.response) return;
-        var list = document.getElementsByName('id')[0];
-        clearList(list);
-        for (let i=0; i<this.response.length; i++)
-          addOption(list, this.response[i].id+" ("+this.response[i].date+") " + this.response[i].site, this.response[i].id);
+        clearList(vol_id);
+        this.response.forEach(vol => addOption(vol_id, vol.id+" ("+vol.date+") " + vol.site, vol.id));
       }
     };
     xhttp.open("GET", "edit.php?listevols", true);
     xhttp.send();
-    igcs.addEventListener('change', handleFileSelect, false);
   }
   function addOption(list, nom, value, selected)
   {
@@ -129,42 +258,99 @@ return;*/
       list.options[i] = null;
     addOption(list, 'Nouveau...', -1, false);
   }
-  function handleFileSelect(evt) {
-    let btnsubmit = document.getElementById('submit');
-    let files = evt.target.files;
-    let totfiles = files.length;
-    let plur = totfiles > 1 ? 's':'';
-    btnsubmit.value = `Envoyer le${plur} fichier${plur}`;
-    btnsubmit.disabled = totfiles <= 0;
-    window.filestoupload = [];
-    [...files].forEach(file => {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        if (e.target.result.split('\n').length <= 10) {
-          alert('le fichier semble invalide !');
-        } else {
-          filestoupload.push(e.target.result);
-        }
-        totfiles--;
-        if (totfiles <= 0) btnsubmit.disabled = evt.target.files.length > window.filestoupload.length;
-      };
-      reader.readAsText(file);
+  function seligc() {
+    btn_seligc.disabled = true;
+    browseForFile().then(handleFileSelect).catch(err=> {
+      btn_seligc.disabled = false;
+      alert('Erreur durant la sélection du fichier!');
+      console.error(err);
     });
   }
-  function onSubmit() {
+  function displayigcinfos(files) {
+    listfiles.innerHTML = "";
+    files = files.map(file => {
+      let igctext = file.name;
+      let fp = trygetigcinfos(file.igc);
+      file.date = -1;
+      if (typeof fp.date?.getMonth === 'function') {
+        file.date = fp.date;
+      }
+      return file;
+    }).sort((a,b) => a.date-b.date);
+    files.forEach(file => {
+      let igctext = file.name;
+      let fp = trygetigcinfos(file.igc);
+      let li = document.createElement("li");
+      let span = document.createElement("span");
+      li.appendChild(span);
+      if (typeof fp.date?.getMonth === 'function') {
+        igctext = `${igctext} (${fp.date.toLocaleString()} UTC)`;
+        filestoupload.push(file.igc);
+        li.classList.add("ok");
+      } else {
+        let err = 'le fichier semble invalide !';
+        if (typeof file.error === 'string') err = file.error;
+        igctext = `<span class="wrong">${igctext}</span> (${err})`;
+        li.classList.add("ko");
+      }
+      span.innerHTML = igctext;
+      listfiles.appendChild(li);
+    });
+    let plur = filestoupload.length > 1 ? 's':'';
+    submit.value = `Envoyer le${plur} fichier${plur}`;
+    submit.disabled = filestoupload.length <= 0;
+  }
+  function handleFileSelect(files) {
+    files = files || [];
+    let totfiles = files.length || 0;
+    submit.disabled = true;
+    window.filestoupload = [];
+    listfiles.innerHTML = totfiles<=0?"":"vérification des traces...";
+    let displayfiles = [];
+    let testfinish = () => {
+      if (totfiles <= 0) {
+        displayigcinfos(displayfiles);
+      }
+    }
+    [...files].forEach(file => {
+      if (file.size <= <?php echo MAX_FILE_SIZE;?>) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          totfiles--;
+          displayfiles.push({'name':file.name, 'igc':e.target.result})
+          testfinish();
+        };
+        try {
+          reader.readAsText(file);
+        } catch (err) {
+          console.error(err);
+          totfiles--;
+          displayfiles.push({'name':file.name, 'igc':null, 'error': 'impossible de charger le fichier'})
+          testfinish();
+        }
+      } else {
+        totfiles--;
+        displayfiles.push({'name':file.name, 'igc':null, 'error': 'fichier trop gros'})
+        testfinish();
+      }
+    });
+    //if (totfiles <= 0)
+      btn_seligc.disabled = false;
+  }
+  function submitfiles() {
     try {
-      let btnsubmit = document.getElementById('submit');
-      btnsubmit.disabled = true;
+      submit.disabled = true;
       const formData = new FormData();
-      let id = document.getElementsByName("id")[0].value;
+      let id = vol_id.value;
       concat.value = false;
-      if (igcs.files.length > 1) {
+      window.filestoupload = window.filestoupload || [];
+      if (filestoupload.length > 1) {
         concat.value = !!confirm('Concaténer les fichiers?');
       }
       formData.append("id", id);
       formData.append("concat", concat.value);
-      for (let i=0; i<igcs.files.length; i++) {
-        //formData.append("userfile[]", igcs.files[i]);
+      for (let i=0; i<filestoupload.length; i++) {
+        //formData.append("userfile[]", filestoupload[i]);
         const blob = new Blob([window.filestoupload[i]], { type: "text/plain" });
         formData.append("userfile[]", blob);
       }
@@ -173,7 +359,6 @@ return;*/
       xhr.onreadystatechange = () => {
         if (xhr.readyState === XMLHttpRequest.DONE) {
           if (xhr.status >= 200 && xhr.status < 300) {
-            igcs.value='';
             let result = xhr.responseText;
             try {
               window.ret = JSON.parse(result);
@@ -186,7 +371,7 @@ return;*/
               if (ret.tracks.length > 0) {
                 scoreigcs(ret.tracks);
               }
-            } catch (e) {console.log(e);alert('oups !!! '+result);}
+            } catch (e) {console.error(e);alert('oups !!! '+result);}
           } else {
             alert(xhr.responseText);
           }
@@ -197,8 +382,13 @@ return;*/
     return false;
   }
   function scoreigcs(tracks) {
-    Promise.all(tracks.map(t => scoreigc(t.id, t.indice))).then(finish).catch(err => {alert('attention, le score n\'a pas pu être calculé');finish();})
-    document.body.innerHTML += 'Vol '+(ret.newvol?"ajouté":"mis à jour")+'<BR>Ne pas fermer cette fenêtre, scoring en cours...';
+    let errfn = err => {console.error(err);alert('attention, le score n\'a pas pu être calculé');finish();};
+    try {
+      Promise.all(tracks.map(t => scoreigc(t.id, t.indice))).then(finish).catch(errfn);
+      document.body.innerHTML += 'Vol '+(ret.newvol?"ajouté":"mis à jour")+'<BR>Ne pas fermer cette fenêtre, scoring en cours...';
+    } catch (err) {
+      errfn(err);
+    }
   }
   function scoreigc(id, indice) {
     return new Promise((resolve) => {
@@ -218,7 +408,12 @@ return;*/
     });
   };
   function finish() {
+    document.body.innerHTML = ret.tracks.length+' score(s) calculé(s)';
+    //handleFileSelect(null); // reinit file chooser
+    window.filestoupload = null;
     if (ret.tracks.length <= 0) return;
+    let editlnk = `edit.php?id=${ret.tracks[0].id}&lat=${encodeURIComponent(ret.tracks[0].fptlat)}&lon=${encodeURIComponent(ret.tracks[0].fptlon)}&alt=${encodeURIComponent(ret.tracks[0].fptalt)}`;
+    document.body.innerHTML += `<BR><a href="${editlnk}">&eacute;diter le vol</a>`;
     // on trie pour éditer éventuellement le premier vol qui n'a pas d'erreur
     ret.tracks = ret.tracks.sort((a,b) => (a.error||'').localeCompare(b.error||''))
     if (window.opener !== window && !window.menubar.visible) {
@@ -229,7 +424,7 @@ return;*/
         }
       }, 500);
     } else {
-      window.location = `edit.php?id=${ret.tracks[0].id}&lat=${encodeURIComponent(ret.tracks[0].fptlat)}&lon=${encodeURIComponent(ret.tracks[0].fptlon)}&alt=${encodeURIComponent(ret.tracks[0].fptalt)}`;
+      window.location = editlnk;
     }
   }
   function postFlightScore(score, id) {
@@ -252,21 +447,20 @@ return;*/
       } catch(e) {console.log(e);alert('attention, le score n\'a pas pu être calculé');resolve();}
     });
   }
+  function changevol() {
+    zoneremarquevol.innerHTML = (vol_id.value < 0)?'':'Vous allez mettre à jour la trace du vol no ' + vol_id.options[vol_id.selectedIndex].text;
+  }
 
   window.onload = loadVols;
 </script>
-<!-- Le type d'encodage des données, enctype, DOIT être spécifié comme ce qui suit -->
-<form enctype="multipart/form-data" action="<?php echo $url;?>" onsubmit="return onSubmit()" method="post">
-    vol à editer/créer :<BR><select name="id">
-  <option value="-1">Nouveau...</option>
-</select><BR>
-  <!-- MAX_FILE_SIZE doit précéder le champ input de type file -->
-  <input type="hidden" name="MAX_FILE_SIZE" value="10000000" />
-  <input type="hidden" id="concat" value="0" />
-  <!-- Le nom de l'élément input détermine le nom dans le tableau $_FILES -->
-  Envoyez le ou les fichiers IGC : <input id="igcs" name="userfile[]" type="file" multiple/><BR><BR>
-  <center><input type="submit" id="submit" value="Envoyer le(s) fichier(s)" disabled/></center>
-</form>
+  <div id="zoneigc">
+    <h3>Vol à editer/créer :</h3>
+    <select id="vol_id" onchange="changevol()"><option value="-1">Nouveau...</option></select><BR>
+    <span id="zoneremarquevol"></span><BR>
+    <input type="hidden" id="concat" value="0" />
+    <input type="button" id="btn_seligc" onclick="seligc()" value="&#x1F4C1;Sélectionner le ou les fichiers IGC"/><BR><ul id="listfiles"></ul><BR>
+    <input type="button" id="submit" onclick="submitfiles();" value="Envoyer le(s) fichier(s)" disabled/>
+  </div>
 
 </body>
 </html>

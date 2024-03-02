@@ -1,5 +1,70 @@
 <?php
 exit(0);return;
+const FICHIER_SITES_FFVL = 'sites_ffvl.json';
+const URL_SITES_FFVL = 'https://data.ffvl.fr/json/sites.json';
+function fetchSitesFFVL() {
+  $timestamp = -1;
+  $size = 0;
+  if (function_exists('curl_version')) {
+    try {
+      // create a new cURL resource with the url
+      $ch = curl_init( URL_SITES_FFVL );     
+
+      // This changes the request method to HEAD
+      curl_setopt($ch, CURLOPT_NOBODY, true);
+      //stop it from outputting stuff to stdout
+      curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+      // attempt to retrieve the modification date
+      curl_setopt($ch, CURLOPT_FILETIME, true);
+      // Execute curl with the configured options
+      $res = curl_exec($ch);
+      
+      if ($res !== false) {
+        // Edit: Fetch the HTTP-code (cred: @GZipp)
+        $code = curl_getinfo($ch, CURLINFO_HTTP_CODE); 
+
+        if ($code >= 200 && $code < 300) {
+          //Last-Modified
+          $ts = curl_getinfo($ch, CURLINFO_FILETIME);
+          if ($ts != -1) { //otherwise unknown
+            $timestamp = $ts; 
+            //echo date("Y-m-d H:i:s", $timestamp); //etc
+          }
+          // To check the size/length:
+          $size = curl_getinfo($ch, CURLINFO_CONTENT_LENGTH_DOWNLOAD); 
+          
+          // To print the content_length:
+          //print( "<br>\n $size bytes");
+        
+          // close cURL resource, and free up system resources
+          curl_close($ch);
+        }
+      }
+    } catch(Exception $err) {
+      //echo $err;
+    }
+  }
+  $sites = null;
+  // si le fichier est différent sur le serveur il faut le mettre à jour en local
+  if (!file_exists(FICHIER_SITES_FFVL) || filemtime(FICHIER_SITES_FFVL) != $timestamp || filesize(FICHIER_SITES_FFVL) != $size) {
+    if (!file_exists(FICHIER_SITES_FFVL)) echo "le fichier n'existe pas\n";
+    else {
+      if (filemtime(FICHIER_SITES_FFVL) != $timestamp) echo "le fichier a un timestamp de ".date("Y-m-d H:i:s", filemtime(FICHIER_SITES_FFVL))." alors que celui de la FFVL ".date("Y-m-d H:i:s", $timestamp)."\n";
+      if (filesize(FICHIER_SITES_FFVL) != $size) echo "le fichier a un size de ".filesize(FICHIER_SITES_FFVL)." alors que celui de la FFVL ".$size."\n";
+    }
+    echo "le fichier doit être mis à jour !";
+    $sites = @file_get_contents('https://data.ffvl.fr/json/sites.json');
+    file_put_contents(FICHIER_SITES_FFVL, $sites);
+    touch(FICHIER_SITES_FFVL, $timestamp);
+  } else {
+    echo "le fichier n'a pas à être mis à jour !";
+    $sites = @file_get_contents(FICHIER_SITES_FFVL);
+  }
+  return @json_decode($sites);
+}
+header('Content-type: application/json');
+fetchSitesFFVL();
+exit(0);return;
 require("config.php");
       try
       {

@@ -39,6 +39,7 @@
     position:fixed;
     left:0;top:0;right:0;bottom:0;
     background-color:white;
+    display: none;
   }
   #map {
     position: fixed;
@@ -137,10 +138,21 @@
   #dispmodes_closed p {
     width: 30px;
   }
+  #loading {
+    position: absolute;
+    top: 0px;bottom: 0px;right: 0px;left: 0px;
+    border: solid 1px #afafaf;
+    background-color: #dfdfdf;
+    padding: 10px;
+    z-index:10;
+  }
 </style>
 
 </head>
 <body>
+<div id="loading">
+  Chargement...
+</div>
 
 <div id="mapcont">
   <div id="map"></div>
@@ -312,6 +324,9 @@
     flstats['alt min'] = `${Math.round(fi.minalt)}m`;
     flstats['vz max'] = `${Math.round(fi.maxvz*10)/10}m/s`;
     flstats['vz min'] = `${Math.round(fi.minvz*10)/10}m/s`;
+    let i=0;
+    let moyvzpos = fi.pts.reduce((acc, cur) => {if (cur.vz > 0){i++;acc.vz+=cur.vz;} return acc;}, {vz:0}).vz / (i||1);
+    flstats['vz moy'] = `${Math.round(moyvzpos*10)/10}m/s`;
     flstats['vx max'] = `${Math.round(fi.maxvx)}km/h`;
     flstats['deniv'] = [`${Math.round(fi.pts[0].alt-fi.pts[fi.pts.length-1].alt)}m`, 'dénivelé entre le décollage et l\'atterissage'];
     let totaltgain = Math.round(fi.totaltgain);
@@ -420,7 +435,9 @@
     }
   });
   graph.addEventListener('onzoom', function(e) {
-    map.fitBounds(L.latLngBounds(L.latLng(e.detail.minlat, e.detail.minlon), L.latLng(e.detail.maxlat, e.detail.maxlon))/*, {padding: [35,35]}*/);
+    if (e.detail.reset != true) {
+      map.fitBounds(L.latLngBounds(L.latLng(e.detail.minlat, e.detail.minlon), L.latLng(e.detail.maxlat, e.detail.maxlon))/*, {padding: [35,35]}*/);
+    }
   });
 
   function fallbackCopyTextToClipboard(text, then, err) {
@@ -484,12 +501,17 @@
 
   function setCursorFromMap(latlng) {
     if (typeof window.fi === 'undefined' || !Array.isArray(window.fi.pts)) return;
-    // slice pour éviter de modifier l'ordre du tableau originel
+    /*// slice pour éviter de modifier l'ordre du tableau originel
     let nearest = window.fi.pts.slice().sort(function(a, b) {
       let la = L.latLng(a.lat, a.lon);
       let lb = L.latLng(b.lat, b.lon);
       return la.distanceTo(latlng) - lb.distanceTo(latlng);
-    })[0];
+    })[0];*/
+    let nearest = window.fi.pts.reduce(function(a, b) {
+      let la = L.latLng(a.lat, a.lon);
+      let lb = L.latLng(b.lat, b.lon);
+      return la.distanceTo(latlng) > lb.distanceTo(latlng) ? b : a;
+    });
     let c1 = map.latLngToLayerPoint(latlng);
     let c2 = map.latLngToLayerPoint(L.latLng(nearest.lat, nearest.lon));
     let dist = Math.sqrt(Math.pow(c2.x-c1.x, 2) + Math.pow(c2.y-c1.y, 2));
@@ -792,6 +814,7 @@
         document.getElementById('formcont').style.display = 'none';
         loadIGC(this.response, typeof finfo !== 'string');
         document.getElementById('igccont').value = this.response;
+        chargement(false);
       }
     };
     xhttp.open("GET", igc, true);
@@ -908,13 +931,19 @@
   function zeroPad(num, places) {
     return String(num).padStart(places, '0');
   }
-
+  function chargement(load=true) {
+    loading.style.display = load?'block':'none';
+  }
   window.onload = function() {
     if (igc) {
+      chargement();
       getIGC(igc);
       document.getElementById('formcont').style.display = 'none';
       if (finfo)
         loadFlightScore(finfo);
+    } else {
+      chargement(false);
+      document.getElementById('formcont').style.display = 'block';
     }
     document.getElementById('frmsub').style.display = 'block';
   };

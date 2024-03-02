@@ -5,9 +5,63 @@ require('Trackfile-Lib/TrackfileLoader.php');
 class TrackLogManager
 {
   const FOLDER_TL = 'Tracklogs';
-
+  const FICHIER_SITES_FFVL = 'sites_ffvl.json';
+  const URL_SITES_FFVL = 'https://data.ffvl.fr/json/sites.json';
+  function fetchSitesFFVL() {
+    $timestamp = -1;
+    $size = 0;
+    if (function_exists('curl_version')) {
+      try {
+        // create a new cURL resource with the url
+        $ch = curl_init( URL_SITES_FFVL );     
+  
+        // This changes the request method to HEAD
+        curl_setopt($ch, CURLOPT_NOBODY, true);
+        //stop it from outputting stuff to stdout
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        // attempt to retrieve the modification date
+        curl_setopt($ch, CURLOPT_FILETIME, true);
+        // Execute curl with the configured options
+        $res = curl_exec($ch);
+        
+        if ($res !== false) {
+          // Edit: Fetch the HTTP-code (cred: @GZipp)
+          $code = curl_getinfo($ch, CURLINFO_HTTP_CODE); 
+  
+          if ($code >= 200 && $code < 300) {
+            //Last-Modified
+            $ts = curl_getinfo($ch, CURLINFO_FILETIME);
+            if ($ts != -1) { //otherwise unknown
+              $timestamp = $ts; 
+              //echo date("Y-m-d H:i:s", $timestamp); //etc
+            }
+            // To check the size/length:
+            $size = curl_getinfo($ch, CURLINFO_CONTENT_LENGTH_DOWNLOAD); 
+            
+            // To print the content_length:
+            //print( "<br>\n $size bytes");
+          
+            // close cURL resource, and free up system resources
+            curl_close($ch);
+          }
+        }
+      } catch(Exception $err) {
+        //echo $err;
+      }
+    }
+    $sites = null;
+    // si le fichier est différent sur le serveur il faut le mettre à jour en local
+    if (!file_exists(FICHIER_SITES_FFVL) || filemtime(FICHIER_SITES_FFVL) != $timestamp || filesize(FICHIER_SITES_FFVL) != $size) {
+      $sites = @file_get_contents('https://data.ffvl.fr/json/sites.json');
+      file_put_contents(FICHIER_SITES_FFVL, $sites);
+      touch(FICHIER_SITES_FFVL, $timestamp);
+    } else {
+      $sites = @file_get_contents(FICHIER_SITES_FFVL);
+    }
+    return @json_decode($sites);
+  }
   public static function getSiteFFVL($lat, $lon) {
-    $sites = @json_decode(@file_get_contents('https://data.ffvl.fr/json/sites.json'));
+    $sites = fetchSitesFFVL();//@json_decode(@file_get_contents('https://data.ffvl.fr/json/sites.json'));
     $site = "";
     $dist = 1000000000;
     if (is_array($sites)) {

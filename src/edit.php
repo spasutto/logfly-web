@@ -82,23 +82,23 @@ else if (isset($_POST['alt']) && preg_match('/^\d+\.?\d*$/', $_POST['alt']))
 }*/
 
 if (isset($_POST['site']) && isset($_POST['date']) && isset($_POST['heure']) && isset($_POST['duree']) && isset($_POST['voile']) && isset($_POST['commentaire'])
-&& preg_match('/^\d+$/', $_POST['duree']))
+  && preg_match('/^\d+$/', $_POST['duree']))
 {
-if ($_POST['site'] != '-1')
-  $site = htmlspecialchars($_POST['site']);
-else if (isset($_POST['autresite']) && $_POST['autresite'] != '')
-  $site = htmlspecialchars($_POST['autresite']);
-else
-{
-  echo "err pas de site renseigné!!!";
-  return;
-}
-if (!$id)
-  $ret = @(new LogflyReader())->addVol($site, $_POST['date'], $_POST['heure'], $_POST['duree'], $_POST['voile'], htmlspecialchars($_POST['commentaire']), $lat, $lon, $alt);
-else
-  $ret = @(new LogflyReader())->updateVol($id, $site, $_POST['date'], $_POST['heure'], $_POST['duree'], $_POST['voile'], htmlspecialchars($_POST['commentaire']), $lat, $lon, $alt);
-echo $ret?"OK":"KO";
-exit(0);
+  if ($_POST['site'] != '-1')
+    $site = htmlspecialchars($_POST['site']);
+  else if (isset($_POST['autresite']) && $_POST['autresite'] != '')
+    $site = htmlspecialchars($_POST['autresite']);
+  else
+  {
+    echo "err pas de site renseigné!!!";
+    return;
+  }
+  if (!$id)
+    $ret = @(new LogflyReader())->addVol($site, $_POST['date'], $_POST['heure'], $_POST['duree'], $_POST['voile'], htmlspecialchars($_POST['commentaire']), $lat, $lon, $alt);
+  else
+    $ret = @(new LogflyReader())->updateVol($id, $site, $_POST['date'], $_POST['heure'], $_POST['duree'], $_POST['voile'], htmlspecialchars($_POST['commentaire']), $lat, $lon, $alt);
+  echo $ret?"OK":"KO";
+  exit(0);
 }
 
 ?><!DOCTYPE html>
@@ -168,7 +168,10 @@ exit(0);
   window.onload = function()
   {
     loading();
-    Promise.all([loadVols(), loadSites(), loadVol(id)]).then(_=>loading(false));
+    // si la position a été spécifiée en entrée c'est que l'on est en train d'ajouter un vol et
+    // c'est peut être un nouveau site, il faut garder sa position
+    let keeplatlon = /[?&]lat=/.test(location.search);
+    Promise.all([loadVols(), loadSites(), loadVol(id, keeplatlon)]).then(_=>loading(false));
     calcheures();
     calcdate();
 
@@ -239,7 +242,7 @@ exit(0);
     });
   }
 
-  function loadVol(id) {
+  function loadVol(id, keeplatlon=false) {
     return new Promise((res) => {
       document.getElementById('zonescore').style.display = 'none';
       if (id > 0) getVignette(id);// document.getElementById('vignette').src = 'image.php?id='+id;
@@ -272,13 +275,13 @@ exit(0);
           document.getElementsByName("commentaire")[0].value = this.response.commentaire;
           cursite = this.response.site;
           if (this.response.site.trim().length > 0)
-              document.getElementsByName("site")[0].value = this.response.site;
+            document.getElementsByName("site")[0].value = this.response.site;
           else
-              document.getElementsByName("site")[0].selectedIndex  = 0;
-          if (this.response.latdeco && this.response.londeco) {
-              document.getElementsByName("lat")[0].value = this.response.latdeco;
-              document.getElementsByName("lon")[0].value = this.response.londeco;
-              document.getElementsByName("alt")[0].value = this.response.altdeco;
+            document.getElementsByName("site")[0].selectedIndex  = 0;
+          if (!keeplatlon && this.response.latdeco && this.response.londeco) {
+            document.getElementsByName("lat")[0].value = this.response.latdeco;
+            document.getElementsByName("lon")[0].value = this.response.londeco;
+            document.getElementsByName("alt")[0].value = this.response.altdeco;
           }
           onSiteChange(document.getElementsByName("site")[0].value);
           document.getElementsByName("vol")[0].value = id;
@@ -293,7 +296,7 @@ exit(0);
   function saveVol()
   {
     btnSave.disabled = true;
-    if (!onsubmitVol()) {
+    if (!isvalideVol()) {
       btnSave.disabled = false;
       return false;
     }
@@ -460,7 +463,7 @@ exit(0);
     document.getElementsByName("jrsem")[0].innerHTML = '('+jrDate+')';
   }
 
-  function onsubmitVol()
+  function isvalideVol()
   {
     let siteid = document.getElementsByName("site")[0].value;
     let champautresite = document.getElementsByName("autresite")[0].value;
@@ -527,7 +530,7 @@ exit(0);
       document.getElementById('zonevignette').style.display = 'initial';
     }).finally(() => {
       document.getElementById('vigntext').innerHTML = "";
-    }).catch(()=>alert('oups'));
+    }).catch((err)=>{alert('oups '+err);console.log(err);});
   }
 
   String.prototype.toHMS = function () {
@@ -598,7 +601,7 @@ vol à editer/créer :<BR><select name="vol" onchange="onVolChange(this.value)">
 //if ($id && !isset($_GET["del"]))
   echo "  <input type=\"button\" id=\"delbtn\" value=\"Suppr\" onclick=\"delVol();\" style=\"display:none\">";
 ?>
-<form action="<?php echo $_SERVER['REQUEST_URI'];?>" name="formvol" method="post" onsubmit="return onsubmitVol();">
+<form action="<?php echo $_SERVER['REQUEST_URI'];?>" name="formvol" method="post" onsubmit="return isvalideVol();">
  <p>Site : <select name="site" onchange="onSiteChange(this.value);">
   <option value="-1" selected>Chargement...</option>
 <?php
