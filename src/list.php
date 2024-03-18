@@ -29,6 +29,9 @@ $text=NULL;
 if (isset($_GET['voile'])) {
   $voile = $_GET['voile'];
 }
+if (isset($_GET['biplace'])) {
+  $biplace = $_GET['biplace'] == "1";
+}
 if (isset($_GET['site'])) {
   $site = $_GET['site'];
 }
@@ -238,7 +241,7 @@ function url_with_parameter($paramname, $paramvalue, $paramtoremove = null) {
     $offset = max(0, intval(($lgfr->getNbrVols() - $volid)/$resperpage)*$resperpage);
     //echo "<h1><a href=\"".$root_url."vol/$volid\">intval((".$lgfr->getNbrVols()." - $volid)/25)*25 = ".$offset."</a></h1>";
   }
-  $vols = $lgfr->getRecords(NULL, FALSE, $resperpage, $offset, $datemin, $datemax, $voile, $site, $text);
+  $vols = $lgfr->getRecords(NULL, FALSE, $resperpage, $offset, $datemin, $datemax, $voile, $site, $text, $biplace);
   $titrefiltre = "";
   if (strlen($voile)>0)
     $titrefiltre .= " pour \"".$voile."\"";
@@ -246,6 +249,11 @@ function url_with_parameter($paramname, $paramvalue, $paramtoremove = null) {
     if (strlen($titrefiltre)>0)
       $titrefiltre .= " et";
     $titrefiltre .= " pour \"".$site."\"";
+  }
+  if ($biplace) {
+    if (strlen($titrefiltre)>0)
+      $titrefiltre .= " et";
+    $titrefiltre .= " biplace";
   }
   if ($text) {
     $titrefiltre .= " filtré par mot clé";
@@ -349,7 +357,7 @@ function url_with_parameter($paramname, $paramvalue, $paramtoremove = null) {
   <?php echo $lnpages;?>
 
 <TABLE id="details">
-<TR><TH>N&deg;</TH><TH>Date</TH><TH>Heure</TH><TH>Duree</TH><TH>Site</TH><TH>Voile</TH><TH>Trace</TH></TR>
+<TR><TH>N&deg;</TH><TH>Date</TH><TH>Heure</TH><TH>Duree</TH><TH>Site</TH><TH>Voile</TH><TH></TH><TH>Trace</TH></TR>
 <?php
   /*echo "<TR>";
   echo "<TD colspan=\"3\"><b>temps de vol :</b></TD>";
@@ -377,6 +385,7 @@ function url_with_parameter($paramname, $paramvalue, $paramtoremove = null) {
     //echo "<TD>". $vol->sduree."</TD>";
     echo "<TD><a href=\"".url_with_parameter("site", $vol->site, "offset")."\" title=\"filtrer les vols pour ce site\">".$vol->site."</a>&nbsp;<a href=\"https://maps.google.com/?q=".$vol->latdeco.",".$vol->londeco."\" target=\"_Blank\" class=\"lien_gmaps\" title=\"google maps\">&#9936;</a></TD>";
     echo "<TD><a href=\"".url_with_parameter("voile", $vol->voile, "offset")."\" title=\"filtrer les vols pour cette voile\">".$vol->voile."</a></TD>";
+    echo "<TD><a href=\"".url_with_parameter("biplace", $vol->biplace, "offset")."\" title=\"filtrer les vols en biplace\">".($vol->biplace?"bi":"")."</a></TD>";
     echo "<TD";
     $url = "";
     if ($vol->igc) {
@@ -406,7 +415,7 @@ function url_with_parameter($paramname, $paramvalue, $paramtoremove = null) {
     } else {
       echo "<TD></TD>";
     }
-    echo "<TR class=\"lignecomm none\"><TD class=\"hidden\">".$vol->id."</TD><TD id=\"comm".$vol->id."\" colspan=\"7\" class=\"desc\"><div id=\"zonecomm".$vol->id."\"></div>";
+    echo "<TR class=\"lignecomm none\"><TD class=\"hidden\">".$vol->id."</TD><TD id=\"comm".$vol->id."\" colspan=\"8\" class=\"desc\"><div id=\"zonecomm".$vol->id."\"></div>";
     echo "<div>météo de ce jour : ";
     //https://www.infoclimat.fr/fr/cartes/observations-meteo/archives/vent_moyen/18/mai/2022/14h/carte-interactive.html
     $libmois = ['janvier', 'fevrier', 'mars', 'avril', 'mai', 'juin', 'juillet', 'aout', 'septembre', 'octobre', 'novembre', 'decembre'];

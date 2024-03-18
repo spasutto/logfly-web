@@ -2,7 +2,10 @@
 include("logfilereader.php");
 //for ($i=0;$i<29;$i++){$pwd = get_temp_base_name();echo strlen($pwd)." ".$pwd."<BR>";}return;
 
-if (isset($_GET['extract_igc'])) {
+if (isset($_GET['upgrade_db'])) {
+  $lgfr = new LogflyReader();
+  $lgfr->upgradeDb();
+} else if (isset($_GET['extract_igc'])) {
   if (isset($_GET['id']) && preg_match('/^\d+$/', $_GET['id'])) {
     $id = intval($_GET['id']);
     $lgfr = new LogflyReader();
@@ -62,6 +65,7 @@ if (isset($_GET['extract_igc'])) {
   clean_tmp_files();
 ?>
 <ul>
+  <li><a href="?upgrade_db">mettre à jour le carnet depuis un carnet Logfly</a></li>
   <li><a href="?extract_igc">extraire les fichiers igc de la base</a></li>
   <li><a href="?insert_igc">télécharger le fichier LogFly.db avec les traces intégrées</a></li>
   <li><a href="?recalcul_igc">calculer les scores igc</a></li>

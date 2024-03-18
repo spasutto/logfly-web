@@ -197,6 +197,9 @@
 </div>
 
 <script>
+var tiles = [], tilepaths = [], finesse = 8, dx=0, dy=0, ddx=0, ddy=0, squareside=100;
+const tileopacity = 0.5;
+
   const fileSelector = document.getElementById('file-selector');
   fileSelector.addEventListener('change', (event) => {
     const fileList = event.target.files;
@@ -326,7 +329,7 @@
     flstats['vz min'] = `${Math.round(fi.minvz*10)/10}m/s`;
     let i=0;
     let moyvzpos = fi.pts.reduce((acc, cur) => {if (cur.vz > 0){i++;acc.vz+=cur.vz;} return acc;}, {vz:0}).vz / (i||1);
-    flstats['vz moy'] = `${Math.round(moyvzpos*10)/10}m/s`;
+    flstats['vz+ moy'] = `${Math.round(moyvzpos*10)/10}m/s`;
     flstats['vx max'] = `${Math.round(fi.maxvx)}km/h`;
     flstats['deniv'] = [`${Math.round(fi.pts[0].alt-fi.pts[fi.pts.length-1].alt)}m`, 'dénivelé entre le décollage et l\'atterissage'];
     let totaltgain = Math.round(fi.totaltgain);
@@ -336,14 +339,17 @@
     } else {
       totaltgain = `${totaltgain}m`;
     }
-    flstats['d+'] = [totaltgain, 'gain total en altitude'];
+    flstats['tot. gain'] = [totaltgain, 'gain total en altitude'];
       //flstats['vx min'] = `${Math.round(fi.minvx)}km/h`;
     updateTraceInfos();
   });
   graph.addEventListener('onposchanged', function(e) {
+    window.curpoint = e.detail;
     let mktxt = e.detail.time.toLocaleString('fr-FR', { /*timeZone: 'UTC'*/ }).substr(-8, 5);
     mktxt+='&nbsp;:&nbsp;'+e.detail.alt+'m';
     mktxt+='<BR>' + e.detail.vz+'m/s&nbsp;&nbsp;&nbsp;'+e.detail.vx+'km/h';
+    let curgr = Math.round(Math.min(12, Math.max(1, e.detail.gr)));
+    //mktxt+=`<BR><a href="#" onclick="calcStartCone(${e.detail.lat, e.detail.lon, curgr, e.detail.alt})">cone (finesse ${curgr})</a>`;
     marker.bindPopup(mktxt).setLatLng([e.detail.lat, e.detail.lon]).update();
     let vz =  Math.min(maxvz, Math.abs(e.detail.vz));
     let dh = mapelem.offsetHeight/2;
@@ -516,10 +522,14 @@
     let c2 = map.latLngToLayerPoint(L.latLng(nearest.lat, nearest.lon));
     let dist = Math.sqrt(Math.pow(c2.x-c1.x, 2) + Math.pow(c2.y-c1.y, 2));
     if (dist>100) return;
+    window.curpoint = nearest;
     //if (L.latLng(nearest.lat, nearest.lon).distanceTo(latlng)>5000) return;
     let mktxt = nearest.time.toLocaleString('fr-FR', { /*timeZone: 'UTC'*/ }).substr(-8, 5);
-    mktxt+='&nbsp;:&nbsp;'+nearest.alt+'m';
+    mktxt+='&nbsp;:&nbsp;'+nearest.alt+'m ('+Math.round(nearest.alt-nearest.gndalt)+'m AGL)';
     mktxt+='<BR>' + nearest.vz+'m/s&nbsp;&nbsp;&nbsp;'+nearest.vx+'km/h';
+    //let gr = Math.round(Math.min(12, Math.max(1, nearest.gr)));
+    //let gr = 8;
+    //mktxt+=`<BR><a href="#" onclick="calcStartCone(${nearest.lat}, ${nearest.lon}, ${gr}, ${nearest.alt})">cone (finesse ${gr})</a>`;
     marker.bindPopup(mktxt).setLatLng([nearest.lat, nearest.lon]).update();
     graph.setPos(nearest);
     updateIcon(nearest);
@@ -527,8 +537,29 @@
 
   function updateIcon(pt) {
     if (typeof window.fi === 'undefined' || !Array.isArray(window.fi.pts)) return;
-    let ratio = (pt.alt-window.fi.minalt)/(window.fi.maxalt-window.fi.minalt);
-    ratio += 0.75; // ratio est contenu dans [0.75, 1.75]
+    let dispmode = window.dispmode ?? 'alt';
+    let iconText = '';
+    switch (dispmode) {
+      case 'vz':
+        iconText = pt.vz + ' m/s';
+        break;
+      case 'vx':
+        iconText = pt.vx + ' km/h';
+        break;
+      case 'GR':
+        iconText = pt.gr;
+        break;
+      case 'altsol':
+        iconText = (pt.alt - pt.gndalt) + ' m';
+        break;
+      case 'alt':
+      default:
+        iconText = parseInt(pt.alt) + ' m';
+        break;
+    }
+    let ratio = 0.5*(pt.alt-window.fi.minalt)/(window.fi.maxalt-window.fi.minalt);
+    //ratio += 0.75; // ratio est contenu dans [0.75, 1.75]
+    ratio += 1.3; // ratio est contenu dans [1.3, 1.8]
     let icon = marker.options.icon;
     icon.options.iconSize = origIconSize.map(s => s * ratio);
     icon.options.iconAnchor = origIconAnchor.map((s,i) => s/origIconSize[i] * icon.options.iconSize[i]);
@@ -536,8 +567,8 @@
     //marker.setRotationOrigin("center");
     marker.setRotationOrigin(icon.options.iconAnchor.map(v => v+"px").join(' '));
     marker.setRotationAngle(pt.bearing+180);
-    let iconText = document.getElementById('icon-paraglider-text');
-    if (iconText) iconText.textContent = parseInt(pt.alt) + ' m';
+    let iconelem = document.getElementById('icon-paraglider-text');
+    if (iconelem) iconelem.textContent = iconText;
   }
 
   function redrawFlight() {
@@ -547,7 +578,7 @@
       hotlineLayer.setStyle({'min':fi.minalt, 'max':fi.maxalt});
     } else if (dispmode == 'vz') {
       hotlineLayer.setLatLngs(window.fi.pts.map(pt => ([pt.lat, pt.lon, pt.vz])));
-      hotlineLayer.setStyle({'min':-5/*fi.minvz*/, 'max':5/*fi.maxvz*/});
+      hotlineLayer.setStyle({'min':-3/*fi.minvz*/, 'max':5/*fi.maxvz*/});
     } else if (dispmode == 'vx') {
       hotlineLayer.setLatLngs(window.fi.pts.map(pt => ([pt.lat, pt.lon, pt.vx])));
       hotlineLayer.setStyle({'min':0/*fi.minvx*/, 'max':fi.maxvx/*55*/});
@@ -779,6 +810,25 @@
     let divDispMode = document.getElementById('divDispMode');
     divDispMode.appendChild(document.getElementById('dispmodes'))
     divDispMode.style.display = 'block';
+    let btnCalcCone = document.getElementById('btnCalcCone');
+    btnCalcCone.onclick = async function() {
+      if (window.conecalculating) {
+        window.conecalculating = false;
+        imgConeLoading.style.display='none';
+        if (window.conecontroller) {
+          conecontroller.abort();
+        }
+      } else {
+        if (window.curpoint) {
+          window.conecalculating=true;
+          imgConeLoading.style.display='block';
+          await calcStartCone(curpoint.lat, curpoint.lon, 8, curpoint.alt);
+          window.conecalculating=false;
+          imgConeLoading.style.display='none';
+        }
+      }
+    };
+    btnCalcCone.style.display = 'block';
   }
   function downloadIGC(igccont, startdate) {
     const a = document.createElement("a");
@@ -959,6 +1009,122 @@
       console.log(points.find(p => p.time.getTime() == timetoseek));
     }
   };
+
+  async function calcStartCone(lat, lon, finesse, amsl) {
+    try {
+      if (window.conecontroller) {
+        conecontroller.abort();
+      }
+      window.conecontroller = new AbortController();
+      let conesignal = conecontroller.signal;
+      if (window.startconept) {
+        map.removeLayer(startconept);
+        startconept = null;
+      }
+      tiles?.forEach(z => {
+        if (z.marker) map.removeLayer(z.marker);
+      });
+      tilepaths?.forEach(z => {
+        map.removeLayer(z);
+      });
+      tiles=[];
+      tilepaths=[];
+      window.startconept = L.marker([lat, lon], {draggable:'false'}).addTo(map);
+      let now = Date.now();
+      window.curfinessecalc = now;
+      const response = await fetch(`elevation/getConeFinesse.php?lat=${lat}&lon=${lon}&finesse=${finesse}&amsl=${amsl}`, {signal: conesignal});
+      const res = await response.json();
+      if (now == window.curfinessecalc) {
+        console.log(res);
+        squareside = res.squareside;
+        dx = res.dx;
+        dy = res.dy;
+        ddx = dx/2;
+        ddy = dy/2;
+        res.tiles.forEach(drawTile);
+      } else {
+        console.log('outdated calc :', res);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  }
+  function color(val, max=300, min=0) {
+    val = Math.max(min, Math.min(val, max));
+    let moy = min + (max-min) / 2;
+    let r = val<moy?0xff:Math.round(((moy-(val-moy))*0xff/moy));
+    let g = val>moy?0xff:Math.round((val*0xff/moy));
+    /*max-=min;
+    val-=min;
+    let a = 0.1*(max-val)/max;
+    a+=0.4;*/
+    let a = tileopacity;
+    let clr = `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}00`;
+    return {color: clr, fillColor: clr, fillOpacity: a};
+  }
+  function drawTile(tile) {
+    if (tile.alt <= 0 && (tile.x!=0 || tile.y!=0)) return;
+    let latlngs = [
+      [tile.pos.lat-ddy,tile.pos.lng-ddx],
+      [tile.pos.lat+ddy,tile.pos.lng-ddx],
+      [tile.pos.lat+ddy,tile.pos.lng+ddx],
+      [tile.pos.lat-ddy,tile.pos.lng+ddx]
+    ];
+    //https://leafletjs.com/reference.html#path
+    let alt = tile.alt<1?Math.round(tile.alt*10)/10:Math.round(tile.alt);
+    let tttext = `${alt}m AGL`;
+    let polygon = L.polygon(latlngs, {opacity:tileopacity, fillOpacity:tileopacity}).bindTooltip(tttext).addTo(map);
+    clroptions = color(tile.alt);
+    tile.marker=polygon;
+    polygon.setStyle({weight:1, lineJoin:'bevel', ...clroptions});
+    //polygon.on('mouseover',() => drawPath(tile));
+    polygon.on('mouseover', function (e) {
+      drawPath(tile);
+    });
+    tiles.push(tile);
+  }
+  function drawPath(tile) {
+    tilepaths?.forEach(z => {
+      z.closePopup();
+      map.removeLayer(z);
+    });
+    // bug si on dézoom en même temps :(
+    tiles.forEach(tile => tile.marker?.closePopup());
+    let origtile = tile;
+    let pathcoord = [];
+    do {
+      pathcoord.push([tile.pos.lat, tile.pos.lng]);
+      //tilepaths.push(L.marker([tile.pos.lat, tile.pos.lng], {draggable:'true'}).addTo(map));
+      tile = tile.parent?tileAt(tile.parent.x, tile.parent.y):null;
+    } while (tile);
+    let alt = origtile.alt<1?Math.round(origtile.alt*10)/10:Math.round(origtile.alt);
+    let d = pathcoord.reduce((acc, cur, i) => {return (i>0)?acc+GraphGPX.distance(pathcoord[i-1][0], pathcoord[i-1][1], cur[0], cur[1]):0;}, 0);
+    let tttext = `${alt}m AGL, ${formatDistance(d)}`;
+    origtile.marker.setTooltipContent(tttext);
+    tilepaths.push(new L.Polyline(pathcoord, {
+      color: 'black',
+      weight: 3,
+      opacity: 1,
+      smoothFactor: 1
+    })/*.bindTooltip(tttext)*/.addTo(map));
+    tilepaths.push(new L.circle([origtile.pos.lat, origtile.pos.lng], {color: 'black', fillOpacity: 1, radius: 0.1*squareside}).bindTooltip(tttext).addTo(map));
+  }
+  function tileAt(x, y) {
+    return tiles.find(t => t.x == x && t.y == y);
+  }
+  function formatDistance(d) {
+    let unit='m';
+    if (d>=1000) {
+      d /= 1000;
+      unit='km';
+    }
+    if (d<100) {
+      d = Math.round(d*10)/10;
+    } else {
+      d = Math.round(d);
+    }
+    return d+unit;
+  }
 </script>
 </body>
 </html>

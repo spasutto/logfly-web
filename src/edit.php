@@ -75,7 +75,12 @@ if (isset($_GET['alt']) && preg_match('/^\d+\.?\d*$/', $_GET['alt']))
   $alt = floatval($_GET['alt']);
 else if (isset($_POST['alt']) && preg_match('/^\d+\.?\d*$/', $_POST['alt']))
   $alt = floatval($_POST['alt']);
-  
+$biplace = 0;
+if (isset($_GET['biplace']) && preg_match('/^[01]$/', $_GET['biplace']))
+  $biplace = intval($_GET['biplace']);
+else if (isset($_POST['biplace']) && preg_match('/^[01]$/', $_POST['biplace']))
+  $biplace = intval($_POST['biplace']);
+
 /*if (isset($_REQUEST["uvol"])) {
     print_r($_POST);
     exit(0);
@@ -94,9 +99,9 @@ if (isset($_POST['site']) && isset($_POST['date']) && isset($_POST['heure']) && 
     return;
   }
   if (!$id)
-    $ret = @(new LogflyReader())->addVol($site, $_POST['date'], $_POST['heure'], $_POST['duree'], $_POST['voile'], htmlspecialchars($_POST['commentaire']), $lat, $lon, $alt);
+    $ret = @(new LogflyReader())->addVol($site, $_POST['date'], $_POST['heure'], $_POST['duree'], $_POST['voile'], htmlspecialchars($_POST['commentaire']), $lat, $lon, $alt, $biplace);
   else
-    $ret = @(new LogflyReader())->updateVol($id, $site, $_POST['date'], $_POST['heure'], $_POST['duree'], $_POST['voile'], htmlspecialchars($_POST['commentaire']), $lat, $lon, $alt);
+    $ret = @(new LogflyReader())->updateVol($id, $site, $_POST['date'], $_POST['heure'], $_POST['duree'], $_POST['voile'], htmlspecialchars($_POST['commentaire']), $lat, $lon, $alt, $biplace);
   echo $ret?"OK":"KO";
   exit(0);
 }
@@ -203,7 +208,10 @@ if (isset($_POST['site']) && isset($_POST['date']) && isset($_POST['heure']) && 
       xhttp.responseType = 'json';
       xhttp.onreadystatechange = function() {
         if (this.readyState == 4 && this.status == 200) {
-          if (!this.response) return;
+          if (!this.response) {
+            res();
+            return;
+          }
           let list = document.getElementsByName('vol')[0];
           clearList(list);
           this.response.forEach(vol => addOption(list, vol.id+" ("+vol.date+") " + vol.site, vol.id));
@@ -249,7 +257,10 @@ if (isset($_POST['site']) && isset($_POST['date']) && isset($_POST['heure']) && 
       else document.getElementById('zonevignette').style.display = 'none';
       //document.getElementById('zonevignette').style.display = id > 0 ? 'initial' : 'none';
       document.getElementById('score').innerHTML = '';
-      if (id <= 0) return;
+      if (id <= 0) {
+        res();
+        return;
+      }
       loadFlightScore(id).then(score => {
         document.getElementById('zonescore').style.display = 'inline-block';
         let scoreinfo = 'pas de score';
@@ -257,7 +268,7 @@ if (isset($_POST['site']) && isset($_POST['date']) && isset($_POST['heure']) && 
           scoreinfo = `score: ${score.scoreInfo.score}, distance : ${score.scoreInfo.distance}km`;
         }
         document.getElementById('score').innerHTML = scoreinfo;
-      }).catch(console.log);
+      }).catch(console.error);
       let xhttp = new XMLHttpRequest();
       xhttp.responseType = 'json';
       xhttp.onreadystatechange = function() {
@@ -272,6 +283,7 @@ if (isset($_POST['site']) && isset($_POST['date']) && isset($_POST['heure']) && 
           document.getElementsByName("dureeheures")[0].value = this.response.duree.toString().toHHMMSS();//this.response.sduree;
           document.getElementsByName("dureeHMS")[0].innerText = this.response.duree.toString().toHMS();//this.response.sduree;
           document.getElementsByName("voile")[0].value = this.response.voile;
+          document.getElementsByName("biplace")[0].checked = this.response.biplace;
           document.getElementsByName("commentaire")[0].value = this.response.commentaire;
           cursite = this.response.site;
           if (this.response.site.trim().length > 0)
@@ -306,6 +318,7 @@ if (isset($_POST['site']) && isset($_POST['date']) && isset($_POST['heure']) && 
     params.heure = document.getElementsByName("heure")[0].value;
     params.duree = document.getElementsByName("duree")[0].innerText;
     params.voile = document.getElementsByName("voile")[0].value;
+    params.biplace = document.getElementsByName("biplace")[0].checked?1:0;
     params.commentaire = document.getElementsByName("commentaire")[0].value;
     params.site = document.getElementsByName("site")[0].value;
     params.lat = document.getElementsByName("lat")[0].value;
@@ -618,7 +631,7 @@ vol à editer/créer :<BR><select name="vol" onchange="onVolChange(this.value)">
   <p>Date : <input type="text" name="date" value="<?php echo date('d/m/Y');?>" onKeyUp="calcdate();"/>&nbsp;&nbsp;<span name="jrsem"></span>
   Heure : <input type="text" name="heure" value="<?php echo date('H:i:s');?>"/></p>
   <p>Durée : <input type="text" name="dureeheures" onKeyUp="calcsecondes()"/>(<span name="dureeHMS"></span>)&nbsp;soit&nbsp;<span name="duree">0</span>&nbsp;secondes</p>
-  <p>Voile : <input type="text" name="voile" /></p>
+  <p>Voile : <input type="text" name="voile" /> <label for="biplace">Biplace : </label><input type="checkbox" name="biplace" id="biplace" /></p>
   <p>Commentaire : <textarea name="commentaire" class="fullwidth" rows="10"></textarea></p>
   <div style="/*height:40px*/display:inline-block;">
     <input type="checkbox" name="deligc" id="cbdeligc" value="1"><label for="cbdeligc">supprimer le fichier IGC</label><BR>

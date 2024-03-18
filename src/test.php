@@ -1,5 +1,10 @@
 <?php
 exit(0);return;
+header("Content-Type: text/plain");
+require('tracklogmanager.php');
+$lgfr = new LogflyReader();
+$lgfr->downgradeDB();
+exit(0);return;
 const FICHIER_SITES_FFVL = 'sites_ffvl.json';
 const URL_SITES_FFVL = 'https://data.ffvl.fr/json/sites.json';
 function fetchSitesFFVL() {

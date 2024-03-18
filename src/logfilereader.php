@@ -5,7 +5,7 @@ require("logfileutils.php");
 
 class Vol
 {
-  public $id, $date, $duree, $sduree, $site, $latdeco, $londeco, $commentaire, $voile;
+  public $id, $date, $duree, $sduree, $site, $latdeco, $londeco, $commentaire, $voile, $biplace;
 }
 class Voile
 {
@@ -105,8 +105,12 @@ class LogflyReader
     }
     return -1;
   }
+  
+  function cleanField($field) {
+    return str_replace(array('\\', '\'', '"'), '', $field);
+  }
 
-  function updateVol($id, $nomsite, $date, $heure, $duree, $voile, $commentaire, $lat = 0.0, $lon = 0.0, $alt = 0.0)
+  function updateVol($id, $nomsite, $date, $heure, $duree, $voile, $commentaire, $lat = 0.0, $lon = 0.0, $alt = 0.0, $biplace=0)
   {
     if (!$this->existeVolId($id))
       return $this->addVol($nomsite, $date, $heure, $duree, $voile, $commentaire, $id);
@@ -114,7 +118,7 @@ class LogflyReader
     if (strlen($heure) != 8)
       $heureformat = "H:i";
     $date =  DateTime::createFromFormat('d/m/Y '.$heureformat, $date." ".$heure);
-    $nomsite = strtoupper($nomsite);
+    $nomsite = trim(strtoupper($nomsite));
     $site = $this->getInfoSite($nomsite);
     //echo "<pre>".print_r($site)."</pre>";
     if (!$site)
@@ -122,7 +126,8 @@ class LogflyReader
     //echo "<pre>".print_r($site)."</pre>";
     $sduree = Utils::timeFromSeconds($duree, 1);
     //echo print_r($site);
-    $sql = "UPDATE Vol SET V_Score=NULL,V_League=NULL,V_Engin='".$voile."',V_CFD=NULL,UTC=0,V_Photos=NULL,V_Commentaire='".str_replace("'", "''", htmlspecialchars_decode($commentaire))."',V_Pays='FRANCE',V_Site='".str_replace("'", "''", $site->nom)."',V_AltDeco='".$site->altitude."',V_LongDeco='".$site->longitude."',V_LatDeco='".$site->latitude."',V_sDuree='".$sduree."',V_Duree=".$duree.",V_Date='".$date->format('Y-m-d H:i:s')."' WHERE V_ID=".$id.";";
+    $voile = trim($this->cleanField($voile));
+    $sql = "UPDATE Vol SET V_Score=NULL,V_League=NULL,V_Engin='".$voile."',V_Biplace='".$biplace."',V_CFD=NULL,UTC=0,V_Photos=NULL,V_Commentaire='".str_replace("'", "''", htmlspecialchars_decode($commentaire))."',V_Pays='FRANCE',V_Site='".str_replace("'", "''", $site->nom)."',V_AltDeco='".$site->altitude."',V_LongDeco='".$site->longitude."',V_LatDeco='".$site->latitude."',V_sDuree='".$sduree."',V_Duree=".$duree.",V_Date='".$date->format('Y-m-d H:i:s')."' WHERE V_ID=".$id.";";
     //echo $sql."<BR>\n";
     $ret = $this->db->query($sql);
     if(!$ret)
@@ -133,7 +138,7 @@ class LogflyReader
     return TRUE;
   }
 
-  function addVol($nomsite, $date, $heure, $duree, $voile, $commentaire, $id=FALSE, $lat = 0.0, $lon = 0.0, $alt = 0.0)
+  function addVol($nomsite, $date, $heure, $duree, $voile, $commentaire, $id=FALSE, $lat = 0.0, $lon = 0.0, $alt = 0.0, $biplace=0)
   {
     $heureformat = "H:i:s";
     if (strlen($heure) < 8)
@@ -145,7 +150,7 @@ class LogflyReader
     $sitelon = 0;
     $sitelat = 0;
     if ($nomsite != null) {
-      $nomsite = strtoupper($nomsite);
+      $nomsite = trim(strtoupper($nomsite));
       $site = $this->getInfoSite($nomsite);
       if (!$site)
         $site = $this->createSite($nomsite, $lat, $lon, $alt);
@@ -155,9 +160,10 @@ class LogflyReader
     } else {
       $nomsite = "";
     }
+    $voile = trim($this->cleanField($voile));
     $sduree = Utils::timeFromSeconds($duree, 1);
-    $sql = "INSERT INTO Vol (V_Score,V_League,V_Engin,V_CFD,UTC,V_Photos,V_IGC,V_Commentaire,V_Pays,V_Site,V_AltDeco,V_LongDeco,V_LatDeco,V_sDuree,V_Duree,V_Date,V_ID)\n";
-    $sql .= "VALUES (NULL,NULL,'".$voile."',NULL,0,NULL,NULL,'".str_replace("'", "''", htmlspecialchars_decode($commentaire))."','FRANCE','".str_replace("'", "''", $nomsite)."','".$sitealt."','".$sitelon."','".$sitelat."','".$sduree."',".$duree.",'".$date->format('Y-m-d H:i:s')."',".$id.");";
+    $sql = "INSERT INTO Vol (V_Score,V_League,V_Engin,V_Biplace,V_CFD,UTC,V_Photos,V_IGC,V_Commentaire,V_Pays,V_Site,V_AltDeco,V_LongDeco,V_LatDeco,V_sDuree,V_Duree,V_Date,V_ID)\n";
+    $sql .= "VALUES (NULL,NULL,'".$voile."',".$biplace.",NULL,0,NULL,NULL,'".str_replace("'", "''", htmlspecialchars_decode($commentaire))."','FRANCE','".str_replace("'", "''", $nomsite)."','".$sitealt."','".$sitelon."','".$sitelat."','".$sduree."',".$duree.",'".$date->format('Y-m-d H:i:s')."',".$id.");";
     //echo $sql."<BR>\n";
     $ret = $this->db->query($sql);
     if(!$ret)
@@ -239,7 +245,7 @@ class LogflyReader
     return $ret != FALSE;
   }
 
-  function getInfoSite($nom = NULL, $tritemps = FALSE, $datemin=null, $datemax=null, $voile=null)
+  function getInfoSite($nom = NULL, $tritemps = FALSE, $datemin=null, $datemax=null, $voile=null, $biplace=null)
   {
     $sites = array();
     //$sql = "SELECT S_Alti, S_Nom, S_Latitude, S_Longitude from SITE WHERE S_Nom= '".$nom."';";
@@ -250,6 +256,10 @@ class LogflyReader
       $sql .= " AND s.S_Nom=v.V_Site";
     if ($voile !== null)
       $sql .= " AND v.V_Engin='".str_replace("'", "''", $voile)."'";
+    if ($biplace !== null) {
+      $biplace = $biplace>0?1:0;
+      $sql .= " AND v.V_Biplace=".$biplace."";
+    }
     if ($datemin instanceof DateTime && $datemin !== FALSE)
       $sql .= " AND V_Date>='".$datemin->format('Y-m-d')."'";
     if ($datemax instanceof DateTime && $datemax !== FALSE)
@@ -381,7 +391,7 @@ class LogflyReader
     return $row['V_Commentaire'];
   }
 
-  function getRecords($id=null, $tritemps = FALSE, $maxres = null, $offset = null, $datemin=null, $datemax=null, $voile=null, $site=null, $text=null)
+  function getRecords($id=null, $tritemps = FALSE, $maxres = null, $offset = null, $datemin=null, $datemax=null, $voile=null, $site=null, $text=null, $biplace=null)
   {
     //$this->db->query("delete from SITE where s_nom=''");
     $unvol = FALSE;
@@ -429,6 +439,10 @@ class LogflyReader
         $cond .= " )";
       }
     }
+    if ($biplace !== null) {
+      $biplace = $biplace>0?1:0;
+      $cond .= " AND V_Biplace=".$biplace."";
+    }
     if (strlen($cond)>3)
       $sql .= " WHERE ".$cond;
     if ($tritemps)
@@ -451,7 +465,7 @@ class LogflyReader
     $row = $ret->fetchArray();
     $vols->tempstotalvol = $numRows = $row['sum'];
 
-    $columns = "V_ID,V_Date,V_Duree,V_sDuree,V_Site,S_Latitude,S_Longitude,V_Engin,(V_IGC IS NOT NULL AND TRIM(V_IGC) != '') AS V_IGC";
+    $columns = "V_ID,V_Date,V_Duree,V_sDuree,V_Site,S_Latitude,S_Longitude,V_Engin,(V_IGC IS NOT NULL AND TRIM(V_IGC) != '') AS V_IGC, V_Biplace";
     if ($id > 0)
       $columns = $columns.",V_Commentaire";
     else
@@ -471,6 +485,7 @@ class LogflyReader
       $vol->commentaire = $row['V_Commentaire'];
       $vol->voile = $row['V_Engin'];
       $vol->igc = $row['V_IGC'];
+      $vol->biplace = $row['V_Biplace']>0;
 
       if (!$vol->igc) {
         $igc_file = dirname(__FILE__) . DIRECTORY_SEPARATOR . FOLDER_TL . DIRECTORY_SEPARATOR . $vol->id .".igc";
@@ -494,6 +509,10 @@ class LogflyReader
     $sql = "SELECT V_Engin, SUM(V_Duree) AS TempsVol, COUNT(1) AS NombreVols from VOL WHERE 1=1";
     if ($site !== null)
       $sql .= " AND V_Site='".str_replace("'", "''", $site)."'";
+    if ($biplace !== null) {
+      $biplace = $biplace>0?1:0;
+      $sql .= " AND V_Biplace=".$biplace."";
+    }
     if ($datemin instanceof DateTime && $datemin !== FALSE)
       $sql .= " AND V_Date>='".$datemin->format('Y-m-d')."'";
     if ($datemax instanceof DateTime && $datemax !== FALSE)
@@ -509,7 +528,7 @@ class LogflyReader
       $vols->voiles[] = $voile;
     }
 
-    $vols->sites = $this->getInfoSite(null, $tritemps, $datemin, $datemax, $voilenom);
+    $vols->sites = $this->getInfoSite(null, $tritemps, $datemin, $datemax, $voilenom, $biplace);
     return $vols;
   }
 
@@ -524,7 +543,7 @@ class LogflyReader
     $tempvol = 0;
     $CSVSEP = "\t";
     $CSV = "";
-    $CSV .= ("No".$CSVSEP."date".$CSVSEP."voile".$CSVSEP."site".$CSVSEP."duree (en secondes)".$CSVSEP."duree".$CSVSEP."temps de vol total (en secondes)".$CSVSEP."score".$CSVSEP."distance".$CSVSEP."type de parcours");
+    $CSV .= ("No".$CSVSEP."date".$CSVSEP."voile".$CSVSEP."biplace".$CSVSEP."site".$CSVSEP."duree (en secondes)".$CSVSEP."duree".$CSVSEP."temps de vol total (en secondes)".$CSVSEP."score".$CSVSEP."distance".$CSVSEP."type de parcours");
     if (!$stats)
       $CSV .= ($CSVSEP."commentaire");
     $CSV .= ("\n");
@@ -534,6 +553,7 @@ class LogflyReader
       $CSV .= ($vol->id.$CSVSEP);
       $CSV .= ($vol->date->format('d/m/Y H:i:s').$CSVSEP);
       $CSV .= ($vol->voile.$CSVSEP);
+      $CSV .= ($vol->biplace.$CSVSEP);
       $CSV .= ($vol->site.$CSVSEP);
       $CSV .= ($vol->duree.$CSVSEP);
       $CSV .= (Utils::timeFromSeconds($vol->duree, 1).$CSVSEP);
@@ -606,6 +626,31 @@ class LogflyReader
     while($row = $ret->fetchArray(SQLITE3_ASSOC))
       $stats[$row['Annee']] = (object) ['TempsVol' => intval($row['TempsVol']), 'NombreVols' => intval($row['NombreVols'])];
     return $stats;
+  }
+  
+  function upgradeDB() {
+    //$this->db->query("UPDATE VOL SET V_Biplace=1 WHERE V_engin='Dual 2 42'");
+    $found = false;
+    $ret = $this->db->query("PRAGMA table_info('VOL');");
+    while($row = $ret->fetchArray(SQLITE3_ASSOC)) {
+      if ($row["name"] == "V_Biplace") {
+        $found = true;
+        break;
+      }
+      //var_dump($row);
+    }
+    if ($found) {
+      echo "carnet déjà mis à jour";
+      exit(0);
+    } else {
+      $this->db->query("ALTER TABLE VOL ADD V_Biplace INTEGER;");
+      echo "carnet mis à jour";
+    }
+  }
+  
+  function downgradeDB() {
+    //CREATE TABLE Vol (V_ID integer NOT NULL PRIMARY KEY, V_Date TimeStamp, V_Duree integer, V_sDuree varchar(20), V_LatDeco double, V_LongDeco double, V_AltDeco integer, V_Site varchar(100), V_Pays varchar(50), V_Commentaire Long Text, V_IGC Long Text, V_Photos Long Text,UTC integer, V_CFD integer,V_Engin Varchar(10), V_League integer, V_Score Long Text, V_Biplace INTEGER)
+    //CREATE TABLE Site(S_ID integer NOT NULL primary key,S_Nom varchar(50),S_Localite varchar(50),S_CP varchar(8),S_Pays varchar(50),S_Type varchar(1),S_Orientation varchar(20),S_Alti varchar(12),S_Latitude double,S_Longitude double,S_Commentaire Long Text,S_Maj varchar(10))
   }
 }
 ?>
