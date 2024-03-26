@@ -153,8 +153,8 @@ if (isset($_REQUEST['agl']) && is_numeric($_REQUEST['agl'])) {
 
 calcStartCone((object) ["lat" => $lat, "lng" => $lng], $finesse, $startalt, $typealt);
 
-//foreach ($tiles as $tile)
-//$tile->alt = round($tile->alt);
+foreach ($tiles as $tile)
+  $tile->alt = round($tile->alt*10)/10;
 /*for ($i=count($tiles); $i>=0; $i--) {
   if ($tiles[$i]->alt <= 0) array_splice($tiles, $i, 1);
   else $tiles[$i]->alt = round($tiles[$i]->alt);

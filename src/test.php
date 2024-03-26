@@ -1,4 +1,5 @@
 <?php
+
 exit(0);return;
 header("Content-Type: text/plain");
 require('tracklogmanager.php');

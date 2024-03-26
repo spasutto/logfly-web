@@ -1078,28 +1078,34 @@ const tileopacity = 0.5;
     tile.marker=polygon;
     polygon.setStyle({weight:1, lineJoin:'bevel', ...clroptions});
     //polygon.on('mouseover',() => drawPath(tile));
-    polygon.on('mouseover', function (e) {
-      drawPath(tile);
+    polygon.on('mouseover', function () {
+        drawPath(tile);
+      });
+    //polygon.on('mouseout', clearPaths);
+      tiles.push(tile);
+    }
+  function clearPaths(origtile) {
+    // bug de tooltips qui restent ouverts si on déplace la carte en même temps
+    tiles.forEach(tile => {
+      if (tile == origtile) return;
+      tile.marker.closeTooltip();
     });
-    tiles.push(tile);
+      tilepaths?.forEach(z => {
+        map.removeLayer(z);
+      });
+    tilepaths=[];
   }
   function drawPath(tile) {
-    tilepaths?.forEach(z => {
-      z.closePopup();
-      map.removeLayer(z);
-    });
-    // bug si on dézoom en même temps :(
-    tiles.forEach(tile => tile.marker?.closePopup());
-    let origtile = tile;
+    clearPaths(tile);
     let pathcoord = [];
+    let origtile = tile;
     do {
       pathcoord.push([tile.pos.lat, tile.pos.lng]);
       //tilepaths.push(L.marker([tile.pos.lat, tile.pos.lng], {draggable:'true'}).addTo(map));
       tile = tile.parent?tileAt(tile.parent.x, tile.parent.y):null;
     } while (tile);
-    let alt = origtile.alt<1?Math.round(origtile.alt*10)/10:Math.round(origtile.alt);
     let d = pathcoord.reduce((acc, cur, i) => {return (i>0)?acc+GraphGPX.distance(pathcoord[i-1][0], pathcoord[i-1][1], cur[0], cur[1]):0;}, 0);
-    let tttext = `${alt}m AGL, ${formatDistance(d)}`;
+    let tttext = `${formatAlt(origtile.alt)}m AGL (${formatAlt(origtile.alt+origtile.altgnd)}m), ${formatDistance(d)}`;
     origtile.marker.setTooltipContent(tttext);
     tilepaths.push(new L.Polyline(pathcoord, {
       color: 'black',
@@ -1111,6 +1117,9 @@ const tileopacity = 0.5;
   }
   function tileAt(x, y) {
     return tiles.find(t => t.x == x && t.y == y);
+  }
+  function formatAlt(alt) {
+    return alt<1?Math.round(alt*10)/10:Math.round(alt);
   }
   function formatDistance(d) {
     let unit='m';

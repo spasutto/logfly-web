@@ -182,6 +182,7 @@ function loadCarto(clegeoportail, disablescrollzoom, rootelem) {
       let btn = L.DomUtil.create('button');
       btn.id = "btnCalcCone";
       btn.title = "Calculer le cone de finesse à la position actuelle";
+      btn.style.display = 'none';
       btn.appendChild(div);
 
       return btn;

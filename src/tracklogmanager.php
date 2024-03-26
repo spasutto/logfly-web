@@ -7,13 +7,13 @@ class TrackLogManager
   const FOLDER_TL = 'Tracklogs';
   const FICHIER_SITES_FFVL = 'sites_ffvl.json';
   const URL_SITES_FFVL = 'https://data.ffvl.fr/json/sites.json';
-  function fetchSitesFFVL() {
+  static function fetchSitesFFVL() {
     $timestamp = -1;
     $size = 0;
     if (function_exists('curl_version')) {
       try {
         // create a new cURL resource with the url
-        $ch = curl_init( URL_SITES_FFVL );     
+        $ch = curl_init( self::URL_SITES_FFVL );     
   
         // This changes the request method to HEAD
         curl_setopt($ch, CURLOPT_NOBODY, true);
@@ -51,17 +51,17 @@ class TrackLogManager
     }
     $sites = null;
     // si le fichier est différent sur le serveur il faut le mettre à jour en local
-    if (!file_exists(FICHIER_SITES_FFVL) || filemtime(FICHIER_SITES_FFVL) != $timestamp || filesize(FICHIER_SITES_FFVL) != $size) {
+    if (!file_exists(self::FICHIER_SITES_FFVL) || filemtime(self::FICHIER_SITES_FFVL) != $timestamp || filesize(self::FICHIER_SITES_FFVL) != $size) {
       $sites = @file_get_contents('https://data.ffvl.fr/json/sites.json');
-      file_put_contents(FICHIER_SITES_FFVL, $sites);
-      touch(FICHIER_SITES_FFVL, $timestamp);
+      file_put_contents(self::FICHIER_SITES_FFVL, $sites);
+      touch(self::FICHIER_SITES_FFVL, $timestamp);
     } else {
-      $sites = @file_get_contents(FICHIER_SITES_FFVL);
+      $sites = @file_get_contents(self::FICHIER_SITES_FFVL);
     }
     return @json_decode($sites);
   }
   public static function getSiteFFVL($lat, $lon) {
-    $sites = fetchSitesFFVL();//@json_decode(@file_get_contents('https://data.ffvl.fr/json/sites.json'));
+    $sites = TrackLogManager::fetchSitesFFVL();//@json_decode(@file_get_contents('https://data.ffvl.fr/json/sites.json'));
     $site = "";
     $dist = 1000000000;
     if (is_array($sites)) {
