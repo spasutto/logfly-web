@@ -303,6 +303,13 @@ const tileopacity = 0.5;
     });
     map.on('movestart', closegraphcfg);
     map.on('zoomstart', closegraphcfg);
+    map.on('contextmenu',function(e){
+      //e.latlng
+      map.closePopup();
+      if (!window.curpoint) return;
+      if (!window.contextpopup) window.contextpopup = L.popup();
+      contextpopup.setLatLng(L.latLng(curpoint.lat, curpoint.lon)).setContent(`<button onclick=\"clearCone();clickCalcCone(${JSON.stringify(curpoint).replace(/"/g, '&quot;')});map.closePopup();\">calculer le c&ocirc;ne de finesse (8)<BR> à cet endroit</button>`).openOn(map);
+    });
   });
   var binfos = false;
 
@@ -812,31 +819,32 @@ const tileopacity = 0.5;
     let divDispMode = document.getElementById('divDispMode');
     divDispMode.appendChild(document.getElementById('dispmodes'))
     divDispMode.style.display = 'block';
-    let btnCalcCone = document.getElementById('btnCalcCone');
-    btnCalcCone.onclick = async function() {
-      if (window.conecalculating) {
-        window.conecalculating = false;
-        imgConeLoading.style.display='none';
-        if (window.conecontroller) {
-          conecontroller.abort();
-        }
-      } else {
-        if (window.curpoint) {
-          if (window.curpointcone) {
-            clearCone();
-            window.curpointcone = null;
-          } else {
-            window.conecalculating=true;
-            imgConeLoading.style.display='block';
-            await calcStartCone(curpoint.lat, curpoint.lon, 8, curpoint.alt);
-            window.conecalculating=false;
-            window.curpointcone = curpoint;
-            imgConeLoading.style.display='none';
-          }
+    window.btnCalcCone = document.getElementById('btnCalcCone');
+    btnCalcCone.onclick = clickCalcCone;
+    btnCalcCone.style.display = 'block';
+  }
+  async function clickCalcCone(startpoint=null) {
+    startpoint = startpoint || window.curpoint;
+    if (window.conecalculating) {
+      window.conecalculating = false;
+      imgConeLoading.style.display='none';
+      if (window.conecontroller) {
+        conecontroller.abort();
+      }
+    } else {
+      if (startpoint) {
+        if (window.curpointcone) {
+          clearCone();
+        } else {
+          window.conecalculating=true;
+          imgConeLoading.style.display='block';
+          await calcStartCone(startpoint.lat, startpoint.lon, 8, startpoint.alt);
+          window.conecalculating=false;
+          window.curpointcone = startpoint;
+          imgConeLoading.style.display='none';
         }
       }
-    };
-    btnCalcCone.style.display = 'block';
+    }
   }
   function downloadIGC(igccont, startdate) {
     const a = document.createElement("a");
@@ -1031,6 +1039,7 @@ const tileopacity = 0.5;
       });
       tiles=[];
       tilepaths=[];
+      window.curpointcone = null;
   }
   async function calcStartCone(lat, lon, finesse, amsl) {
     try {

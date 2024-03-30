@@ -553,7 +553,7 @@ class LogflyReader
       $CSV .= ($vol->id.$CSVSEP);
       $CSV .= ($vol->date->format('d/m/Y H:i:s').$CSVSEP);
       $CSV .= ($vol->voile.$CSVSEP);
-      $CSV .= ($vol->biplace.$CSVSEP);
+      $CSV .= (($vol->biplace?'oui':'non').$CSVSEP);
       $CSV .= ($vol->site.$CSVSEP);
       $CSV .= ($vol->duree.$CSVSEP);
       $CSV .= (Utils::timeFromSeconds($vol->duree, 1).$CSVSEP);
