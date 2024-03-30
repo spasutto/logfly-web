@@ -46,7 +46,7 @@
     padding: 0;
     margin: 0;
   }
-  html, body, #map {
+  html, body, #map_cont {
     height: 100%;
     width: 100%;
   }
@@ -67,7 +67,7 @@
 
 
 
-<div id="map"></div>
+<div id="map_cont"></div>
 
 <span id="infobox"></span>
 <script>
@@ -161,12 +161,12 @@
   map.on('click', onMapClick);*/
 
 
-  var map = loadCarto("<?php if (defined('CLEGEOPORTAIL')) echo CLEGEOPORTAIL;?>");
-  //window.onload= function() {
+  window.onload= async function() {
+    window.map = await loadCarto("<?php if (defined('CLEGEOPORTAIL')) echo CLEGEOPORTAIL;?>", false, document.getElementById('map_cont'));
     window.msg = document.getElementById("infobox");
     getSiteList();
     msg.onclick = function() {message();};
-  //};
+  };
 </script>
 
 

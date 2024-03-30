@@ -41,7 +41,7 @@
     background-color:white;
     display: none;
   }
-  #map {
+  #map_elem {
     position: fixed;
     top: 0;
     bottom: 100px;
@@ -155,7 +155,7 @@
 </div>
 
 <div id="mapcont">
-  <div id="map"></div>
+  <div id="map_elem"></div>
   <div id="vz" class="vz"></div>
   <div id="graph"></div>
 </div>
@@ -223,7 +223,7 @@ const tileopacity = 0.5;
   Element.prototype.setGradient = function( from, to, horizontal ){
     this.style.background = 'linear-gradient(to '+(horizontal ? 'left' : 'top')+', '+from+', '+to+' 100%)';
   }
-  var mapelem = document.getElementById('map');
+  var mapelem = document.getElementById('map_elem');
   var vzelem = document.getElementById('vz');
   var maxvz = 10;
   //http://192.168.1.16/web/logfly-web/src/trace.php?igc=http%3A%2F%2F192.168.1.16%2Fweb%2Flogfly-web%2Fsrc%2FTracklogs%2F392.igc&finfo=http%3A%2F%2F192.168.1.16%2Fweb%2Flogfly-web%2Fsrc%2FTracklogs%2F392.json
@@ -262,47 +262,49 @@ const tileopacity = 0.5;
 
   var graph = new GraphGPX(document.getElementById("graph"), {elevationservice:elevationservice, disablescrollzoom: disablescroll});
   graph.addAnalyser(new AnaTrace());
-  var map = loadCarto(clegeoportail, disablescroll, document.getElementById('mapcont'));
-  var binfos = false;
+  loadCarto(clegeoportail, disablescroll, document.getElementById('map_elem')).then(map => {
+    window.map = map;
 
-  var marker = L.marker([0,0]).addTo(map);
-  //var svg = '<svg viewBox="0 0 24 24" height="32" width="32" fill="transparent" stroke="black" stroke-width="2" stroke-linecap="round" xmlns="http://www.w3.org/2000/svg"> <g> <path d="M1 1 l22 22"/> <path d="M1 23 l22 -22"/> </g> </svg>';
-  //var iconUrl = 'data:image/svg+xml;base64,' + btoa(svg);
-  origIconSize = [32, 32];
-  origIconAnchor = [16, 32];
-  let iconUrl = 'paraglider.svg';
-  //let iconUrl = 'crosshair.svg';
-  fetch(iconUrl)
-  .then(response => response.text())
-  .then((svg) => {
-    //let iconUrl = 'data:image/svg+xml;base64,' + btoa(svg);
-    //var icon = L.icon({iconUrl: iconUrl, iconSize: origIconSize,iconAnchor: origIconAnchor});
-    let icon = L.divIcon({html: svg, className: "",iconSize: origIconSize,iconAnchor: origIconAnchor});
-    marker.setIcon(icon);
-  })
-  .catch(err => {
-    console.log(err);
-    var icon = L.icon({iconUrl: iconUrl, iconSize: origIconSize,iconAnchor: origIconAnchor});
-    marker.setIcon(icon);
+    window.marker = L.marker([0,0]).addTo(map);
+    //var svg = '<svg viewBox="0 0 24 24" height="32" width="32" fill="transparent" stroke="black" stroke-width="2" stroke-linecap="round" xmlns="http://www.w3.org/2000/svg"> <g> <path d="M1 1 l22 22"/> <path d="M1 23 l22 -22"/> </g> </svg>';
+    //var iconUrl = 'data:image/svg+xml;base64,' + btoa(svg);
+    origIconSize = [32, 32];
+    origIconAnchor = [16, 32];
+    let iconUrl = 'paraglider.svg';
+    //let iconUrl = 'crosshair.svg';
+    fetch(iconUrl)
+    .then(response => response.text())
+    .then((svg) => {
+      //let iconUrl = 'data:image/svg+xml;base64,' + btoa(svg);
+      //var icon = L.icon({iconUrl: iconUrl, iconSize: origIconSize,iconAnchor: origIconAnchor});
+      let icon = L.divIcon({html: svg, className: "",iconSize: origIconSize,iconAnchor: origIconAnchor});
+      marker.setIcon(icon);
+    })
+    .catch(err => {
+      console.log(err);
+      var icon = L.icon({iconUrl: iconUrl, iconSize: origIconSize,iconAnchor: origIconAnchor});
+      marker.setIcon(icon);
+    });
+    let closegraphcfg = function() {graph.opencfg(true);};
+    map.on('click', function(e) {
+      setCursorFromMap(e.latlng);
+      closegraphcfg();
+    });
+    map.on('mousemove', function(e) {
+      setCursorFromMap(e.latlng);
+    });
+    map.on('fullscreenchange', function () {
+      closegraphcfg();
+      if (map.isFullscreen()) {
+          graph.disableScrollZoom = false;
+      } else {
+          graph.disableScrollZoom = disablescroll;
+      }
+    });
+    map.on('movestart', closegraphcfg);
+    map.on('zoomstart', closegraphcfg);
   });
-  let closegraphcfg = function() {graph.opencfg(true);};
-  map.on('click', function(e) {
-    setCursorFromMap(e.latlng);
-    closegraphcfg();
-  });
-  map.on('mousemove', function(e) {
-    setCursorFromMap(e.latlng);
-  });
-  map.on('fullscreenchange', function () {
-    closegraphcfg();
-    if (map.isFullscreen()) {
-        graph.disableScrollZoom = false;
-    } else {
-        graph.disableScrollZoom = disablescroll;
-    }
-  });
-  map.on('movestart', closegraphcfg);
-  map.on('zoomstart', closegraphcfg);
+  var binfos = false;
 
   var flstats = {};
   var gpx_bounds = null;
@@ -820,11 +822,17 @@ const tileopacity = 0.5;
         }
       } else {
         if (window.curpoint) {
-          window.conecalculating=true;
-          imgConeLoading.style.display='block';
-          await calcStartCone(curpoint.lat, curpoint.lon, 8, curpoint.alt);
-          window.conecalculating=false;
-          imgConeLoading.style.display='none';
+          if (window.curpointcone) {
+            clearCone();
+            window.curpointcone = null;
+          } else {
+            window.conecalculating=true;
+            imgConeLoading.style.display='block';
+            await calcStartCone(curpoint.lat, curpoint.lon, 8, curpoint.alt);
+            window.conecalculating=false;
+            window.curpointcone = curpoint;
+            imgConeLoading.style.display='none';
+          }
         }
       }
     };
@@ -1009,14 +1017,8 @@ const tileopacity = 0.5;
       console.log(points.find(p => p.time.getTime() == timetoseek));
     }
   };
-
-  async function calcStartCone(lat, lon, finesse, amsl) {
-    try {
-      if (window.conecontroller) {
-        conecontroller.abort();
-      }
-      window.conecontroller = new AbortController();
-      let conesignal = conecontroller.signal;
+  
+  function clearCone() {
       if (window.startconept) {
         map.removeLayer(startconept);
         startconept = null;
@@ -1029,6 +1031,15 @@ const tileopacity = 0.5;
       });
       tiles=[];
       tilepaths=[];
+  }
+  async function calcStartCone(lat, lon, finesse, amsl) {
+    try {
+      if (window.conecontroller) {
+        conecontroller.abort();
+      }
+      window.conecontroller = new AbortController();
+      let conesignal = conecontroller.signal;
+      clearCone();
       window.startconept = L.marker([lat, lon], {draggable:'false'}).addTo(map);
       let now = Date.now();
       window.curfinessecalc = now;

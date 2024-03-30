@@ -58,10 +58,10 @@ class TrackLogManager
     } else {
       $sites = @file_get_contents(self::FICHIER_SITES_FFVL);
     }
-    return @json_decode($sites);
+    return $sites;
   }
   public static function getSiteFFVL($lat, $lon) {
-    $sites = TrackLogManager::fetchSitesFFVL();//@json_decode(@file_get_contents('https://data.ffvl.fr/json/sites.json'));
+    $sites = @json_decode(TrackLogManager::fetchSitesFFVL());//@json_decode(@file_get_contents('https://data.ffvl.fr/json/sites.json'));
     $site = "";
     $dist = 1000000000;
     if (is_array($sites)) {
