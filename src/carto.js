@@ -1,6 +1,8 @@
 var startIcon = null, finishIcon = null, turnpointIcon = null, deco_icon = null, attero_icon = null;
 
-async function loadCarto(clegeoportail, disablescrollzoom, rootelem, loadffvl=false) {
+async function loadCarto(clegeoportail=null, mapelem=null, disablescrollzoom=false, rootfselem=null, loadffvl=false) {
+  mapelem = mapelem || document.getElementById('map');
+  rootfselem = rootfselem || mapelem;
   let useign = typeof clegeoportail == "string" && clegeoportail.trim().length > 0;
   window.usermoved = false;
   let firstzoom = true;
@@ -10,13 +12,13 @@ async function loadCarto(clegeoportail, disablescrollzoom, rootelem, loadffvl=fa
     options.dragging = !isTouchDevice();
     options.touchzoom = true;
   }
-  let map = L.map(rootelem, options).setView([45.182471, 5.725589], 13);
+  let map = L.map(mapelem, options).setView([45.182471, 5.725589], 13);
   L.control.scale().addTo(map);
   map.on('dragstart', function (e) { window.usermoved = true; });
   map.on('zoomend', function (e) { if (firstzoom) { firstzoom = false; return; } window.usermoved = true; });
 
   if (typeof L.Control.Fullscreen == 'function') {
-    let options = {'element' : rootelem};
+    let options = {'element' : rootfselem};
     map.on('fullscreenchange', function () {
         if (map.isFullscreen()) {
             map.scrollWheelZoom.enable();
@@ -272,6 +274,9 @@ function afficherSitesFFVL(map, afficher=true) {
       let nomsite = `${decode(site.site_sous_type)} FFVL <b>"${decode(site.nom)}"</b>`;
       if (site.sous_nom.trim().length > 0) {
         nomsite += ` (${decode(site.sous_nom)})`;
+      }
+      if (/^\d+$/.test(site.alt)) {
+        nomsite += ` ${parseInt(site.alt)}m`;
       }
       let infos = `<h3>${nomsite}</h3>${decode(site.description)}`;
       /* ORIENTATIONS POSSIBLES :

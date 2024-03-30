@@ -262,7 +262,7 @@ const tileopacity = 0.5;
 
   var graph = new GraphGPX(document.getElementById("graph"), {elevationservice:elevationservice, disablescrollzoom: disablescroll});
   graph.addAnalyser(new AnaTrace());
-  loadCarto(clegeoportail, disablescroll, document.getElementById('map_elem')).then(map => {
+  loadCarto(clegeoportail, document.getElementById('map_elem'), disablescroll, document.getElementById('mapcont')).then(map => {
     window.map = map;
 
     window.marker = L.marker([0,0]).addTo(map);

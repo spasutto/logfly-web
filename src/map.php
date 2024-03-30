@@ -162,7 +162,7 @@
 
 
   window.onload= async function() {
-    window.map = await loadCarto("<?php if (defined('CLEGEOPORTAIL')) echo CLEGEOPORTAIL;?>", false, document.getElementById('map_cont'));
+    window.map = await loadCarto("<?php if (defined('CLEGEOPORTAIL')) echo CLEGEOPORTAIL;?>", document.getElementById('map_cont'));
     window.msg = document.getElementById("infobox");
     getSiteList();
     msg.onclick = function() {message();};
