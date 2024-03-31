@@ -7,6 +7,8 @@ print_r($files);
 
 require("config.php");
 include("logfilereader.php");
+const ELEVATIONSERVICE = "elevation/getElevation.php";
+
 $vols = [];
 foreach ((new LogflyReader())->getRecords()->vols as $vol) {
 if ($vol->igc)
@@ -14,7 +16,6 @@ if ($vol->igc)
 }
 $vols = "[" . implode (",", $vols) . "]";
 $tracefilesprefix = urlencode((defined('FOLDER_TL')?FOLDER_TL:"")."/");
-$elevationservice = (defined('ELEVATIONSERVICE')?urlencode(ELEVATIONSERVICE):"");
 $clegeoportail = (defined('CLEGEOPORTAIL')?urlencode(CLEGEOPORTAIL):"");
 $cletimezonedb = (defined('CLETIMEZONEDB')?urlencode(CLETIMEZONEDB):"");
 ?>
@@ -42,7 +43,7 @@ $cletimezonedb = (defined('CLETIMEZONEDB')?urlencode(CLETIMEZONEDB):"");
     <script>
     var vols = <?php echo $vols;?>;
     var tracefilesprefix = '<?php echo $tracefilesprefix;?>';
-    var elevationservice = '<?php echo $elevationservice;?>';
+    var elevationservice = '<?php echo urlencode(ELEVATIONSERVICE);?>';
     var clegeoportail = '<?php echo $clegeoportail;?>';
     var cletimezonedb = '<?php echo $cletimezonedb;?>';
 function $(id) {

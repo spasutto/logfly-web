@@ -2,6 +2,8 @@
 require("config.php");
 require("logfilereader.php");
 
+const ELEVATIONSERVICE = "elevation/getElevation.php";
+
 $url =  "//{$_SERVER['HTTP_HOST']}".dirname($_SERVER['PHP_SELF'])."/";
 $root_url = htmlspecialchars( $url, ENT_QUOTES, 'UTF-8' );
 
@@ -390,7 +392,7 @@ function url_with_parameter($paramname, $paramvalue, $paramtoremove = null) {
     $url = "";
     if ($vol->igc) {
       $tracefileprefix = urlencode((defined('FOLDER_TL')?FOLDER_TL:"")."/" . $vol->id);
-      $url = "trace.html?igc=".$tracefileprefix.".igc&start=".$vol->date->getTimestamp()."&finfo=".$tracefileprefix.".json&elevationservice=".(defined('ELEVATIONSERVICE')?urlencode(ELEVATIONSERVICE):"")."&clegeoportail=".(defined('CLEGEOPORTAIL')?urlencode(CLEGEOPORTAIL):"");
+      $url = "trace.html?igc=".$tracefileprefix.".igc&start=".$vol->date->getTimestamp()."&finfo=".$tracefileprefix.".json&elevationservice=".(urlencode(ELEVATIONSERVICE))."&clegeoportail=".(defined('CLEGEOPORTAIL')?urlencode(CLEGEOPORTAIL):"");
       echo " class=\"zoneimgtrace\" data-id=\"".$vol->id."\"";
       echo " onClick=\"openTrace(this);return false;\" title=\"voir la trace GPS de ce vol\n(ctrl-click pour ouvrir dans un nouvel onglet)\" style=\"cursor: pointer\"";
       echo "><a href=\"".$url."\"><img src=\"map.svg\" width=\"18px\"></a>";
@@ -571,7 +573,7 @@ function affichComment(id) {
 function openTrace(elem) {
   let lnk = elem.getElementsByTagName('a')[0];
   //let tracefileprefix = encodeURI("<?php if (defined('FOLDER_TL')) echo FOLDER_TL;?>/" + id);
-  let url = lnk.href;//"trace.html?igc="+tracefileprefix+".igc&finfo="+tracefileprefix+".json&elevationservice="+encodeURI('<?php if (defined('ELEVATIONSERVICE')) echo ELEVATIONSERVICE;?>')+"&clegeoportail="+encodeURI('<?php if (defined('CLEGEOPORTAIL')) echo CLEGEOPORTAIL;?>');
+  let url = lnk.href;
   MyWindow=window.open(url,'MyWindow','width=900,height=380');
 }
 function hideImagesTrace(id) {

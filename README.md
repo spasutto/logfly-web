@@ -45,16 +45,12 @@ Options +Indexes
 Ainsi les fichiers permettant de modifier ou récupérer la base LogFly seront protégés par un mot de passe.
 
 # Gestion de la topographie (DEM)
-Le visualisateur de trace supporte la topographie au format TIF ou HGT. Pour cela il faut télécharger les fichiers DEM et les mettre dans le dossier correspondant (.tif dans elevation/SRTM et .hgt dans elevation/HGT). Ensuite bien penser à renommer le fichier _config.php en config.php.
-
-Par défaut le service utilisera la topographie sous format HGT, pour le changer il faut éditer le fichier config.php et changer la valeur de la constante ELEVATIONSERVICE en "elevation/getElevationSRTM.php"
+Le visualisateur de trace supporte la topographie au format HGT. Pour cela il faut télécharger les fichiers DEM et les mettre dans le dossier correspondant (_elevation/HGT_). Ensuite bien penser à renommer le fichier _config.php en config.php.
 
 #### Sources
  - HGT : http://viewfinderpanoramas.org/dem3.html#alps
- - SRTM : http://dwtkns.com/srtm/
 
 # Credits
- - couche de gestion de la topographie SRTM : https://github.com/bobosola/PHP-SRTM
  - bouton fullscreen modifié de https://github.com/Leaflet/Leaflet.fullscreen
  - calcul du score https://github.com/mmomtchev/igc-xc-score/
 

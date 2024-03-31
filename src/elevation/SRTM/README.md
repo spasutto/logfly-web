@@ -1,1 +1,0 @@
-Placer ici les fichiers topographiques au format tif
