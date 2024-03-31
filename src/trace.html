@@ -796,9 +796,9 @@ const tileopacity = 0.5;
       if (gap > interval) {
         //let url = location.protocol+'//'+location.hostname+(location.port?":"+location.port:"")+location.pathname+(location.search?location.search:"");
         //\n${url}#${points[i].time.getTime()}
-        console.log(`trou dans la trace de ${gap}ms @${points[i].time.toString()}`);
         j = i+gap/interval;
         k = i-1;
+        console.log(`trou dans la trace de ${gap}ms @${points[i].time.toLocaleString()}, comblé par ${j-i} point(s) virtuel(s)`);
         for (; i<j; i++) {
           clone = JSON.parse(JSON.stringify(points[i-1]));
           clone.time = new Date(new Date(clone.time).getTime() + interval);
