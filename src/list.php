@@ -395,7 +395,7 @@ function url_with_parameter($paramname, $paramvalue, $paramtoremove = null) {
       $url = "trace.html?igc=".$tracefileprefix.".igc&start=".$vol->date->getTimestamp()."&finfo=".$tracefileprefix.".json&elevationservice=".(urlencode(ELEVATIONSERVICE))."&clegeoportail=".(defined('CLEGEOPORTAIL')?urlencode(CLEGEOPORTAIL):"");
       echo " class=\"zoneimgtrace\" data-id=\"".$vol->id."\"";
       echo " onClick=\"openTrace(this);return false;\" title=\"voir la trace GPS de ce vol\n(ctrl-click pour ouvrir dans un nouvel onglet)\" style=\"cursor: pointer\"";
-      echo "><a href=\"".$url."\"><img src=\"map.svg\" width=\"18px\"></a>";
+      echo "><a id=\"traceurl_".$vol->id."\" href=\"".$url."\"><img src=\"map.svg\" width=\"18px\"></a>";
       $url_image = "image.php?id=".$vol->id;
       $fname = "Tracklogs".DIRECTORY_SEPARATOR.$vol->id.".jpg";
       if (file_exists($fname)) {
@@ -406,7 +406,6 @@ function url_with_parameter($paramname, $paramvalue, $paramtoremove = null) {
     else {
       echo ">";
     }
-    echo "<input type=\"hidden\" id=\"traceurl_".$vol->id."\" value=\"".$url."\">";
     echo "</TD>";
     if ($vol->commentaire || $vol->igc) {
       echo "<TD class=\"btncomm";
@@ -425,7 +424,7 @@ function url_with_parameter($paramname, $paramvalue, $paramtoremove = null) {
     $date = clone $vol->date;
     $date->modify('-1 day');
     echo " / <a href=\"http://78.207.28.106/mto/auto/".$date->format('y').$date->format('m').$date->format('d')."GFS/frog.html\">Caplain</a>";
-    echo " / <a href=\"https://www.infoclimat.fr/fr/cartes/observations-meteo/archives/vent_moyen/".$vol->date->format('j')."/".$libmois[intval($vol->date->format('n'))-1]."/".$vol->date->format('Y')."/14h/carte-interactive.html\">relevés</a>";
+    echo " / <a href=\"https://www.infoclimat.fr/fr/cartes/observations-meteo/archives/vent_moyen/".$vol->date->format('j')."/".$libmois[intval($vol->date->format('n'))-1]."/".$vol->date->format('Y')."/11h/carte-interactive.html\">relevés</a>";
     echo "</div><div id=\"zonecarto".$vol->id."\"></div></TD></TR>";
     echo "</TR>\n";
   }
@@ -555,7 +554,7 @@ function affichComment(id) {
       zonecomm.innerHTML = "<b>Chargement...</b>";
     }
     if (zonecarto.innerHTML == "" && btncomm.previousElementSibling.innerHTML) {
-      let url = document.getElementById('traceurl_'+id).value;
+      let url = document.getElementById('traceurl_'+id).href;
       if (url.trim().length > 0) {
         url += "&disablescroll=1";
         zonecarto.innerHTML += "<iframe src=\""+url+"\" width=\"99%\" height=\"658px\"></iframe>";

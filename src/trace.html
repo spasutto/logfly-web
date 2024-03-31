@@ -798,6 +798,7 @@ const tileopacity = 0.5;
         //\n${url}#${points[i].time.getTime()}
         j = i+gap/interval;
         k = i-1;
+        // TODO : tracer les points manquants entre pos/alt[i] et pos/alt[i+1]
         console.log(`trou dans la trace de ${gap}ms @${points[i].time.toLocaleString()}, comblé par ${j-i} point(s) virtuel(s)`);
         for (; i<j; i++) {
           clone = JSON.parse(JSON.stringify(points[i-1]));
