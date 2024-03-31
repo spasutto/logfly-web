@@ -183,7 +183,7 @@ insertion des IGC... <span id="inserperc"></span><BR>
       if (errs.length > 0) alert("il semble qu'il y'ai eu une/des erreurs : "+errs);
       setTimeout(() => {document.body.innerHTML += "<a href=\"<?php echo $_SERVER['REQUEST_URI'];?>&base="+base+"&dl\">télécharger la base</a>";}, 1000);
       window.open('<?php echo $_SERVER['REQUEST_URI'];?>&base='+base+'&dl','MyWindow','width=320,height=120')
-      setTimeout(() => {window.close();}, 1500);
+      //setTimeout(() => {window.close();}, 1500);
     }).catch(err => alert(err));
   };
 </script>

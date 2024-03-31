@@ -820,7 +820,7 @@ const tileopacity = 0.5;
     divDispMode.appendChild(document.getElementById('dispmodes'))
     divDispMode.style.display = 'block';
     window.btnCalcCone = document.getElementById('btnCalcCone');
-    btnCalcCone.onclick = clickCalcCone;
+    btnCalcCone.onclick = clickCalcCone.bind(null, null);
     btnCalcCone.style.display = 'block';
   }
   async function clickCalcCone(startpoint=null) {
@@ -831,17 +831,22 @@ const tileopacity = 0.5;
       if (window.conecontroller) {
         conecontroller.abort();
       }
-    } else {
-      if (startpoint) {
-        if (window.curpointcone) {
-          clearCone();
-        } else {
-          window.conecalculating=true;
-          imgConeLoading.style.display='block';
-          await calcStartCone(startpoint.lat, startpoint.lon, 8, startpoint.alt);
+      clearCone();
+      window.curpointcone=null;
+    }
+    if (startpoint) {
+      if (window.curpointcone) {
+        clearCone();
+        btnCalcCone.title = "Calculer le cone de finesse à la position actuelle";
+      } else {
+        window.conecalculating=true;
+        imgConeLoading.style.display='block';
+        let ret = await calcStartCone(startpoint.lat, startpoint.lon, 8, startpoint.alt);
+        if (ret) {
           window.conecalculating=false;
           window.curpointcone = startpoint;
           imgConeLoading.style.display='none';
+          btnCalcCone.title = "Masquer le cone de finesse";
         }
       }
     }
@@ -1055,7 +1060,8 @@ const tileopacity = 0.5;
       const response = await fetch(`elevation/getConeFinesse.php?lat=${lat}&lon=${lon}&finesse=${finesse}&amsl=${amsl}`, {signal: conesignal});
       const res = await response.json();
       if (now == window.curfinessecalc) {
-        console.log(res);
+        let totaltime = Date.now()-now;
+        console.log(`${res.tiles.length} tiles in ${totaltime}ms (${res.time}ms calculation/${totaltime-res.time}ms network)`, res);
         squareside = res.squareside;
         dx = res.dx;
         dy = res.dy;
@@ -1067,20 +1073,25 @@ const tileopacity = 0.5;
       }
     } catch (err) {
       console.error(err);
+      return false;
     }
+    return true;
   }
   function color(val, max=300, min=0) {
-    val = Math.max(min, Math.min(val, max));
+    let bval = Math.max(min, Math.min(val, max));
     let moy = min + (max-min) / 2;
-    let r = val<moy?0xff:Math.round(((moy-(val-moy))*0xff/moy));
-    let g = val>moy?0xff:Math.round((val*0xff/moy));
-    /*max-=min;
-    val-=min;
-    let a = 0.1*(max-val)/max;
-    a+=0.4;*/
+    let r = bval<moy?0xff:Math.round(((moy-(bval-moy))*0xff/moy));
+    let g = bval>moy?0xff:Math.round((bval*0xff/moy));
+    let b = 0;
+    if (val > max) {
+      let bmax = (max-min)*2;
+      val -= max;
+      val = Math.min(bmax, val);
+      b = Math.round((val*0xff/bmax));
+    }
     let a = tileopacity;
-    let clr = `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}00`;
-    return {color: clr, fillColor: clr, fillOpacity: a};
+    let clr = `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
+    return {color: clr, fillColor: clr, opacity: a, fillOpacity: a};
   }
   function drawTile(tile) {
     if (tile.alt <= 0 && (tile.x!=0 || tile.y!=0)) return;

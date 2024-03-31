@@ -41,11 +41,12 @@ function possibledestinations($start) {
   $frontier = array($start);
   $visited = array();
   $visited[0][0] = $start;
+  $prev = null;
   $iter = 0;
   while (count($frontier)>0) {
     $currentNode = array_pop($frontier);
     if ($iter>0 && $currentNode->alt <= 0) continue;
-    $neighbors = getneighbours($currentNode, $visited);
+    $neighbors = getneighbours($currentNode, $visited, $prev);
     foreach ($neighbors as $neighbor) {
       $newalt = null;
       if (!isset($neighbor->pos)) {
@@ -63,6 +64,7 @@ function possibledestinations($start) {
         $neighbor->parent = (object) ["x" => $currentNode->x, "y" => $currentNode->y];
         $frontier[] = $neighbor;
         $visited[$neighbor->x][$neighbor->y] = $neighbor;
+        $prev=$neighbor;
       }
     }
     $iter++;
@@ -79,15 +81,16 @@ function altfortile($prev, $cur) {
   $altloss = ($prev->x==$cur->x || $prev->y==$cur->y) ? $altlossft : $altlossdiag;
   return ($prev->altgnd+$prev->alt) - $altloss - $cur->altgnd;
 }
-function getneighbours($node, $visited) {
+function getneighbours($node, $visited, $prev) {
   $neighbours = array();
   for ($x=-1; $x<=1; $x++) {
     for ($y=-1; $y<=1; $y++) {
       if ($x==0 && $y==0) continue;
       $rx = $node->x+$x;
       $ry = $node->y+$y;
+      if ($prev && $prev->x==$rx && $prev->yx==$ry) continue;
       $neighbour = (object) ['x'=>$rx, 'y'=>$ry];
-      $neighbour = getTileAt($visited, $neighbour) ?? $neighbour;
+      $neighbour = $visited[$neighbour->x][$neighbour->y] ?? $neighbour;
       $neighbours[] = $neighbour;
     }
   }
@@ -102,9 +105,6 @@ function removeTile(&$array, $tile) {
       return;
     }
   }
-}
-function getTileAt($array, $tile) {
-  return $array[$tile->x][$tile->y];
 }
 
 // Converts from degrees to radians.
@@ -151,6 +151,7 @@ if (isset($_REQUEST['agl']) && is_numeric($_REQUEST['agl'])) {
   $typealt='AMSL';
 }
 
+$start = microtime(true);
 calcStartCone((object) ["lat" => $lat, "lng" => $lng], $finesse, $startalt, $typealt);
 
 foreach ($tiles as $tile)
@@ -160,7 +161,7 @@ foreach ($tiles as $tile)
   else $tiles[$i]->alt = round($tiles[$i]->alt);
 }*/
   
-$ret = (object) ["squareside" => SQUARESIDE, "dx" => $dx, "dy" => $dy, "tiles" => $tiles];
+$ret = (object) ["squareside" => SQUARESIDE, "dx" => $dx, "dy" => $dy, "tiles" => $tiles, "time" => floor((microtime(true)-$start) * 1000)];
 
 echo json_encode($ret);
 ?>

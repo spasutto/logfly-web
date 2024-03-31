@@ -18,6 +18,8 @@ voir aussi la section [sécurité](#sécurité) pour configurer un accès proté
 
  - Renommer le fichier _config.php en config.php
 
+ - Convertir la base : aller sur la page _admin.php_ et cliquer sur *"mettre à jour le carnet depuis un carnet Logfly"*
+
 ## configuration
 
 Pour pouvoir utiliser la cartographie IGN il faut éditer le fichier config.php pour remplacer la chaîne "VOTRECLEGEOPORTAIL" par votre clé API Géoportail. Pour la génération des aperçus de traces côté serveur on peut aussi spécifier une clé sans protection (par exemple sans referer) dans la constante CLEGEOPORTAIL2.
