@@ -16,7 +16,7 @@ RewriteBase /logfly/
 ```
 voir aussi la section [sécurité](#sécurité) pour configurer un accès protégé à la base pour éviter que n'importe qui puisse éditer les vols
 
- - Renommer le fichier _config.php en config.php
+ - Renommer le fichier _config.php en config.php (voir la section [configuration](#configuration))
 
  - Convertir la base : aller sur la page _admin.php_ et cliquer sur *"mettre à jour le carnet depuis un carnet Logfly"*
 
@@ -54,7 +54,6 @@ Par défaut le service utilisera la topographie sous format HGT, pour le changer
  - SRTM : http://dwtkns.com/srtm/
 
 # Credits
- - visualisation GPX sur leaflet : https://github.com/mpetazzoni/leaflet-gpx
  - couche de gestion de la topographie SRTM : https://github.com/bobosola/PHP-SRTM
  - bouton fullscreen modifié de https://github.com/Leaflet/Leaflet.fullscreen
  - calcul du score https://github.com/mmomtchev/igc-xc-score/
