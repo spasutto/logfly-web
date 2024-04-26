@@ -348,7 +348,7 @@ if (isset($_POST['site']) && isset($_POST['date']) && isset($_POST['heure']) && 
             btnSave.disabled = false;
 
             if (window.opener) {
-                window.opener.location.reload();
+                try {window.opener.location.reload();} catch(err){}
                 window.close();
             }
         }

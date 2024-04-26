@@ -86,6 +86,7 @@ class GraphGPX {
       disablescrollzoom: false,
       showvz: false,
       showvx: false,
+      showvt: false,
       showgr: false,
       showgndalt: false,
       colors: {
@@ -97,7 +98,8 @@ class GraphGPX {
         axistertiary: "#e5e5e5",
         alt: "#002fff",
         vz: "#af00af",
-        vx: "#22af00",
+        vx: "#086114",
+        vt: "#22af00",//facc15
         gr: "#2200af",
         gndalt: "#ff0000",
         debug: "#ff0000"
@@ -115,6 +117,7 @@ class GraphGPX {
     }
     this.options.showvz = this.options.showvz === true;
     this.options.showvx = this.options.showvx === true;
+    this.options.showvt = this.options.showvt === true;
     this.options.showgr = this.options.showgr === true;
     this.options.showgndalt = this.options.showgndalt === true;
     this.bdrect = this.elem.getBoundingClientRect();
@@ -136,6 +139,14 @@ class GraphGPX {
   }
   get showVx() {
     return this.options.showvx === true;
+  }
+
+  set showVt(showvt) {
+    this.options.showvt = showvt === true;
+    this.paint();
+  }
+  get showVt() {
+    return this.options.showvt === true;
   }
 
   set showGR(showgr) {
@@ -172,7 +183,7 @@ class GraphGPX {
 
   resetInfos() {
     // à chaque changement impacter aussi fizoom dans updateZoom()
-    this.fi = { 'pts': [], maxalt: -1000, minalt: 100000, totaltgain: 0, maxvz:-1000, minvz:100000, maxvx:-1000, minvx:100000, maxgr:-1000, mingr:100000, minaltdiff:100000, maxaltdiff:-1000, minlat:190, maxlat:-190, minlon:190, maxlon:-190, start: new Date };
+    this.fi = { 'pts': [], maxalt: -1000, minalt: 100000, totaltgain: 0, maxvz:-1000, minvz:100000, maxvx:-1000, minvx:100000, maxvt:-1000, minvt:100000, maxgr:-1000, mingr:100000, minaltdiff:100000, maxaltdiff:-1000, minlat:190, maxlat:-190, minlon:190, maxlon:-190, start: new Date };
     //this.fizoom = JSON.parse(JSON.stringify(this.fi)); // clone ne fonctionne pas pour la date
     this.elevcalls = 0;
     this.starttouch = 0;
@@ -186,9 +197,16 @@ class GraphGPX {
     this.updateZoom();
   }
   
+  #calcvt(vx, vz) {
+    vz = 3.6*vz; // m/s --> km/h
+    return Math.sqrt(vx*vx+vz*vz);
+  }
+  
   updateZoom() {
     if (this.zoomsel[0]>-1 && this.zoomsel[1]>-1) {
-      this.fizoom.pts = this.fi.pts.slice(this.zoomsel[0], this.zoomsel[1]);
+      // si on zoom dans une partie déjà zoomée il faut travailler sur fizoom et pas fi
+      //this.fizoom.pts = this.fi.pts.slice(this.zoomsel[0], this.zoomsel[1]);
+      this.fizoom.pts = this.fizoom.pts.slice(this.zoomsel[0], this.zoomsel[1]);
       let fpt = this.fizoom.pts[0];
       this.fizoom.minalt = this.fizoom.pts.reduce((prev, cur) => prev<cur.alt?prev:cur.alt, fpt.alt);
       this.fizoom.maxalt = this.fizoom.pts.reduce((prev, cur) => prev>cur.alt?prev:cur.alt, fpt.alt);
@@ -198,6 +216,8 @@ class GraphGPX {
       this.fizoom.maxvx = this.fizoom.pts.reduce((prev, cur) => prev>cur.vx?prev:cur.vx, fpt.vx);
       this.fizoom.minvz = this.fizoom.pts.reduce((prev, cur) => prev<cur.vz?prev:cur.vz, fpt.vz);
       this.fizoom.maxvz = this.fizoom.pts.reduce((prev, cur) => prev>cur.vz?prev:cur.vz, fpt.vz);
+      this.fizoom.minvt = this.fizoom.pts.reduce((prev, cur) => prev<this.#calcvt(cur.vx, cur.vz)?prev:this.#calcvt(cur.vx, cur.vz), this.#calcvt(fpt.vx, fpt.vz));
+      this.fizoom.maxvt = this.fizoom.pts.reduce((prev, cur) => prev>this.#calcvt(cur.vx, cur.vz)?prev:this.#calcvt(cur.vx, cur.vz), this.#calcvt(fpt.vx, fpt.vz));
       this.fizoom.minlat = this.fizoom.pts.reduce((prev, cur) => prev<cur.lat?prev:cur.lat, fpt.lat);
       this.fizoom.maxlat = this.fizoom.pts.reduce((prev, cur) => prev>cur.lat?prev:cur.lat, fpt.lat);
       this.fizoom.minlon = this.fizoom.pts.reduce((prev, cur) => prev<cur.lon?prev:cur.lon, fpt.lon);
@@ -306,6 +326,25 @@ class GraphGPX {
     elem2.setAttribute('title', 'vitesse sol');
     elem2.setAttribute('style', 'font-weight: bold;color: '+this.options.colors.vx);
     elem2.appendChild(document.createTextNode('Vx'));
+    elem.appendChild(elem2);
+    this.elem.appendChild(elem);
+
+    elem2 = document.createElement("input");
+    elem2.setAttribute('type', 'checkbox');
+    elem2.id = 'grphshowvt';
+    if (this.options.showvt) {
+      elem2.checked = true;
+    }
+    elem2.onclick = function (evt) {
+      this.options.showvt = evt.currentTarget.checked;
+      this.paint();
+    }.bind(this);
+    elem.appendChild(elem2);
+    elem2 = document.createElement("label");
+    elem2.setAttribute('for', 'grphshowvt');
+    elem2.setAttribute('title', 'vitesse sur trajectoire');
+    elem2.setAttribute('style', 'font-weight: bold;color: '+this.options.colors.vt);
+    elem2.appendChild(document.createTextNode('Vt'));
     elem.appendChild(elem2);
     this.elem.appendChild(elem);
 
@@ -597,15 +636,20 @@ class GraphGPX {
     let altdiff = maxaltg - minaltg;//this.fizoom.maxalt-this.fizoom.minalt;
     altdiff *= 1.05;
     let maxvx = Math.ceil(this.fizoom.maxvx);
+    let maxvt = Math.ceil(this.fizoom.maxvt);
     let coefh = this.canvas.height / altdiff;
-    let coefhvz = this.canvas.height / (this.fizoom.maxvz-this.fizoom.minvz);
+    let minvzg = Math.max(-8, this.fizoom.minvz);
+    let maxvzg = Math.min(8, this.fizoom.maxvz);
+    let coefhvz = this.canvas.height / (maxvzg-minvzg);
     let coefhvx = this.canvas.height / (maxvx-this.fizoom.minvx);
+    let coefhvt = this.canvas.height / (this.fizoom.maxvt-this.fizoom.minvt);
     let maxgr = Math.min(20, this.fizoom.maxgr);
     let coefhgr = this.canvas.height / (maxgr-this.fizoom.mingr);
     let coefhgndalt = this.canvas.height / (this.fizoom.maxaltdiff-this.fizoom.minaltdiff);
     let getY = function (alt) { return this.canvas.height - Math.round(coefh * (alt - this.fizoom.minalt)); }.bind(this);
-    let getYVz = function (vz) { return this.canvas.height - Math.round(coefhvz * (vz - this.fizoom.minvz)); }.bind(this);
+    let getYVz = function (vz) { return this.canvas.height - Math.round(coefhvz * (vz - minvzg)); }.bind(this);
     let getYVx = function (vx) { return this.canvas.height - Math.round(coefhvx * (vx - this.fizoom.minvx)); }.bind(this);
+    let getYVt = function (vt) { return this.canvas.height - Math.round(coefhvt * (vt - this.fizoom.minvt)); }.bind(this);
     let getYGR = function (gr) { if (gr === Infinity) gr=maxgr; return this.canvas.height - Math.round(coefhgr * (gr - this.fizoom.mingr)); }.bind(this);
     let getYGndAlt = function (altdiff) { return this.canvas.height - Math.round(coefhgndalt * (altdiff - this.fizoom.minaltdiff)); }.bind(this);
     this.incx = this.canvas.width / this.fizoom.pts.length;
@@ -719,11 +763,29 @@ class GraphGPX {
     if (this.options.showvx) {
       this.ctx.strokeStyle = this.options.colors.vx;
       x = 0;
-      y = getYVx(this.fizoom.pts[0].vx);
+      y = getYVt(this.fizoom.pts[0].vx);
       this.ctx.beginPath();
       this.ctx.moveTo(x, y);
       for (t = 0; t < this.fizoom.pts.length; t += this.incr) {
-        y = getYVx(this.fizoom.pts[t].vx);
+        y = getYVt(this.fizoom.pts[t].vx);
+        y = Math.min(this.canvas.height, y);
+        if (y >= 0) {
+          this.ctx.lineTo(x, y);
+        }
+        x += this.incx;
+      }
+      this.ctx.stroke();
+    }
+
+    // vt
+    if (this.options.showvt) {
+      this.ctx.strokeStyle = this.options.colors.vt;
+      x = 0;
+      y = getYVt(this.#calcvt(this.fizoom.pts[0].vx, this.fizoom.pts[0].vz));
+      this.ctx.beginPath();
+      this.ctx.moveTo(x, y);
+      for (t = 0; t < this.fizoom.pts.length; t += this.incr) {
+        y = getYVt(this.#calcvt(this.fizoom.pts[t].vx, this.fizoom.pts[t].vz));
         y = Math.min(this.canvas.height, y);
         if (y >= 0) {
           this.ctx.lineTo(x, y);
@@ -846,8 +908,8 @@ class GraphGPX {
       this.ctx.lineTo(this.canvas.width - 1, this.canvas.height);
       this.ctx.stroke();
       //this.ctx.fillStyle = "#0f0f0f";
-      let maxvz = Math.ceil(this.fizoom.maxvz);
-      let minvz = Math.floor(this.fizoom.minvz);
+      let maxvz = Math.ceil(maxvzg);
+      let minvz = Math.floor(minvzg);
       for (t = minvz; t <= maxvz; t++) {
         y = getYVz(t);
         if (y <= 0 || y > this.canvas.height) continue;
@@ -877,13 +939,41 @@ class GraphGPX {
       this.ctx.lineTo(this.canvas.width - 1, this.canvas.height);
       this.ctx.stroke();
       //this.ctx.fillStyle = "#0f0f0f";
-      let minvx = Math.floor(this.fizoom.minvx);
-      let step = Math.round((maxvx-minvx)/6); // 6 graduations dans la hauteur
+      let minvt = Math.floor(this.fizoom.minvt);
+      let step = Math.round((maxvt-minvt)/6); // 6 graduations dans la hauteur
       let divis = Math.pow(10, step.toString().length - 1);
       step = Math.max(10, Math.round(step/divis)*divis);
-      minvx = Math.round(minvx/divis)*divis;
-      for (t = minvx; t <= maxvx; t+=step) {
-        y = getYVx(t);
+      minvt = Math.round(minvt/divis)*divis;
+      for (t = minvt; t <= maxvt; t+=step) {
+        y = getYVt(t);
+        if (y <= 0 || y > this.canvas.height) continue;
+        this.ctx.beginPath();
+        this.ctx.moveTo(minscale, y - 3);
+        this.ctx.lineTo(minscale+4, y - 3);
+        this.ctx.stroke();
+        this.ctx.fillText(t, minscale+5, y);
+      }
+      minscale += 20;
+    }
+
+    // legende vt
+    if (this.options.showvt) {
+      this.ctx.strokeStyle = this.options.colors.axissecondary;
+      this.ctx.fillStyle = this.options.colors.vt;
+      this.ctx.lineWidth = 1;
+      this.ctx.beginPath();
+      this.ctx.moveTo(minscale, 0);
+      this.ctx.lineTo(minscale, this.canvas.height);
+      this.ctx.lineTo(this.canvas.width - 1, this.canvas.height);
+      this.ctx.stroke();
+      //this.ctx.fillStyle = "#0f0f0f";
+      let minvt = Math.floor(this.fizoom.minvt);
+      let step = Math.round((maxvt-minvt)/6); // 6 graduations dans la hauteur
+      let divis = Math.pow(10, step.toString().length - 1);
+      step = Math.max(10, Math.round(step/divis)*divis);
+      minvt = Math.round(minvt/divis)*divis;
+      for (t = minvt; t <= maxvt; t+=step) {
+        y = getYVt(t);
         if (y <= 0 || y > this.canvas.height) continue;
         this.ctx.beginPath();
         this.ctx.moveTo(minscale, y - 3);
@@ -973,7 +1063,8 @@ class GraphGPX {
       'minlat' : this.fizoom.minlat,
       'maxlat' : this.fizoom.maxlat,
       'minlon' : this.fizoom.minlon,
-      'maxlon' : this.fizoom.maxlon
+      'maxlon' : this.fizoom.maxlon,
+      'reset'  : reset
     } });
     this.elem.dispatchEvent(event);
   }
@@ -982,8 +1073,9 @@ class GraphGPX {
     // les vz max/min sont en instantané donc très grandes
     const VZMAX = 30;
     const VZMIN = -30;
+    const MININTEGTIME = 15; // 15s pour la vz
     this.resetInfos();
-    let i = 0, j = 0, k = 0, alt = 0, lat = 0, lon = 0, latvx = 0, lonvx = 0, vz = 0, vx = 0, gr = 0, tdiff = 0, vzm = [], vxm = [];
+    let i = 0, j = 0, k = 0, alt = 0, lat = 0, lon = 0, latvx = 0, lonvx = 0, vz = 0, vx = 0, gr = 0, tdiff = 0, vzm = [], vxm = [], nbintegvz = null;
     let time;
     for (i=0; i<points.length; i++) {
       alt = points[i].alt;
@@ -1009,16 +1101,17 @@ class GraphGPX {
       } else {
         tdiff = (time.getTime() - this.fi.pts[i - 1].time.getTime()) / 1000;
         tdiff = (tdiff === 0 || isNaN(tdiff) || tdiff === Infinity) ? 1 : tdiff;
+        nbintegvz = nbintegvz ?? Math.max(1, Math.ceil(MININTEGTIME/tdiff));
         vz = (alt - this.fi.pts[i - 1].alt) / tdiff;
         // si VZ > max alors on réévalue alt avec VZ -antérieur- ne fonctionne pas, on prends vz = 0 et l'altitude du point précédent
         if (vz > VZMAX || vz < VZMIN) {
           vz = 0;//Math.max(VZMIN, Math.min(VZMAX, vz));//this.fi.pts[i - 1].vz
           //this.fi.pts[i].alt = alt = this.fi.pts[i - 1].alt;//vz * tdiff + this.fi.pts[i - 1].alt;
         }
-        if (vzm.length < 25) {
+        if (vzm.length < nbintegvz) {
           vzm.push(vz);
         } else {
-          if (j > 0 && j % 25 == 0) j = 0;
+          if (j > 0 && j % nbintegvz == 0) j = 0;
           vzm[j++] = vz;
         }
         vz = vzm.reduce((a, b) => a + b, 0) / vzm.length;
@@ -1054,6 +1147,9 @@ class GraphGPX {
       if (vz > this.fi.maxvz) this.fi.maxvz = vz;
       if (vx < this.fi.minvx) this.fi.minvx = vx;
       if (vx > this.fi.maxvx) this.fi.maxvx = vx;
+      let vt = this.#calcvt(vx, vz);
+      if (vt < this.fi.minvt) this.fi.minvt = vt;
+      if (vt > this.fi.maxvt) this.fi.maxvt = vt;
       if (gr < this.fi.mingr) this.fi.mingr = gr;
       if (gr > this.fi.maxgr) this.fi.maxgr = gr;
       if (lat < this.fi.minlat) this.fi.minlat = lat;
@@ -1068,6 +1164,8 @@ class GraphGPX {
     this.fi.maxvz = Math.min(15, this.fi.maxvz);
     this.fi.minvx = Math.max(0, this.fi.minvx);
     this.fi.maxvx = Math.min(200, this.fi.maxvx);
+    this.fi.minvt = Math.max(0, this.fi.minvt);
+    this.fi.maxvt = Math.min(300, this.fi.maxvt);
     if (typeof this.options.elevationservice === 'string') {
       let curelev = 0;
       let locations = [];

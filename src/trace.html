@@ -359,7 +359,9 @@ const tileopacity = 0.5;
     mktxt+='<BR>' + e.detail.vz+'m/s&nbsp;&nbsp;&nbsp;'+e.detail.vx+'km/h';
     let curgr = Math.round(Math.min(12, Math.max(1, e.detail.gr)));
     //mktxt+=`<BR><a href="#" onclick="calcStartCone(${e.detail.lat, e.detail.lon, curgr, e.detail.alt})">cone (finesse ${curgr})</a>`;
-    marker.bindPopup(mktxt).setLatLng([e.detail.lat, e.detail.lon]).update();
+    if (!istouch)
+      marker.bindPopup(mktxt);
+    marker.setLatLng([e.detail.lat, e.detail.lon]).update();
     let vz =  Math.min(maxvz, Math.abs(e.detail.vz));
     let dh = mapelem.offsetHeight/2;
     let hvz = vz * dh / maxvz;
@@ -539,7 +541,9 @@ const tileopacity = 0.5;
     //let gr = Math.round(Math.min(12, Math.max(1, nearest.gr)));
     //let gr = 8;
     //mktxt+=`<BR><a href="#" onclick="calcStartCone(${nearest.lat}, ${nearest.lon}, ${gr}, ${nearest.alt})">cone (finesse ${gr})</a>`;
-    marker.bindPopup(mktxt).setLatLng([nearest.lat, nearest.lon]).update();
+    if (!istouch)
+      marker.bindPopup(mktxt);
+    marker.setLatLng([nearest.lat, nearest.lon]).update();
     graph.setPos(nearest);
     updateIcon(nearest);
   }
