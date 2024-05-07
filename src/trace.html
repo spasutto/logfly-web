@@ -18,6 +18,7 @@
     <script src="carto.js"></script>
     <script src="graph.js"></script>
     <script src="anatrace.js"></script>
+    <!--<script src="anadifftrace.js"></script>-->
     <script src="lib/igc-xc-score.js"></script>
     <script src="https://cdn.plot.ly/plotly-2.16.1.min.js"></script>
     <script src="lib/igc2kmz.min.js"></script>
@@ -263,6 +264,7 @@ const urlParams = new URLSearchParams(window.location.search);
 
   var graph = new GraphGPX(document.getElementById("graph"), {elevationservice:elevationservice, disablescrollzoom: disablescroll});
   graph.addAnalyser(new AnaTrace());
+  //graph.addAnalyser(new AnaDiffTrace());
   loadCarto(clegeoportail, document.getElementById('map_elem'), disablescroll, document.getElementById('mapcont')).then(map => {
     window.map = map;
 

@@ -78,7 +78,7 @@ function decode(encodedPath, precision = 5) {
 }
 
 class GraphGPX {
-  #analysers = [];
+  analysers = [];
   #DEBUG = false;
   static get DEFAULT_CONF() {
     return {
@@ -173,7 +173,11 @@ class GraphGPX {
   }
 
   addAnalyser(analyser) {
-    this.#analysers.push(analyser);
+    this.analysers.push(analyser);
+    if (Array.isArray(this.fi)) {
+      launchAnalysers();
+    }
+    this.createOptionsAnalysers();
   }
 
   setDebugMode() {
@@ -239,7 +243,7 @@ class GraphGPX {
 
   createCanvas() {
     this.canvas = document.createElement("canvas");
-    let elem = document.createTextNode('Navigateur obsolète!');
+    let elem = document.createTextNode('Navigateur obsolète!'), elem2 = null;
     this.canvas.appendChild(elem);
 
     this.canvas.oncontextmenu = function(){return false;};
@@ -291,7 +295,12 @@ class GraphGPX {
     elem.style.border = 'solid 1px grey';
     elem.style.userSelect = "none";
 
-    let elem2 = document.createElement("input");
+    elem2 = document.createElement("div");
+    elem2.id = 'opts_analysers';
+    elem2.setAttribute('style', 'display: inline;');
+    elem.appendChild(elem2);
+
+    elem2 = document.createElement("input");
     elem2.setAttribute('type', 'checkbox');
     elem2.id = 'grphshowvz';
     if (this.options.showvz) {
@@ -308,7 +317,6 @@ class GraphGPX {
     elem2.setAttribute('style', 'font-weight: bold;color: '+this.options.colors.vz);
     elem2.appendChild(document.createTextNode('Vz'));
     elem.appendChild(elem2);
-    this.elem.appendChild(elem);
 
     elem2 = document.createElement("input");
     elem2.setAttribute('type', 'checkbox');
@@ -327,7 +335,6 @@ class GraphGPX {
     elem2.setAttribute('style', 'font-weight: bold;color: '+this.options.colors.vx);
     elem2.appendChild(document.createTextNode('Vx'));
     elem.appendChild(elem2);
-    this.elem.appendChild(elem);
 
     elem2 = document.createElement("input");
     elem2.setAttribute('type', 'checkbox');
@@ -346,7 +353,6 @@ class GraphGPX {
     elem2.setAttribute('style', 'font-weight: bold;color: '+this.options.colors.vt);
     elem2.appendChild(document.createTextNode('Vt'));
     elem.appendChild(elem2);
-    this.elem.appendChild(elem);
 
     elem2 = document.createElement("input");
     elem2.setAttribute('type', 'checkbox');
@@ -365,7 +371,6 @@ class GraphGPX {
     elem2.setAttribute('style', 'font-weight: bold;color: '+this.options.colors.gr);
     elem2.appendChild(document.createTextNode('GR'));
     elem.appendChild(elem2);
-    this.elem.appendChild(elem);
 
     elem2 = document.createElement("input");
     elem2.setAttribute('type', 'checkbox');
@@ -385,8 +390,36 @@ class GraphGPX {
     elem2.appendChild(document.createTextNode('alt AGL'));
     elem.appendChild(elem2);
     this.elem.appendChild(elem);
-
+    
     this.paint();
+  }
+  createOptionsAnalysers() {
+    let opts_analysers = document.getElementById('opts_analysers');
+    opts_analysers.innerHTML = '';
+    this.analysers.forEach(a => {
+      let elem2 = document.createElement("input");
+      elem2.setAttribute('type', 'checkbox');
+      let elemid = 'grphshow'+a.constructor.name, idx=1;
+      while (document.getElementById(elemid) != null) {
+        elemid = 'grphshow'+a.constructor.name+(idx++);
+      }
+      elem2.id = elemid;
+      if (a.show) {
+        elem2.checked = true;
+      }
+      elem2.onclick = function (evt) {
+        a.show = evt.currentTarget.checked;
+        this.paint();
+      }.bind(this);
+      opts_analysers.appendChild(elem2);
+      elem2 = document.createElement("label");
+      elem2.setAttribute('for', elemid);
+      elem2.setAttribute('title', 'analyse de la trace');
+      elem2.setAttribute('style', 'font-weight: bold;color: black');
+      elem2.appendChild(document.createTextNode(a.name));
+      opts_analysers.appendChild(elem2);
+      if (a.show) this.paint();
+    });
   }
 
   addEventListener(evtname, fct) {
@@ -536,7 +569,7 @@ class GraphGPX {
     if (this.isselecting) {
       this.isselecting = false;
       this.selection[1] = this.selection[0] = -1;
-      this.paintmouseinfos(this.curidx);
+      this.paintmouseinfos();
     }
   }
   
@@ -601,7 +634,7 @@ class GraphGPX {
       this.ctx2.fillText('\u21e7' , 0, 0);// 2b99 2191 21A5 21E7 21EB 21EC 25B2 032D 1403 1431
       this.ctx2.restore();
       if (this.#DEBUG) {
-      this.ctx2.fillStyle = this.options.colors.debug;
+        this.ctx2.fillStyle = this.options.colors.debug;
         this.ctx2.fillText(curpt.diffbearing+'°' , posx+rvxtextw+12, posy);
       }
       let gr = curpt.gr;
@@ -613,6 +646,10 @@ class GraphGPX {
       t.setUTCSeconds((curpt.time.getTime() - this.fizoom.start.getTime()) / 1000);
       this.ctx2.fillStyle = this.options.colors.axis;
       this.ctx2.fillText(curpt.time.toLocaleString('fr-FR'/*, { timeZone: 'UTC' }*/).substr(-8, 5) + " ("+t.toLocaleString('fr-FR', { timeZone: 'UTC' }).substr(-8, 5)+")", posx, posy+=10);
+
+      this.analysers.forEach(a => {
+        if (a.show && typeof a.paintmouseinfos == 'function') a.paintmouseinfos(this, x);
+      });
     }
   }
 
@@ -1049,6 +1086,10 @@ class GraphGPX {
       }
       minscale += 20;
     }
+
+    this.analysers.forEach(a => {
+      if (a.show && typeof a.paint == 'function') a.paint(this);
+    });
   }
 
   zoom(reset) {
@@ -1187,10 +1228,16 @@ class GraphGPX {
     this.updateZoom();
     this.paint();
     this.paintmouseinfos();
-    if (Array.isArray(this.#analysers)) {
-      this.#analysers.forEach(a => a.analyse(this.fi));
-    }
+    this.launchAnalysers();
     return this.fi;
+  }
+  
+  launchAnalysers() {
+    if (Array.isArray(this.analysers)) {
+      let startTime = performance.now();
+      this.analysers.forEach(a => a.analyse(this.fi));
+      console.log(`analysers : ${Math.round(performance.now()-startTime)}ms`);
+    }
   }
 
   getElevation(locations, index, count) {
