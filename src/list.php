@@ -392,7 +392,7 @@ function url_with_parameter($paramname, $paramvalue, $paramtoremove = null) {
     $url = "";
     if ($vol->igc) {
       $tracefileprefix = urlencode((defined('FOLDER_TL')?FOLDER_TL:"")."/" . $vol->id);
-      $url = "trace.html?igc=".$tracefileprefix.".igc&start=".$vol->date->getTimestamp()."&finfo=".$tracefileprefix.".json&elevationservice=".(urlencode(ELEVATIONSERVICE))."&clegeoportail=".(defined('CLEGEOPORTAIL')?urlencode(CLEGEOPORTAIL):"");
+      $url = "trace.html?igc=".$tracefileprefix.".igc&start=".$vol->date->getTimestamp()."&finfo=".$tracefileprefix.".json&paraglidername=".urlencode($vol->voile)."&elevationservice=".(urlencode(ELEVATIONSERVICE))."&clegeoportail=".(defined('CLEGEOPORTAIL')?urlencode(CLEGEOPORTAIL):"");
       echo " class=\"zoneimgtrace\" data-id=\"".$vol->id."\"";
       echo " onClick=\"openTrace(this);return false;\" title=\"voir la trace GPS de ce vol\n(ctrl-click pour ouvrir dans un nouvel onglet)\" style=\"cursor: pointer\"";
       echo "><a id=\"traceurl_".$vol->id."\" href=\"".$url."\"><img src=\"map.svg\" width=\"18px\"></a>";

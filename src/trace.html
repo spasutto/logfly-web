@@ -199,6 +199,7 @@
 <script>
 var tiles = [], tilepaths = [], finesse = 8, dx=0, dy=0, ddx=0, ddy=0, squareside=100;
 const tileopacity = 0.5;
+const urlParams = new URLSearchParams(window.location.search);
 
   const fileSelector = document.getElementById('file-selector');
   fileSelector.addEventListener('change', (event) => {
@@ -655,7 +656,10 @@ const tileopacity = 0.5;
       date = ('0'+date.getDate()).slice(-2)+"/"+('0'+(date.getMonth()+1)).slice(-2)+"/"+date.getFullYear();
     }
     let dname = typeof window.pilotname === 'string' && window.pilotname.trim().length > 0 ? '<BR>'+window.pilotname:'';
-    let htmlinfos = '<div id="ctinfos"><p class="gras centre souligne">'+date+dname+'</p>';
+    let pname = typeof window.paraglidername === 'string' && window.paraglidername.trim().length > 0 ?window.paraglidername:'';
+    if (pname.length > 16) pname = `<span title="${pname}">${pname.substring(0,15)}&#x2026;</span>`;
+    if (pname) pname = '<BR>'+pname;
+    let htmlinfos = '<div id="ctinfos"><p class="gras centre souligne">'+date+dname+pname+'</p>';
     for (let prop in flstats) {
       let propval = flstats[prop];
       htmlinfos += "<p";
@@ -748,6 +752,10 @@ const tileopacity = 0.5;
     window.extensions = parseIRecord(lines.find(l => l.trim().startsWith('I')));
     let records = lines.filter(l => l.trim().startsWith('B'));
     window.pilotname = lines.find(l => l.trim().startsWith('HFPLTPILOTINCHARGE'))?.split(':')[1];
+    window.paraglidername = urlParams.get('paraglidername');
+    if (!paraglidername) {
+      window.paraglidername = lines.find(l => l.trim().startsWith('HFGTYGLIDERTYPE'))?.split(':')[1];
+    }
     //0000000000111111111
     //0123456789012345678
     //HFDTEDATE:100522,01
@@ -893,6 +901,9 @@ const tileopacity = 0.5;
         chargement(false);
       }
     };
+    xhttp.onerror=function(e) {
+      chargement(true, "Error fetching " + url, true);
+    };
     xhttp.open("GET", igc, true);
     xhttp.send(null);
   }
@@ -980,6 +991,9 @@ const tileopacity = 0.5;
         }
       }
     };
+    xhttp.onerror=function(e) {
+      chargement(true, "Error fetching " + url, true);
+    };
     xhttp.open("GET", finfo, true);
     xhttp.send();
   }
@@ -1007,8 +1021,9 @@ const tileopacity = 0.5;
   function zeroPad(num, places) {
     return String(num).padStart(places, '0');
   }
-  function chargement(load=true) {
+  function chargement(load=true, message='Chargement...', add=false) {
     loading.style.display = load?'block':'none';
+    loading.innerHTML = (add?loading.innerHTML+'<BR>':'')+message;
   }
   window.onload = function() {
     if (igc) {
