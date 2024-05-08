@@ -78,8 +78,18 @@ class AnaTrace {
     this.glides = [];
     this.dives = [];
   }
+  static toRad(l) {
+    return Math.PI * l / 180;
+  }
+  static toDeg(l) {
+    return 180 * l / Math.PI;
+  }
   static distance_to(from, to) {
-    let d2 = Math.sin(from.lat) * Math.sin(to.lat) + Math.cos(from.lat) * Math.cos(to.lat) * Math.cos(from.lon - to.lon);
+    let flat = AnaTrace.toRad(from.lat);
+    let flon = AnaTrace.toRad(from.lon);
+    let tlat = AnaTrace.toRad(to.lat);
+    let tlon = AnaTrace.toRad(to.lon);
+    let d2 = Math.sin(flat) * Math.sin(tlat) + Math.cos(flat) * Math.cos(tlat) * Math.cos(flon - tlon);
     return d2 < 1 ? R * Math.acos(d2) : 0;
   }
   static interpolate(other, delta) {
@@ -326,13 +336,27 @@ class AnaTrace {
   paintmouseinfos(x) {
     let idxpt = this.graph.fi.pts.indexOf(this.graph.fizoom.pts[this.graph.curidx]);
     if (idxpt < 0) return;
-    x++;
+    x+=2;
     if (this.thermals.some(t => t.start<=idxpt && t.stop>=idxpt)) {
       this.graph.ctx2.fillText(this.getStateLabel(1), x, 10);
+      let cur = this.thermals.find(t => t.start<=idxpt && t.stop>=idxpt);
+      let dt = (this.graph.fi.pts[cur.stop].time - this.graph.fi.pts[cur.start].time)/1000;
+      let dz = this.graph.fi.pts[cur.stop].alt - this.graph.fi.pts[cur.start].alt;
+      this.graph.ctx2.fillText(`${Math.round(dz)}m @ ${Math.round(10*dz / dt)/10}m/s`, x, 18);
     } else if (this.glides.some(g => g.start<=idxpt && g.stop>=idxpt)) {
       this.graph.ctx2.fillText(this.getStateLabel(2), x, 10);
+      let cur = this.glides.find(t => t.start<=idxpt && t.stop>=idxpt);
+      let dp = AnaTrace.distance_to(this.graph.fi.pts[cur.stop], this.graph.fi.pts[cur.start]);
+      let dt = (this.graph.fi.pts[cur.stop].time - this.graph.fi.pts[cur.start].time)/1000;
+      let dz = this.graph.fi.pts[cur.stop].alt - this.graph.fi.pts[cur.start].alt;
+      let average_ld = dz < 0 ? Math.round(10*(-dp / dz))/10 : '\u221E';
+      this.graph.ctx2.fillText(`${Math.round(10*dp / 1000)/10}km @ ${average_ld}:1, ${Math.round(3.6 * dp / dt)}km/h`, x, 18);
     } else if (this.dives.some(d => d.start<=idxpt && d.stop>=idxpt)) {
       this.graph.ctx2.fillText(this.getStateLabel(3), x, 10);
+      let cur = this.dives.find(t => t.start<=idxpt && t.stop>=idxpt);
+      let dt = (this.graph.fi.pts[cur.stop].time - this.graph.fi.pts[cur.start].time)/1000;
+      let dz = this.graph.fi.pts[cur.stop].alt - this.graph.fi.pts[cur.start].alt;
+      this.graph.ctx2.fillText(`${-1 * Math.round(-dz)}m @ ${Math.round(10*dz / dt)/10}m/s`, x, 18);
     }
   }
   getStateLabel(state) {
