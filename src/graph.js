@@ -174,10 +174,24 @@ class GraphGPX {
 
   addAnalyser(analyser) {
     this.analysers.push(analyser);
-    if (Array.isArray(this.fi)) {
+    if (Array.isArray(this.fi?.pts) && this.fi.pts.length>0) {
       launchAnalysers();
     }
     this.createOptionsAnalysers();
+  }
+  
+  activateAnalyser(analyser) {
+    analyser.show = true;
+    let needrepaint = false;
+    document.getElementById('opts_analysers').querySelectorAll('input[type="checkbox"]').forEach(ipt => {
+      if (ipt.id.startsWith('grphshow'+analyser.constructor.name)) {
+        ipt.checked = true;
+        needrepaint = true;
+      }
+    });
+    if (needrepaint) {
+      this.paint();
+    }
   }
 
   setDebugMode() {
@@ -648,7 +662,7 @@ class GraphGPX {
       this.ctx2.fillText(curpt.time.toLocaleString('fr-FR'/*, { timeZone: 'UTC' }*/).substr(-8, 5) + " ("+t.toLocaleString('fr-FR', { timeZone: 'UTC' }).substr(-8, 5)+")", posx, posy+=10);
 
       this.analysers.forEach(a => {
-        if (a.show && typeof a.paintmouseinfos == 'function') a.paintmouseinfos(this, x);
+        if (a.show && typeof a.paintmouseinfos == 'function') a.paintmouseinfos(x);
       });
     }
   }
@@ -1088,7 +1102,7 @@ class GraphGPX {
     }
 
     this.analysers.forEach(a => {
-      if (a.show && typeof a.paint == 'function') a.paint(this);
+      if (a.show && typeof a.paint == 'function') a.paint();
     });
   }
 
@@ -1234,9 +1248,11 @@ class GraphGPX {
   
   launchAnalysers() {
     if (Array.isArray(this.analysers)) {
-      let startTime = performance.now();
-      this.analysers.forEach(a => a.analyse(this.fi));
-      console.log(`analysers : ${Math.round(performance.now()-startTime)}ms`);
+      this.analysers.forEach(a => {
+        let startTime = performance.now();
+        a.analyse(this.fi);
+        console.log(`analyser "${a.name}" : ${Math.round(performance.now()-startTime)}ms`);
+      });
     }
   }
 
@@ -1256,34 +1272,35 @@ class GraphGPX {
     let minusalt = 0;
     xhttp.onreadystatechange = function() {
       if (xhttp.readyState == 4 && xhttp.status == 200) {
-        if (!xhttp.responseText) return;
-        try {
-          //let dv = (new DataView(new Uint8Array(xhttp.responseText.split('').map(v => v.charCodeAt(0))).buffer));
-          //let alts = JSON.parse(xhttp.responseText);
-          let altdiff = 0;
-          for (let i=index,j=0; i < index+count; i++,j+=2) {
-            //this.fi.pts[i].gndalt = alts[j++];
-            //this.fi.pts[i].gndalt = (j+2>dv.byteLength) ? 0 : dv.getInt16(j, true);
-            this.fi.pts[i].gndalt = (j+2>xhttp.responseText.length) ? 0 : (new DataView(new Uint8Array([xhttp.responseText.charCodeAt(j), xhttp.responseText.charCodeAt(j+1)]).buffer)).getInt16(0, true);
-            if (this.fi.pts[i].alt == 0)
-              this.fi.pts[i].alt = this.fi.pts[i].gndalt;
-            altdiff = this.fi.pts[i].alt - this.fi.pts[i].gndalt;
-            if (altdiff < this.fi.minaltdiff) this.fi.minaltdiff = altdiff;
-            if (altdiff > this.fi.maxaltdiff) this.fi.maxaltdiff = altdiff;
+        if (xhttp.responseText) {
+          try {
+            //let dv = (new DataView(new Uint8Array(xhttp.responseText.split('').map(v => v.charCodeAt(0))).buffer));
+            //let alts = JSON.parse(xhttp.responseText);
+            let altdiff = 0;
+            for (let i=index,j=0; i < index+count; i++,j+=2) {
+              //this.fi.pts[i].gndalt = alts[j++];
+              //this.fi.pts[i].gndalt = (j+2>dv.byteLength) ? 0 : dv.getInt16(j, true);
+              this.fi.pts[i].gndalt = (j+2>xhttp.responseText.length) ? 0 : (new DataView(new Uint8Array([xhttp.responseText.charCodeAt(j), xhttp.responseText.charCodeAt(j+1)]).buffer)).getInt16(0, true);
+              if (this.fi.pts[i].alt == 0)
+                this.fi.pts[i].alt = this.fi.pts[i].gndalt;
+              altdiff = this.fi.pts[i].alt - this.fi.pts[i].gndalt;
+              if (altdiff < this.fi.minaltdiff) this.fi.minaltdiff = altdiff;
+              if (altdiff > this.fi.maxaltdiff) this.fi.maxaltdiff = altdiff;
+            }
+            // réalignement sur l'altitude d'atterissage ; dangereux si la trace est coupée, on se retrouve avec tout le vol sous terre
+            //if (typeof this.fi.pts[this.fi.pts.length-1].gndalt == 'number')
+            //  minusalt = this.fi.pts[this.fi.pts.length-1].alt - this.fi.pts[this.fi.pts.length-1].gndalt;
           }
-          // réalignement sur l'altitude d'atterissage ; dangereux si la trace est coupée, on se retrouve avec tout le vol sous terre
-          //if (typeof this.fi.pts[this.fi.pts.length-1].gndalt == 'number')
-          //  minusalt = this.fi.pts[this.fi.pts.length-1].alt - this.fi.pts[this.fi.pts.length-1].gndalt;
+          catch (e) { console.log("error \"" + e + "\" while eval " + xhttp.responseText); }
+          if (minusalt != 0)
+            this.fi.pts.forEach(function (pt) { pt.alt -= minusalt; });
+          this.fi.maxalt = this.arrayMax(this.fi.pts, 'alt');
+          this.fi.minalt = this.arrayMin(this.fi.pts, 'alt');
+          this.fi.minalt = Math.max(0, this.fi.minalt);
+          this.fi.maxalt = Math.min(10000, this.fi.maxalt);
+          this.fi.minaltdiff = Math.max(0, this.fi.minaltdiff);
+          this.fi.maxaltdiff = Math.min(10000, this.fi.maxaltdiff);
         }
-        catch (e) { console.log("error \"" + e + "\" while eval " + xhttp.responseText); }
-        if (minusalt != 0)
-          this.fi.pts.forEach(function (pt) { pt.alt -= minusalt; });
-        this.fi.maxalt = this.arrayMax(this.fi.pts, 'alt');
-        this.fi.minalt = this.arrayMin(this.fi.pts, 'alt');
-        this.fi.minalt = Math.max(0, this.fi.minalt);
-        this.fi.maxalt = Math.min(10000, this.fi.maxalt);
-        this.fi.minaltdiff = Math.max(0, this.fi.minaltdiff);
-        this.fi.maxaltdiff = Math.min(10000, this.fi.maxaltdiff);
         this.elevcalls--;
         if (this.elevcalls <= 0) {
           this.updateZoom();
@@ -1293,6 +1310,10 @@ class GraphGPX {
         }
       }
     }.bind(this);
+    xhttp.onerror=function(e) {
+      let event = new CustomEvent('ondataloaded', {"detail": this.fi});
+      this.elem.dispatchEvent(event);
+    };
     xhttp.open("POST", this.options.elevationservice, true);
     //xhttp.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');
     //xhttp.send(JSON.stringify(data));

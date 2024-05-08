@@ -165,7 +165,7 @@
 <h1>Calcul de vol</h1>
 <label for="file-selector">Sélectionnez un fichier IGC : </label>
 <input type="file" id="file-selector" accept=".igc" multiple><HR>
-<label for="formigc">Ou placez directement le contenu du fichier IGC : </label>
+Ou placez directement le contenu du fichier IGC :
 <form id="formigc" method="post" onsubmit="loadIGC(undefined, true);return false;">
 <div style="max-width: 640px">
   <textarea type="text" id="igccont" style="width:100%;height:80px"></textarea><BR>
@@ -185,6 +185,7 @@
     <input type="radio" id="dmGR" name="dispmodes" value="GR" onclick="window.dispmode=this.value;redrawFlight();"><label for="dmGR">finesse</label><BR>
     <input type="radio" id="dmAlt" name="dispmodes" value="alt" onclick="window.dispmode=this.value;redrawFlight();"><label for="dmAlt">altitude</label><BR>
     <input type="radio" id="dmAltSol" name="dispmodes" value="altsol" onclick="window.dispmode=this.value;redrawFlight();"><label for="dmAltSol">altitude sol</label><BR>
+    <div id="opts_dispanalysers"></div>
     <input type="radio" id="dmNone" name="dispmodes" value="none" onclick="window.dispmode=this.value;redrawFlight();"><label for="dmNone">aucune</label>
     <p class="clickable gras centre souligne" onclick="dispmodes.classList.toggle('replie')">Mode altitude :</p>
     <input type="radio" id="dmGpsAlt" name="dispmodesalt" value="gps" onclick="redrawAltData(this.value);" checked><label for="dmGpsAlt">GPS</label><BR>
@@ -263,8 +264,8 @@ const urlParams = new URLSearchParams(window.location.search);
   var elevationservice = getParameter("elevationservice") || 'elevation/getElevation.php';
 
   var graph = new GraphGPX(document.getElementById("graph"), {elevationservice:elevationservice, disablescrollzoom: disablescroll});
-  graph.addAnalyser(new AnaTrace());
-  //graph.addAnalyser(new AnaDiffTrace());
+  graph.addAnalyser(new AnaTrace(graph));
+  //graph.addAnalyser(new AnaDiffTrace(graph));
   loadCarto(clegeoportail, document.getElementById('map_elem'), disablescroll, document.getElementById('mapcont')).then(map => {
     window.map = map;
 
@@ -331,6 +332,7 @@ const urlParams = new URLSearchParams(window.location.search);
   graph.addEventListener('ondataloaded', function(e) {
     window.fi = e.detail;
     redrawFlight();
+    constructAnalysersOptions();
     let s = (fi.pts[fi.pts.length-1].time.getTime() - fi.pts[0].time.getTime()) / 1000;
     let t = new Date(Date.UTC(1970, 0, 1));
     t.setUTCSeconds(s);
@@ -460,6 +462,17 @@ const urlParams = new URLSearchParams(window.location.search);
     }
   });
 
+  function constructAnalysersOptions() {
+    let opts_dispanalysers = document.getElementById('opts_dispanalysers');
+    opts_dispanalysers.innerHTML = '';
+    graph.analysers.forEach(a => {
+      if (Array.isArray(a.dispModes)) {
+        a.dispModes.forEach(dm => {
+          opts_dispanalysers.innerHTML += `<input type="radio" id="dm${dm.id}" name="dispmodes" value="${dm.id}" onclick="window.dispmode=this.value;redrawFlight();"><label for="dm${dm.id}">${dm.name}</label><BR>\n`;
+        });
+      }
+    });
+  }
   function fallbackCopyTextToClipboard(text, then, err) {
     var textArea = document.createElement("textarea");
     textArea.value = text;
@@ -570,7 +583,12 @@ const urlParams = new URLSearchParams(window.location.search);
         break;
       case 'alt':
       default:
-        iconText = parseInt(pt.alt) + ' m';
+        if (graph.analysers.some(a => Array.isArray(a.dispModes) && a.dispModes.some(dm => dm.id == dispmode))) {
+          let analyser = graph.analysers.find(a => Array.isArray(a.dispModes) && a.dispModes.some(dm2 => dm2.id == dispmode));
+          iconText = analyser.getDispModeCurrentValue(pt);
+        } else {
+          iconText = parseInt(pt.alt) + ' m';
+        }
         break;
     }
     let ratio = 0.5*(pt.alt-window.fi.minalt)/(window.fi.maxalt-window.fi.minalt);
@@ -589,6 +607,14 @@ const urlParams = new URLSearchParams(window.location.search);
 
   function redrawFlight() {
     window.dispmode = typeof window.dispmode === 'string'?window.dispmode:'vz';
+    hotlineLayer.setStyle({
+      'palette': {
+        0.0: '#0000ff',
+        0.4: '#00ff00',
+        0.7: '#ffff00',
+        1.0: '#ff0000'
+      }
+    });
     if (dispmode == 'alt') {
       hotlineLayer.setLatLngs(window.fi.pts.map(pt => ([pt.lat, pt.lon, pt.alt])));
       hotlineLayer.setStyle({'min':fi.minalt, 'max':fi.maxalt});
@@ -609,6 +635,18 @@ const urlParams = new URLSearchParams(window.location.search);
       ptsr.forEach(p => {if (p<min) min = p;if (p>max) max = p;})
       hotlineLayer.setLatLngs(pts);
       hotlineLayer.setStyle({'min':min, 'max':max});
+    } else if (graph.analysers.some(a => Array.isArray(a.dispModes) && a.dispModes.some(dm => dm.id == dispmode))) {
+      let analyser = graph.analysers.find(a => Array.isArray(a.dispModes) && a.dispModes.some(dm2 => dm2.id == dispmode));
+      graph.activateAnalyser(analyser);
+      //let dmid = analyser.dispModes.find(dm2 => dm2.name == dispmode).id;
+      let dm = analyser.getDispModeData(dispmode);
+      hotlineLayer.setLatLngs(dm.pts);
+      if (typeof dm.min === 'number') {
+        hotlineLayer.setStyle({'min':dm.min, 'max':dm.max});
+      }
+      if (typeof dm.palette === 'object') {
+        hotlineLayer.setStyle({'palette': dm.palette});
+      }
     } else {
       hotlineLayer.setLatLngs(window.fi.pts.map(pt => ([pt.lat, pt.lon, 0])));
       hotlineLayer.setStyle({'min':0, 'max':0.1});
