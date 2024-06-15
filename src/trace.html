@@ -405,10 +405,10 @@ const urlParams = new URLSearchParams(window.location.search);
     delete flstats.selection;
     updateTraceInfos();
 
-    if (typeof graphsel == 'object' && Array.isArray(window.fi?.pts) && Array.isArray(graphsel) && graphsel.length === 2 && graphsel[1] < fi.pts.length && graphsel[0] != graphsel[1]) {
-      let stpt = fi.pts[graphsel[0]],
-        endpt = fi.pts[graphsel[1]];
-      let portion = fi.pts.slice(graphsel[0], graphsel[1]);
+    if (typeof graphsel == 'object' && Array.isArray(window.graph?.fizoom?.pts) && Array.isArray(graphsel) && graphsel.length === 2 && graphsel[1] < graph.fizoom.pts.length && graphsel[0] != graphsel[1]) {
+      let stpt = graph.fizoom.pts[graphsel[0]],
+        endpt = graph.fizoom.pts[graphsel[1]];
+      let portion = graph.fizoom.pts.slice(graphsel[0], graphsel[1]);
       let prevpt = {lat: stpt.lat, lon: stpt.lon};
       let vxmoy = 0;
       let vzmoy = 0;
@@ -442,18 +442,20 @@ const urlParams = new URLSearchParams(window.location.search);
         deniv = '+' + deniv;
       }
       //<a title="afficher la polaire pour la sélection" href="#" onclick="event.stopPropagation();showpolaire(${JSON.stringify(portion.map(p => ({'vx': p.vx, 'vz': p.vz}))).replaceAll("\"", "'")});">
-      let seltext = `<u>Finesse :</u> ${finesse} <i>(${deniv}m en ${totaldist}km à ${vxmoy}km/h, vz moy: ${vzmoy}m/s)<BR><u>Altitude de départ :</u> ${stpt.alt}m<BR><u>Vitesse sur parcours :</u> ${vmoy}km/h en ${elapsed}<BR><u>Distance linéaire :</u> ${dist}km</i>`;
+      let seltext = `<u>Finesse :</u> ${finesse} <i>(${deniv}m en ${totaldist}km à ${vxmoy}km/h, vz moy: ${vzmoy}m/s)<BR><u>Altitude de départ :</u> ${stpt.alt}m<BR><u>Altitude d'arrivée :</u> ${endpt.alt}m<BR><u>Vitesse sur parcours :</u> ${vmoy}km/h en ${elapsed}<BR><u>Distance linéaire :</u> ${dist}km</i>`;
       let selinfos = {'finesse':finesse, 'deniv':deniv, 'distance_totale':totaldist, 'distance_lineaire':dist, 'vxmoy':vxmoy, 'vzmoy':vzmoy, 'altitude_depart':stpt.alt, 'vitesse_parcours':vmoy, 'elapsed':elapsed};
       let csvinfosbtn  = ` <a href="#" onclick="return cpInfosPortion(event, ${JSON.stringify(selinfos).replaceAll("\"", "&quot;")});" title="copier les informations sur la sélection dans le presse-papier">&#x1F4CB;</a>`;
       let csvportionbtn  = ` <a href="#" onclick="return dlPortion(event, ${graphsel[0]}, ${graphsel[1]});" title="télécharger la portion de vol en CSV">&#x1F4BE;</a>`;
       flstats['selection'] = seltext + csvinfosbtn + csvportionbtn;
       updateTraceInfos();
+      let popup = L.popup().setContent(seltext);
       window.selectionline = L.polyline(portion.map(pt => [pt.lat, pt.lon, pt.alt]),{
           color: '#ff00ff',
           weight: 6,
           opacity: 0.85,
           smoothFactor: 1
-        }).bindTooltip(seltext).addTo(map);
+        }).addTo(map);
+      window.selectionline.bindPopup(popup).openPopup();
     }
   });
   graph.addEventListener('onzoom', function(e) {

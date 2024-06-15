@@ -432,8 +432,14 @@ function url_with_parameter($paramname, $paramvalue, $paramtoremove = null) {
   echo $lnpages;
 ?>
 </div>
-<footer><a href="parcours.php">carte des parcours</a></footer>
-
+<?php
+  $url_imageparcours = "parcours.php";
+  $fname = "Tracklogs".DIRECTORY_SEPARATOR."parcours.jpg";
+  if (file_exists($fname)) {
+    $url_imageparcours = $fname."?".filemtime($fname);
+  }
+  echo "<footer><a href=\"".$url_imageparcours."\">carte des parcours</a></footer>";
+?>
 <script>
 var showComment = true;
 var volid = <?php echo $volid??0;?>;

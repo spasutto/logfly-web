@@ -115,8 +115,12 @@ if (isset($_POST['site']) && isset($_POST['date']) && isset($_POST['heure']) && 
   <title>Edition d'un vol</title>
   <script src="lib/igc-xc-score.js"></script>
   <script src="score.js"></script>
+  <script src="autocomplete.js"></script>
 
   <style>
+  * {
+    font-family: sans-serif;
+  }
   .fullwidth {
   width: 100%;
   }
@@ -172,6 +176,7 @@ if (isset($_POST['site']) && isset($_POST['date']) && isset($_POST['heure']) && 
   }
   window.onload = function()
   {
+    let acb = new AutoComplete(document.getElementsByName('voile')[0], 'search.php?type=voiles', {minlength:0});
     loading();
     // si la position a été spécifiée en entrée c'est que l'on est en train d'ajouter un vol et
     // c'est peut être un nouveau site, il faut garder sa position
@@ -340,17 +345,18 @@ if (isset($_POST['site']) && isset($_POST['date']) && isset($_POST['heure']) && 
       if (this.readyState == 4) {
         message("");
         if (this.status != 200 || this.responseText != "OK") {
-            alert("l'enregistrement semble avoir échoué ! " + this.status + ' ' + this.responseText);
-            btnSave.disabled = false;
+          alert("l'enregistrement semble avoir échoué ! " + this.status + ' ' + this.responseText);
+          btnSave.disabled = false;
         }
         else {
-            alert(params.id>0?"updated !!!":"new record ok !!! ");
-            btnSave.disabled = false;
+          alert(params.id>0?"updated !!!":"new record ok !!! ");
+          btnSave.disabled = false;
 
-            if (window.opener) {
-                try {window.opener.location.reload();} catch(err){}
-                window.close();
-            }
+          if (window.opener) {
+            window.closing = true;
+            try {window.opener.location.reload();} catch(err){}
+            window.close();
+          }
         }
       }
     };
@@ -543,7 +549,7 @@ if (isset($_POST['site']) && isset($_POST['date']) && isset($_POST['heure']) && 
       document.getElementById('zonevignette').style.display = 'initial';
     }).finally(() => {
       document.getElementById('vigntext').innerHTML = "";
-    }).catch((err)=>{alert('oups '+err);console.log(err);});
+    }).catch((err)=>{if (!window.closing) alert('oups '+err);console.log(err);});
   }
 
   String.prototype.toHMS = function () {

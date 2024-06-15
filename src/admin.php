@@ -153,11 +153,15 @@ insertion des IGC... <span id="inserperc"></span><BR>
   let base = '<?php echo $tmpbaseid;?>';
   let inserperc = document.getElementById('inserperc');
   let cur = 0;
+  let start_time = 0;
   function insert_igc(id) {
     return () => fetch("<?php echo $_SERVER['REQUEST_URI'];?>&base="+base+"&id="+id).then(res => res.text()).then(res => {
+      let perc = Math.round(100*(++cur)/vols.length);
+      let ellapsed = performance.now() - start_time;
+      let tempsrestant = perc <= 0 ? '?' : new Date(Math.round(100*(ellapsed)/perc-ellapsed)).toISOString().slice(11,19);
       //document.body.innerHTML += id + " : " + res + "<BR/>";
       window.scrollTo(0, document.body.scrollHeight);
-      inserperc.innerHTML = Math.round(100*(++cur)/vols.length)+'%';
+      inserperc.innerHTML = `${perc}% (temps restant : ${tempsrestant})`;
       return res;
     });
   }
@@ -178,6 +182,7 @@ insertion des IGC... <span id="inserperc"></span><BR>
     }, {});
   };
   window.onload = function() {
+    start_time = performance.now();
     Promise.allsync(vols.map(insert_igc)).then(res => {
       let errs = Object.entries(res.filter(r => typeof r!=='string' || !r.startsWith('OK')).groupByCount()).map(v => `${v[0]} (${v[1]} fois)`).join('\n') || '';
       if (errs.length > 0) alert("il semble qu'il y'ai eu une/des erreurs : "+errs);

@@ -14,6 +14,7 @@ if (!$id || $id <= 0)
 
 $force = $_GET['force'] === '1';
 $debug = $_GET['debug'] === '1';
+$fixedzoom = (isset($_GET['zoom']) && preg_match("/^\d+$/i", $_GET['zoom'])) ? intval($_GET['zoom']) : -1;
 
 $TRACKLOGS = "Tracklogs".DIRECTORY_SEPARATOR;
 //array_map('unlink', glob( __DIR__.DIRECTORY_SEPARATOR."Tracklogs".DIRECTORY_SEPARATOR."*.jpg"));
@@ -186,12 +187,17 @@ if ($trkmaxlat-$trkminlat>0.6 || $trkmaxlon-$trkminlon>0.6)
 else if ($trkmaxlat-$trkminlat>0.4 || $trkmaxlon-$trkminlon>0.4)
   $zoom = 12;
 */
-$zoom = $maxzoom;//count($scaledenominators)-1;
+if ($fixedzoom >= $minzoom && $fixedzoom<=$maxzoom) {
+  $zoom = $fixedzoom;
+} else {
+  $zoom = $maxzoom;//count($scaledenominators)-1;
+}
 do {
     $TLxy = lngLatToTileXY($TL[0], $TL[1], $zoom);
     $BRxy = lngLatToTileXY($BR[0], $BR[1], $zoom);
     $heighty = $BRxy[1] - $TLxy[1] + 1;
     $widthx = $BRxy[0] - $TLxy[0] + 1;
+    if ($fixedzoom >= $minzoom && $fixedzoom<=$maxzoom) break;
 }
 while (($widthx>7 || $heighty>7) && --$zoom>=$minzoom);
 $TLlnglat = tileXYToLngLat($TLxy[0], $TLxy[1], $zoom);
@@ -230,9 +236,10 @@ if ($WIDTH>$MAXSIZE || $HEIGHT>$MAXSIZE)
     $tileheight = ceil($tileheight*$yfactor);
 }
 if ($debug) {
-  header('Content-Type: text/plain');
+  //header('Content-Type: text/plain');
+  header('Content-Type: text/html');
   echo("");
-  echo("xfactor=$xfactor\n");
+  echo("<pre>xfactor=$xfactor\n");
   echo("yfactor=$yfactor\n");
   echo("trkminlon=$trkminlon\n");
   echo("trkmaxlat=$trkmaxlat\n");
@@ -247,10 +254,10 @@ if ($debug) {
   echo("TLlnglat=");print_r($TLlnglat);
   echo("BRlnglat=");print_r($BRlnglat);
   echo "zoom: ".$zoom."\n";
-  echo "widthx: ".$widthx." heighty: ".$heighty."\n";
+  echo "widthx: ".$widthx." heighty: ".$heighty." (".($widthx*$heighty)." tuiles)\n";
   echo "WIDTH: ".$WIDTH." HEIGHT: ".$HEIGHT."\n";
   echo "oldwidth: ".$oldwidth." oldheight: ".$oldheight."\n";
-  exit(0);
+  echo "</pre><table>";
 }
 
 $img = imagecreatetruecolor($WIDTH, $HEIGHT);
@@ -259,19 +266,30 @@ if ($zoom >= 14 && $zoom <= 16)
   $layer = 'GEOGRAPHICALGRIDSYSTEMS.MAPS.SCAN25TOUR'; // fond IGN 25 systématiquement
 $cle = CLEGEOPORTAIL;
 if (defined('CLEGEOPORTAIL2')) $cle = CLEGEOPORTAIL2;
-for ($x=0; $x<$widthx; $x++)
+for ($y=0; $y<$heighty; $y++)
 {
-    for ($y=0; $y<$heighty; $y++)
-    {
-        $tilex = $TLxy[0]+$x;
-        $tiley = $TLxy[1]+$y;
-        $imgtmp = @imagecreatefromjpeg('https://wxs.ign.fr/'.$cle.'/geoportail/wmts?&REQUEST=GetTile&SERVICE=WMTS&VERSION=1.0.0&STYLE=normal&TILEMATRIXSET=PM&FORMAT=image/jpeg&LAYER='.$layer.'&TILEMATRIX='.$zoom.'&TILEROW='.$tiley.'&TILECOL='.$tilex);
-        if (!$imgtmp) continue;
-        if ($xfactor != 1 || $yfactor != 1)
-            /*imagecopyresized*/imagecopyresampled($img, $imgtmp, $x*$tilewidth, $y*$tileheight, 0, 0, $tilewidth, $tileheight, 256, 256);
-        else
-            imagecopy($img, $imgtmp, $x*256, $y*256, 0, 0, 256, 256);
+  if ($debug) echo "<TR>";
+  for ($x=0; $x<$widthx; $x++)
+  {
+    $tilex = $TLxy[0]+$x;
+    $tiley = $TLxy[1]+$y;
+    $url = 'https://wxs.ign.fr/'.$cle.'/geoportail/wmts?&REQUEST=GetTile&SERVICE=WMTS&VERSION=1.0.0&STYLE=normal&TILEMATRIXSET=PM&FORMAT=image/jpeg&LAYER='.$layer.'&TILEMATRIX='.$zoom.'&TILEROW='.$tiley.'&TILECOL='.$tilex;
+    if ($debug) {
+      echo "<TD><a href=\"".$url."\"><img src=\"".$url."\" width=\"200px\"></a></TD>";
+      continue;
     }
+    $imgtmp = @imagecreatefromjpeg($url);
+    if (!$imgtmp) continue;
+    if ($xfactor != 1 || $yfactor != 1)
+      /*imagecopyresized*/imagecopyresampled($img, $imgtmp, $x*$tilewidth, $y*$tileheight, 0, 0, $tilewidth, $tileheight, 256, 256);
+    else
+      imagecopy($img, $imgtmp, $x*256, $y*256, 0, 0, 256, 256);
+  }
+  if ($debug) echo "</TR>";
+}
+if ($debug) {
+  echo "</table>";
+  exit(0);
 }
 
 $blue = imagecolorallocate($img,0,0,255);

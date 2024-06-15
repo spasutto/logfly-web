@@ -189,10 +189,29 @@ class LogflyReader
     rename("Tracklogs/tempid.igc", "Tracklogs/".$id2.".igc");
   }
 
-  function getSites()
+  function getVoiles($text='')
+  {
+    $data = array();
+    $sql = "SELECT DISTINCT V_Engin from VOL";
+    if (strlen($text)>0) {
+      $sql .= " WHERE V_Engin LIKE '%".str_replace("'", "''", strtoupper($text))."%'";
+    }
+    $sql .= " order by V_Engin;";
+    $ret = $this->db->query($sql);
+    while($row = $ret->fetchArray(SQLITE3_ASSOC))
+    {
+      $data[] = $row['V_Engin'];
+    }
+    return $data;
+  }
+  function getSites($text='')
   {
     $sites = array();
-    $sql = "SELECT S_Nom from SITE order by S_Nom;";
+    $sql = "SELECT DISTINCT S_Nom from SITE";
+    if (strlen($text)>0) {
+      $sql .= " WHERE S_Nom LIKE '%".str_replace("'", "''", strtoupper($text))."%'";
+    }
+    $sql .= " order by S_Nom;";
     $ret = $this->db->query($sql);
     while($row = $ret->fetchArray(SQLITE3_ASSOC))
     {
