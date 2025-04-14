@@ -1,8 +1,9 @@
 var startIcon = null, finishIcon = null, turnpointIcon = null, deco_icon = null, attero_icon = null;
 
-async function loadCarto(clegeoportail=null, mapelem=null, disablescrollzoom=false, rootfselem=null, loadffvl=false) {
+async function loadCarto(clegeoportail=null, mapelem=null, disablescrollzoom=false, rootfselem=null, loadffvl=false, layers=[]) {
   mapelem = mapelem || document.getElementById('map');
   rootfselem = rootfselem || mapelem;
+  layers = typeof layers === 'object'?layers:{};
   let useign = typeof clegeoportail == "string" && clegeoportail.trim().length > 0;
   window.usermoved = false;
   let firstzoom = true;
@@ -41,10 +42,22 @@ async function loadCarto(clegeoportail=null, mapelem=null, disablescrollzoom=fal
     zoomOffset: -1
   });*/
   if (useign) {
-    baseMaps["Photos Satellite"] = L.tileLayer("https://wxs.ign.fr/decouverte/geoportail/wmts?&REQUEST=GetTile&SERVICE=WMTS&VERSION=1.0.0&STYLE=normal&TILEMATRIXSET=PM&FORMAT=image/jpeg&LAYER=ORTHOIMAGERY.ORTHOPHOTOS&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}",
-      {minZoom : 0,maxZoom : 18,attribution : '<a target="_blank" href="https://www.geoportail.gouv.fr/">IGN-F/Geoportail</a>', tileSize : 256 /* les tuiles du Géooportail font 256x256px*/ });
+    clegeoportail = 'ign_scan_ws';
+    //baseMaps["Photos Satellite"] = L.tileLayer("https://wxs.ign.fr/decouverte/geoportail/wmts?&REQUEST=GetTile&SERVICE=WMTS&VERSION=1.0.0&STYLE=normal&TILEMATRIXSET=PM&FORMAT=image/jpeg&LAYER=ORTHOIMAGERY.ORTHOPHOTOS&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}",
+    //baseMaps["Photos Satellite"] = L.tileLayer("https://data.geopf.fr/private/wmts?SERVICE=WMTS&VERSION=1.0.0&REQUEST=GetTile&apikey="+clegeoportail+"&STYLE=normal&TILEMATRIXSET=PM&FORMAT=image/jpeg&LAYER=ORTHOIMAGERY.ORTHOPHOTOS&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}",
+    //  {minZoom : 0,maxZoom : 18,attribution : '<a target="_blank" href="https://www.geoportail.gouv.fr/">IGN-F/Geoportail</a>', tileSize : 256 /* les tuiles du Géooportail font 256x256px*/ });
+    baseMaps["Photos Satellite"] = L.tileLayer('https://data.geopf.fr/wmts?'+
+            '&REQUEST=GetTile&SERVICE=WMTS&VERSION=1.0.0&TILEMATRIXSET=PM'+
+            '&LAYER={ignLayer}&STYLE={style}&FORMAT={format}'+
+            '&TILECOL={x}&TILEROW={y}&TILEMATRIX={z}',
+      {ignLayer: 'ORTHOIMAGERY.ORTHOPHOTOS',
+	            style: 'normal',
+	            format: 'image/jpeg',
+	            service: 'WMTS',
+	            minZoom : 0,maxZoom : 18,attribution : '<a target="_blank" href="https://www.geoportail.gouv.fr/">IGN-F/Geoportail</a>', tileSize : 256 /* les tuiles du Géooportail font 256x256px*/ });
     //"&LAYER=GEOGRAPHICALGRIDSYSTEMS.MAPS"+
-    baseMaps["Carte IGN"] = L.tileLayer("https://wxs.ign.fr/"+clegeoportail+"/geoportail/wmts?&REQUEST=GetTile&SERVICE=WMTS&VERSION=1.0.0&STYLE=normal&TILEMATRIXSET=PM&FORMAT=image/jpeg&LAYER=GEOGRAPHICALGRIDSYSTEMS.MAPS.SCAN25TOUR&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}",
+    //baseMaps["Carte IGN"] = L.tileLayer("https://wxs.ign.fr/"+clegeoportail+"/geoportail/wmts?&REQUEST=GetTile&SERVICE=WMTS&VERSION=1.0.0&STYLE=normal&TILEMATRIXSET=PM&FORMAT=image/jpeg&LAYER=GEOGRAPHICALGRIDSYSTEMS.MAPS.SCAN25TOUR&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}",
+    baseMaps["Carte IGN"] = L.tileLayer("https://data.geopf.fr/private/wmts?SERVICE=WMTS&VERSION=1.0.0&REQUEST=GetTile&apikey="+clegeoportail+"&STYLE=normal&TILEMATRIXSET=PM&FORMAT=image/jpeg&LAYER=GEOGRAPHICALGRIDSYSTEMS.MAPS.SCAN25TOUR&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}",
       {minZoom : 0,maxZoom : 16,attribution : '<a target="_blank" href="https://www.geoportail.gouv.fr/">IGN-F/Geoportail</a>', tileSize : 256 /* les tuiles du Géooportail font 256x256px */ });
   }
   baseMaps["Carte Topo"] = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
@@ -52,6 +65,10 @@ async function loadCarto(clegeoportail=null, mapelem=null, disablescrollzoom=fal
     attribution: 'Map data: &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, <a href="http://viewfinderpanoramas.org">SRTM</a> | Map style: &copy; <a href="https://opentopomap.org">OpenTopoMap</a> (<a href="https://creativecommons.org/licenses/by-sa/3.0/">CC-BY-SA</a>)'
   });
   if (window.location.search.indexOf('debug=1') > -1) baseMaps = {};
+
+  for (let addlayer in layers) {
+    baseMaps[addlayer] = layers[addlayer];
+  }
 
   for (let basemap in baseMaps) {
     baseMaps[basemap].addTo(map);
@@ -70,9 +87,10 @@ async function loadCarto(clegeoportail=null, mapelem=null, disablescrollzoom=fal
           let show = btn.dataset.show == "false";
           btn.setAttribute('title', (show?'Masquer':'Afficher')+' les sites FFVL');
           if (!window.sites_ffvl) {
-            await loadSitesFFVL();
-            preAfficherSitesFFVL(map);
-          } else {
+            if (await loadSitesFFVL())
+              preAfficherSitesFFVL(map);
+          }
+          if (window.sites_ffvl) {
             afficherSitesFFVL(map, show);
           }
           btn.dataset.show = show;
@@ -184,8 +202,8 @@ async function loadCarto(clegeoportail=null, mapelem=null, disablescrollzoom=fal
     });
     new L.Control.CalcCone({ position: 'topleft' }).addTo(map);
   } else {
-    await loadSitesFFVL();
-    preAfficherSitesFFVL(map);
+    if (await loadSitesFFVL())
+      preAfficherSitesFFVL(map);
   }
 
   let LeafIcon = L.Icon.extend({
@@ -209,7 +227,15 @@ function isTouchDevice() {
 }
 async function loadSitesFFVL() {
   const response = await fetch('sites_ffvl.php');
-  window.sites_ffvl = (await response.json()).filter(s => s.site_type == 'vol' && s.terrain_statut.startsWith('actif') && (s.site_sous_type == "Atterrissage" || s.site_sous_type == "DÃ©collage"));
+  try {
+    //window.sites_ffvl = (await response.json()).filter(s => s.site_type == 'vol' && s.terrain_statut.startsWith('actif') && (s.site_sous_type == "Atterrissage" || s.site_sous_type == "DÃ©collage"));
+    window.sites_ffvl = (await response.json()).filter(s => /*s.possible_usages == 3 && */s.status == 'actif'  && (s.flying_functions == 2 || s.flying_functions == 1));
+    return true;
+  } catch (err) {
+    console.error(err);
+    alert(err);
+  }
+  return false;
 }
 function preAfficherSitesFFVL(map) {
   let link = document.createElement('link');
@@ -231,35 +257,36 @@ function afficherSitesFFVL(map, afficher=true) {
   if (!window.sites_ffvl_markers) {
   	window.sites_ffvl_markers = L.markerClusterGroup();
   
+    let regurl = /https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)/ig;
+    let parse = (s) => s?.replaceAll(regurl, '<a href="$&" target="_blank">$&</a>') ?? '';
+    let decode = (s) => parse(/*decodeURIComponent(escape(s))*/s).replaceAll('\\\'', '\'') ?? '';
     sites_ffvl.forEach(site => {
-      let regurl = /https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)/ig;
-      let parse = (s) => s.replaceAll(regurl, '<a href="$&" target="_blank">$&</a>');
-      let decode = (s) => parse(decodeURIComponent(escape(s))).replaceAll('\\\'', '\'');
-      let nomsite = `${decode(site.site_sous_type)} FFVL <b>"${decode(site.nom)}"</b>`;
-      if (site.sous_nom.trim().length > 0) {
-        nomsite += ` (${decode(site.sous_nom)})`;
+      if (site.suid == 854) debugger;
+      let nomsite = `${site.flying_functions == 2?'Atterissage':'Décollage'} FFVL <b>"${decode(site.toponym)}"</b>`;
+      //if (site.toponym.trim().length > 0) {
+      //  nomsite += ` (${decode(site.toponym)})`;
+      //}
+      if (/^\d+$/.test(site.altitude)) {
+        nomsite += ` ${parseInt(site.altitude)}m`;
       }
-      if (/^\d+$/.test(site.alt)) {
-        nomsite += ` ${parseInt(site.alt)}m`;
-      }
-      let infos = `<h3>${nomsite}</h3>${decode(site.description)}`;
+      let infos = `<h3>${nomsite}</h3>${decode(site.description)}<BR>${decode(site.environmental_description)}<BR>${decode(site.hike_and_fly_description)}<BR>${decode(site.flying_rules_description)}<BR>${decode(site.tourist_info)}`;
       /* ORIENTATIONS POSSIBLES :
       sites_ffvl.map(s => (s.vent_favo??'')+(s.vent_defavo??'')).filter((value, index, array) => {return array.indexOf(value) === index;}).join(';').split(';').filter((value, index, array) => {return array.indexOf(value) === index;})
       */
-      if (site.vent_favo.trim().length > 0) {
-        infos += `<BR><b>orientations favorables : </b>${decode(site.vent_favo)}`;
+      if (site.wind_orientations_ok?.trim().length > 0) {
+        infos += `<BR><b>orientations favorables : </b>${decode(site.wind_orientations_ok)}`;
       }
-      if (site.vent_defavo.trim().length > 0) {
-        infos += `<BR><b>orientations défavorables : </b>${decode(site.vent_defavo)}`;
+      if (site.wind_orientations_nok?.trim().length > 0) {
+        infos += `<BR><b>orientations défavorables : </b>${decode(site.wind_orientations_nok)}`;
       }
-      if (site.dangers.trim().length > 0) {
-        infos += `<BR><b>dangers : </b>${decode(site.dangers)}`;
+      if (site.restrictions?.trim().length > 0) {
+        infos += `<BR><b>dangers : </b>${decode(site.restrictions)}`;
       }
       infos += `<BR><a href="https://federation.ffvl.fr/sites_pratique/voir/${site.suid}" target="_blank" style="float:right">fiche FFVL</a><BR>`;
-      if (site.site_sous_type == "Atterrissage") {
-    		sites_ffvl_markers.addLayer(L.marker(new L.LatLng(site.lat, site.lon), { icon: attero_icon }).bindTooltip(nomsite).bindPopup(infos));
+      if (site.flying_functions == 2) {
+    		sites_ffvl_markers.addLayer(L.marker(new L.LatLng(site.latitude, site.longitude), { icon: attero_icon }).bindTooltip(nomsite).bindPopup(infos));
       } else {
-        sites_ffvl_markers.addLayer(L.marker(new L.LatLng(site.lat, site.lon), { icon: deco_icon }).bindTooltip(nomsite).bindPopup(infos));
+        sites_ffvl_markers.addLayer(L.marker(new L.LatLng(site.latitude, site.longitude), { icon: deco_icon }).bindTooltip(nomsite).bindPopup(infos));
       }
     });
   }

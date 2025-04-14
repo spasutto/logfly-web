@@ -233,6 +233,18 @@ function url_with_parameter($paramname, $paramvalue, $paramtoremove = null) {
       /*filter: invert(68%) sepia(89%) saturate(476%) hue-rotate(340deg) brightness(118%) contrast(119%);*/
       filter: invert(100%) sepia(0%) saturate(7493%) hue-rotate(288deg) brightness(100%) contrast(107%);
   }
+  .imgTrace {
+    display:none;
+    position:fixed;
+    max-width:320px;
+    border: solid 1px grey;
+    box-shadow: 0px 0px 40px 40px white;
+  }
+  .imgTrace>img {
+    float:right;
+    max-width:320px;
+    max-height:320px;
+  }
   </style>
 </head>
 
@@ -401,7 +413,7 @@ function url_with_parameter($paramname, $paramvalue, $paramtoremove = null) {
       if (file_exists($fname)) {
         $url_image = $fname."?".filemtime($fname);
       }
-      echo " <div name=\"imgTrace\" id=\"imgTrace".$vol->id."\" data-id=\"".$vol->id."\" style=\"display:none;position:fixed;max-width:320px;border: solid 1px grey;\"><img src=\"".$url_image."\" style=\"float:right;max-width:320px;max-height:320px;\"></div>";
+      echo " <div name=\"imgTrace\" id=\"imgTrace".$vol->id."\" class=\"imgTrace\" data-id=\"".$vol->id."\"><img src=\"".$url_image."\"></div>";
     }
     else {
       echo ">";

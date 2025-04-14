@@ -266,14 +266,15 @@ if ($zoom >= 14 && $zoom <= 16)
   $layer = 'GEOGRAPHICALGRIDSYSTEMS.MAPS.SCAN25TOUR'; // fond IGN 25 systématiquement
 $cle = CLEGEOPORTAIL;
 if (defined('CLEGEOPORTAIL2')) $cle = CLEGEOPORTAIL2;
-for ($y=0; $y<$heighty; $y++)
+for ($x=0; $x<$widthx; $x++)
 {
   if ($debug) echo "<TR>";
-  for ($x=0; $x<$widthx; $x++)
+  for ($y=0; $y<$heighty; $y++)
   {
     $tilex = $TLxy[0]+$x;
     $tiley = $TLxy[1]+$y;
-    $url = 'https://wxs.ign.fr/'.$cle.'/geoportail/wmts?&REQUEST=GetTile&SERVICE=WMTS&VERSION=1.0.0&STYLE=normal&TILEMATRIXSET=PM&FORMAT=image/jpeg&LAYER='.$layer.'&TILEMATRIX='.$zoom.'&TILEROW='.$tiley.'&TILECOL='.$tilex;
+    //$url = 'https://wxs.ign.fr/'.$cle.'/geoportail/wmts?&REQUEST=GetTile&SERVICE=WMTS&VERSION=1.0.0&STYLE=normal&TILEMATRIXSET=PM&FORMAT=image/jpeg&LAYER='.$layer.'&TILEMATRIX='.$zoom.'&TILEROW='.$tiley.'&TILECOL='.$tilex;
+    $url = 'https://data.geopf.fr/private/wmts?SERVICE=WMTS&VERSION=1.0.0&REQUEST=GetTile&apikey=ign_scan_ws&STYLE=normal&TILEMATRIXSET=PM&FORMAT=image/jpeg&LAYER='.$layer.'&TILEMATRIX='.$zoom.'&TILEROW='.$tiley.'&TILECOL='.$tilex;
     if ($debug) {
       echo "<TD><a href=\"".$url."\"><img src=\"".$url."\" width=\"200px\"></a></TD>";
       continue;

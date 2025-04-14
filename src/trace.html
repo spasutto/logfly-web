@@ -789,8 +789,36 @@ const urlParams = new URLSearchParams(window.location.search);
       igccont = document.getElementById('igccont').value;
       document.getElementById('formcont').style.display = 'none';
     }
-    if (calcfs === true) calcFlightScore(igccont);
+    if (calcfs === true) await calcFlightScore(igccont);
     let lines = igccont.split(/\r?\n/);
+    //0000000000111111111
+    //0123456789012345678
+    //HFDTEDATE:100522,01
+    window.startdate = new Date();
+    // todo : remplacer ces deux lignes par un reduce
+    let startflightsection = -1, endflightsection = -1;
+    let startlinesindex = lines.filter(l => l=l.trim().startsWith('HFDTE')).map(l => lines.indexOf(l));
+    startlinesindex.forEach(i => {
+      let startdateline = lines[i];
+      let tmpstartdate = new Date();
+      if (startdateline) {
+        let sidx = startdateline.startsWith('HFDTEDATE')?10:5;
+        tmpstartdate.setDate(parseInt(startdateline.substring(sidx,sidx+2)));
+        tmpstartdate.setMonth(parseInt(startdateline.substring(sidx+2,sidx+4))-1);
+        let year = 2000+parseInt(startdateline.substring(sidx+4,sidx+6));
+        if (year > tmpstartdate.getFullYear()) year -= 100;
+        tmpstartdate.setFullYear(year);
+      }
+      if (tmpstartdate < startdate) {
+        startdate = tmpstartdate;
+        startflightsection = i;
+      }
+    });
+    if (startlinesindex.length>1 && !confirm('concaténer les vols?')) {
+      endflightsection = startlinesindex.find(i => i>startflightsection) ?? lines.length;
+      lines=lines.filter((l,i) => i>=startflightsection&&i<endflightsection);
+      //let otherlines=lines.filter((l,i) => i<startflightsection||i>=endflightsection);
+    }
     window.extensions = parseIRecord(lines.find(l => l.trim().startsWith('I')));
     let records = lines.filter(l => l.trim().startsWith('B'));
     window.pilotname = lines.find(l => l.trim().startsWith('HFPLTPILOTINCHARGE'))?.split(':')[1];
@@ -798,21 +826,6 @@ const urlParams = new URLSearchParams(window.location.search);
     if (!paraglidername) {
       window.paraglidername = lines.find(l => l.trim().startsWith('HFGTYGLIDERTYPE'))?.split(':')[1];
     }
-    //0000000000111111111
-    //0123456789012345678
-    //HFDTEDATE:100522,01
-    window.startdate = new Date();
-    lines.filter(l => l.trim().startsWith('HFDTEDATE')).forEach(startdateline => {
-      let tmpstartdate = new Date();
-      if (startdateline) {
-        tmpstartdate.setDate(parseInt(startdateline.substr(10,2)));
-        tmpstartdate.setMonth(parseInt(startdateline.substr(12,2))-1);
-        let year = 2000+parseInt(startdateline.substr(14,2));
-        if (year > tmpstartdate.getFullYear()) year -= 100;
-        tmpstartdate.setFullYear(year);
-      }
-      if (tmpstartdate < startdate) startdate = tmpstartdate;
-    });
     if (typeof tzoffset !== 'number' || tzoffset < 0) {
       window.tzoffset = 0;
       if (records.length > 0) {
@@ -931,25 +944,34 @@ const urlParams = new URLSearchParams(window.location.search);
     });
   }
   function getIGC(igc) {
-    let xhttp = new XMLHttpRequest();
-    xhttp.responseType = 'text';
-    xhttp.onreadystatechange = function() {
-      if (this.readyState == 4 && this.status == 200) {
-        if (!this.responseText) return;
-        window.igccontent = this.response;
-        document.getElementById('formcont').style.display = 'none';
-        loadIGC(this.response, typeof finfo !== 'string');
-        document.getElementById('igccont').value = this.response;
-        chargement(false);
-      }
-    };
-    xhttp.onerror=function(e) {
-      chargement(true, "Error fetching " + url, true);
-    };
-    xhttp.open("GET", igc, true);
-    xhttp.send(null);
+    return new Promise((res, rej) => {
+      let xhttp = new XMLHttpRequest();
+      xhttp.responseType = 'text';
+      xhttp.onreadystatechange = async function() {
+        if (this.readyState == 4) {
+          if (this.status == 200 && this.responseText) {
+            window.igccontent = this.response;
+            document.getElementById('formcont').style.display = 'none';
+            await loadIGC(this.response, typeof finfo !== 'string');
+            document.getElementById('igccont').value = this.response;
+            chargement(false);
+            res();
+          } else {
+            rej();
+          }
+        }
+      };
+      xhttp.onerror=function(e) {
+        let msgerr = "Error fetching " + url;
+        chargement(true, msgerr, true);
+        rej(msgerr);
+      };
+      xhttp.open("GET", igc, true);
+      xhttp.send(null);
+    });
   }
   function displayFlightScore(flightscore) {
+    window.flightscore = flightscore;
     let isTriangle = function() { return (flightscore.opt.scoring.code == 'tri' || flightscore.opt.scoring.code == 'fai'); };
     flstats['flightscore'] = '';
     if (typeof flightscore.scoreInfo == 'object') {
@@ -1002,42 +1024,64 @@ const urlParams = new URLSearchParams(window.location.search);
     }
     flstats['score'] = `${Math.round(flightscore.score*10)/10}pts`;
     flstats['vit.'] = `${Math.round(36000*flightscore.scoreInfo.distance/(flightscore.opt.landing-flightscore.opt.launch))/10}km/h`;
+    calcParcoursSpeed(); // on recalcule la vraie vitesse si on a déjà l'IGC
     updateTraceInfos();
   }
-  function calcFlightScore(igccontent) {
-    if (typeof igccontent !== 'string') return;
+  function calcParcoursSpeed() {
+    if (!window.points || !window.flightscore) return;
     try {
-      IGCScore.score(igccontent, (score) => {
-        if (score && typeof score.value == 'object') {
-          score = score.value;
-        }
-        if (score && typeof score.opt == 'object' && typeof score.opt.flight == 'object') delete score.opt.flight;
-        displayFlightScore(score);
-      });
-    } catch(e) {console.log(e);}
+      let legs = flightscore.scoreInfo.legs;
+      let distp = legs.map(l => l.d).reduce((sum, num) => sum + num);
+      // on trouve les points dans la trace correspondant au plus près du départ de la première branche et de l'arrivée de la dernière pour calculer le temps sur le parcours
+      let timep = (window.points.sort(pt => GraphGPX.distance(pt.lat, pt.lon, legs[legs.length-1].finish.y, legs[legs.length-1].finish.x)).reverse()[0].time.valueOf()
+       -window.points.sort(pt => GraphGPX.distance(pt.lat, pt.lon, legs[0].start.y, legs[0].start.x)).reverse()[0].time.valueOf())/1000;
+      let speedp = distp / (timep / 3600);
+      flstats['vit.'] = `${Math.round(speedp*10)/10}km/h`;
+    } catch(e) {console.error(e);}
+  }
+  function calcFlightScore(igccontent) {
+    return new Promise((res, rej) => {
+      if (typeof igccontent !== 'string') {
+        res();
+        return;
+      }
+      try {
+        IGCScore.score(igccontent, (score) => {
+          if (score && typeof score.value == 'object') {
+            score = score.value;
+          }
+          if (score && typeof score.opt == 'object' && typeof score.opt.flight == 'object') delete score.opt.flight;
+          displayFlightScore(score);
+          res();
+        });
+      } catch(e) {console.error(e);rej(e);}
+    });
   }
   function loadFlightScore(finfo) {
-    let xhttp = new XMLHttpRequest();
-    xhttp.responseType = 'json';
-    xhttp.onreadystatechange = function() {
-      if (this.readyState == 4) {
-        if (this.status == 200) {
-          try {
-            if (typeof this.response == 'object') {
-              displayFlightScore(this.response);
-            }
-          } catch(e) {window.finfo=null;calcFlightScore(window.igccontent);}
-        } else {
-          window.finfo=null;
-          calcFlightScore(window.igccontent);
+    return new Promise((res, rej) => {
+      let xhttp = new XMLHttpRequest();
+      xhttp.responseType = 'json';
+      xhttp.onreadystatechange = function() {
+        if (this.readyState == 4) {
+          if (this.status == 200) {
+            try {
+              if (typeof this.response == 'object') {
+                displayFlightScore(this.response);
+                res();
+              } else throw new Error('impossible de charger le score');
+            } catch(e) {window.finfo=null;calcFlightScore(window.igccontent).then(res).catch(rej);}
+          } else {
+            window.finfo=null;
+            calcFlightScore(window.igccontent).then(res).catch(rej);
+          }
         }
-      }
-    };
-    xhttp.onerror=function(e) {
-      chargement(true, "Error fetching " + url, true);
-    };
-    xhttp.open("GET", finfo, true);
-    xhttp.send();
+      };
+      xhttp.onerror=function(e) {
+        chargement(true, "Error fetching " + url, true);
+      };
+      xhttp.open("GET", finfo, true);
+      xhttp.send();
+    });
   }
   function showpolaire(portion) {
     portion.sort((p1, p2) => p1.vx - p2.vx);
@@ -1070,10 +1114,11 @@ const urlParams = new URLSearchParams(window.location.search);
   window.onload = function() {
     if (igc) {
       chargement();
-      getIGC(igc);
       document.getElementById('formcont').style.display = 'none';
-      if (finfo)
-        loadFlightScore(finfo);
+      Promise.all([getIGC(igc), finfo?loadFlightScore(finfo):null]).then(() => {
+        calcParcoursSpeed();
+        updateTraceInfos();
+      });
     } else {
       chargement(false);
       document.getElementById('formcont').style.display = 'block';

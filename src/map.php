@@ -95,10 +95,13 @@
         message(msg);
       //sites = sites.filter(function(s) { return (typeof s.latitude != 'number') || (typeof s.longitude != 'number') || (!isNumeric(s.altitude)); });
       sites.forEach(function(s) {
-        let sitenom = s.nom;
+        let sitenom = s.nom + ` (${s.nombrevols} vol${s.nombrevols>1?'s':''})`;
         if (isInLogflyPopup())
           sitenom = "<a href=\"#\" onclick=\"filtre('"+sitenom.replace('\'', '\\\'')+"');\" title=\"filtrer les vols pour ce site\">"+sitenom+"</a>";
-        L.marker([s.latitude, s.longitude]).addTo(map).bindPopup(sitenom);
+        let marker = L.marker([s.latitude, s.longitude]).addTo(map).bindPopup(sitenom);
+        if (s.nombrevols>1) {
+          marker._icon.style.filter = `hue-rotate(${Math.min(160, s.nombrevols)}deg)`;
+        }
       });
       let maxlat = Math.max.apply(Math, sites.map(function(o) { return o.latitude; }));
       let minlat = Math.min.apply(Math, sites.map(function(o) { return o.latitude; }));

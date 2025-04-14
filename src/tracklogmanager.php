@@ -6,7 +6,7 @@ class TrackLogManager
 {
   const FOLDER_TL = 'Tracklogs';
   const FICHIER_SITES_FFVL = 'sites_ffvl.json';
-  const URL_SITES_FFVL = 'https://data.ffvl.fr/json/sites.json';
+  const URL_SITES_FFVL = 'https://data.ffvl.fr/api?base=terrains&mode=json&key='.CLEFFVL;//'https://data.ffvl.fr/json/sites.json';
   static function fetchSitesFFVL() {
     $timestamp = -1;
     $size = 0;
@@ -52,7 +52,7 @@ class TrackLogManager
     $sites = null;
     // si le fichier est différent sur le serveur il faut le mettre à jour en local
     if (!file_exists(self::FICHIER_SITES_FFVL) || filemtime(self::FICHIER_SITES_FFVL) != $timestamp || filesize(self::FICHIER_SITES_FFVL) != $size) {
-      $sites = @file_get_contents('https://data.ffvl.fr/json/sites.json');
+      $sites = @file_get_contents(self::URL_SITES_FFVL);
       file_put_contents(self::FICHIER_SITES_FFVL, $sites);
       touch(self::FICHIER_SITES_FFVL, $timestamp);
     } else {
@@ -61,14 +61,14 @@ class TrackLogManager
     return $sites;
   }
   public static function getSiteFFVL($lat, $lon) {
-    $sites = @json_decode(TrackLogManager::fetchSitesFFVL());//@json_decode(@file_get_contents('https://data.ffvl.fr/json/sites.json'));
+    $sites = @json_decode(TrackLogManager::fetchSitesFFVL());//@json_decode(@file_get_contents(self::URL_SITES_FFVL));
     $site = "";
     $dist = 1000000000;
     if (is_array($sites)) {
       $distmp = 0;
       for ($i=0; $i<count($sites); $i++) {
         //lat="44.91205" lon="5.5913"
-        $distmp = distance($sites[$i]->lat, $sites[$i]->lon, $lat, $lon);
+        $distmp = distance(floatval($sites[$i]->latitude), floatval($sites[$i]->longitude), $lat, $lon);
         if ($distmp<$dist) {
           $dist = $distmp;
           $site = $sites[$i];
@@ -78,7 +78,7 @@ class TrackLogManager
     if ($dist > 1000) {
       return NULL;
     }
-    return ["nom"=> $site->nom, "site"=> $site, "dist"=>$dist];
+    return ["nom"=> $site->toponym, "site"=> $site, "dist"=>$dist];
   }
 
   public function uploadIGCs($tmpfnames, $id = null, $concat) {//ret &$destname, &$fpt
@@ -170,7 +170,7 @@ class TrackLogManager
         }
         if ($sitenom && $lgfr->getInfoSite($sitenom) === FALSE) {
           $lgfr->createSite($sitenom);
-          $lgfr->editSite($sitenom, $sitenom, $site->lat, $site->lon, $site->alt);
+          $lgfr->editSite($sitenom, $sitenom, floatval($site->latitude), floatval($site->longitude), floatval($site->altitude));
         }
         if (!$id) {
           $id = $lgfr->addVol($sitenom, $fpt->date->format("d/m/Y"), $fpt->date->format("H:i:s"), $duree, $tfreader->glider_type, "");

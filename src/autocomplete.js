@@ -8,12 +8,14 @@
 const AC_DEFAULT_OPTIONS = {
   minlength: 3,
   maxresults: 50,
-  searchterm: 's'
+  searchterm: 's',
+  trim: true
 };
 
 class AutoComplete {
   get curText() {
-    return this.input?.value ?? '';
+    let t = this.input?.value ?? '';
+    return this.options.trim?t.trim():t;
   }
   constructor(elem, searchaction, options) {
     this.loaded = false;
@@ -42,7 +44,7 @@ class AutoComplete {
       let style = document.createElement('style');
       style.type = 'text/css';
       style.id=stylename;
-      style.innerHTML = 'a.ACB { display:inline-block; width: 100%; font-weight:bold; color:black;text-decoration: none; } a.ACB:hover{background-color: #008fef; color: #d3ff22; } a.ACB.inactive { font-weight: normal; cursor: default;}';
+      style.innerHTML = 'a.ACB { display:inline-block; width: 100%; font-weight:normal; color:black;text-decoration: none; } a.ACB:hover{background-color: #008fef; color: #d3ff22; } a.ACB.inactive { font-weight: normal; cursor: default;}';
       document.getElementsByTagName('head')[0].appendChild(style);
     }
     this.ul = document.createElement("ul");
@@ -132,6 +134,9 @@ class AutoComplete {
       a.setAttribute('href', '#');
       if (typeof res.active === 'boolean' && !res.active) {
         a.classList.add('inactive');
+      } else {
+        const regsame = new RegExp("("+this.curText.replaceAll('(', '\\(').replaceAll(')', '\\)')+")", "gi");
+        itemtext = itemtext.replaceAll(regsame, '<b>$1</b>');
       }
       a.innerHTML = itemtext;
       a.onclick = (() => {
