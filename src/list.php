@@ -287,14 +287,52 @@ function url_with_parameter($paramname, $paramvalue, $paramtoremove = null) {
     $titredate = " jusqu'au ".$datetemp->format('d/m/Y');
   }
 
-  $nbpages = ceil($vols->nbvols/$resperpage);
-  $lnpages = "<div class=\"ppt_info\">page";
-  echo "";
-  for ($i=0; $i<$nbpages; $i++) {
+  function create_ln_page($i) {
+    global $offset, $resperpage;
     $lnoffset = $i*$resperpage;
     $balise = ($lnoffset != $offset) ? "a":"div";
     $titrepage = ($lnoffset != $offset) ? ('aller à la page '.($i+1)) : 'ceci est la page courante';
-    $lnpages .= "&nbsp;<".$balise." href=\"".url_with_parameter("offset", $lnoffset, ['vol'])."\" title=\"".$titrepage."\">".($i+1)."</".$balise.">";
+    return "&nbsp;<".$balise." href=\"".url_with_parameter("offset", $lnoffset, ['vol'])."\" title=\"".$titrepage."\">".($i+1)."</".$balise.">";
+  }
+  $nbpages = ceil($vols->nbvols/$resperpage);
+  $lnpages = "<div class=\"ppt_info\">page";
+  if ($nbpages < 10) {
+    for ($i=0; $i<$nbpages; $i++) {
+      $lnpages .= create_ln_page($i);
+    }
+  } else {
+    $pagecourante = ceil($offset/$resperpage);;
+    $pagesbefore = $pagecourante;
+    $pagesafter = $nbpages-$pagecourante;
+    if ($pagecourante>4) {
+      for ($i=0; $i<3; $i++) {
+        $lnpages .= create_ln_page($i);
+      }
+      if ($pagecourante-2 > 3)
+        $lnpages .= " ...";
+      for ($i=$pagecourante-2; $i<=$pagecourante; $i++) {
+        $lnpages .= create_ln_page($i);
+      }
+    } else {
+      for ($i=0; $i<=$pagecourante; $i++) {
+        $lnpages .= create_ln_page($i);
+      }
+    }
+    if ($pagesafter>4) {
+      //$lnpages .= create_ln_page($pagecourante+1);
+      for ($i=$pagecourante+1; $i<$pagecourante+3; $i++) {
+        $lnpages .= create_ln_page($i);
+      }
+      if ($nbpages-1 > $pagecourante+3)
+        $lnpages .= " ...";
+      for ($i=$nbpages-1; $i<$nbpages; $i++) {
+        $lnpages .= create_ln_page($i);
+      }
+    } else {
+      for ($i=$pagecourante+1; $i<$nbpages; $i++) {
+        $lnpages .= create_ln_page($i);
+      }
+    }
   }
   $lnpages .= "</div>";
 

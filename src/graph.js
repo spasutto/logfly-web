@@ -171,6 +171,14 @@ class GraphGPX {
   get disableScrollZoom() {
     return this.options.disablescrollzoom === true;
   }
+  
+  
+  get curLatLon() {
+    if (this.curidx<0) {
+      return {'lat':0, 'lng':0};
+    }
+    return {'lat':this.fizoom.pts[this.curidx].lat, 'lng':this.fizoom.pts[this.curidx].lon};
+  }
 
   addAnalyser(analyser) {
     this.analysers.push(analyser);
@@ -201,7 +209,7 @@ class GraphGPX {
 
   resetInfos() {
     // à chaque changement impacter aussi fizoom dans updateZoom()
-    this.fi = { 'pts': [], maxalt: -1000, minalt: 100000, totaltgain: 0, maxvz:-1000, minvz:100000, maxvx:-1000, minvx:100000, maxvt:-1000, minvt:100000, maxgr:-1000, mingr:100000, minaltdiff:100000, maxaltdiff:-1000, minlat:190, maxlat:-190, minlon:190, maxlon:-190, start: new Date };
+    this.fi = { 'pts': [], maxalt: -1000, maxaltt:0, minalt: 100000, minaltt:0, totaltgain: 0, maxvz:-1000, maxvzt:0, minvz:100000, minvzt:0, maxvx:-1000, maxvxt:0, minvx:100000, maxvt:-1000, minvt:100000, maxgr:-1000, mingr:100000, minaltdiff:100000, maxaltdiff:-1000, minlat:190, maxlat:-190, minlon:190, maxlon:-190, start: new Date };
     //this.fizoom = JSON.parse(JSON.stringify(this.fi)); // clone ne fonctionne pas pour la date
     this.elevcalls = 0;
     this.starttouch = 0;
@@ -226,14 +234,14 @@ class GraphGPX {
       //this.fizoom.pts = this.fi.pts.slice(this.zoomsel[0], this.zoomsel[1]);
       this.fizoom.pts = this.fizoom.pts.slice(this.zoomsel[0], this.zoomsel[1]);
       let fpt = this.fizoom.pts[0];
-      this.fizoom.minalt = this.fizoom.pts.reduce((prev, cur) => prev<cur.alt?prev:cur.alt, fpt.alt);
-      this.fizoom.maxalt = this.fizoom.pts.reduce((prev, cur) => prev>cur.alt?prev:cur.alt, fpt.alt);
+      this.fizoom.minalt = this.fizoom.pts.reduce((prev, cur, i) => {if (prev<cur.alt) return prev; else {this.fizoom.minaltt=i;return cur.alt;}}, fpt.alt);
+      this.fizoom.maxalt = this.fizoom.pts.reduce((prev, cur, i) => {if (prev>cur.alt) return prev; else {this.fizoom.maxaltt=i;return cur.alt;}}, fpt.alt);
       this.fizoom.minaltdiff = this.fizoom.pts.reduce((prev, cur) => prev<(cur.alt-cur.gndalt)?prev:cur.alt-cur.gndalt, fpt.alt-fpt.gndalt);
       this.fizoom.maxaltdiff = this.fizoom.pts.reduce((prev, cur) => prev>(cur.alt-cur.gndalt)?prev:cur.alt-cur.gndalt, fpt.alt-fpt.gndalt);
       this.fizoom.minvx = this.fizoom.pts.reduce((prev, cur) => prev<cur.vx?prev:cur.vx, fpt.vx);
-      this.fizoom.maxvx = this.fizoom.pts.reduce((prev, cur) => prev>cur.vx?prev:cur.vx, fpt.vx);
-      this.fizoom.minvz = this.fizoom.pts.reduce((prev, cur) => prev<cur.vz?prev:cur.vz, fpt.vz);
-      this.fizoom.maxvz = this.fizoom.pts.reduce((prev, cur) => prev>cur.vz?prev:cur.vz, fpt.vz);
+      this.fizoom.maxvx = this.fizoom.pts.reduce((prev, cur, i) => {if (prev>cur.vx) return prev; else {this.fizoom.maxvxt=i;return cur.vx;}}, fpt.vx);
+      this.fizoom.minvz = this.fizoom.pts.reduce((prev, cur, i) => {if(prev<cur.vz) return prev; else {this.fizoom.minvzt=i;return cur.vz;}}, fpt.vz);
+      this.fizoom.maxvz = this.fizoom.pts.reduce((prev, cur, i) => {if(prev>cur.vz) return prev; else {this.fizoom.maxvzt=i;return cur.vz;}}, fpt.vz);
       this.fizoom.minvt = this.fizoom.pts.reduce((prev, cur) => prev<this.#calcvt(cur.vx, cur.vz)?prev:this.#calcvt(cur.vx, cur.vz), this.#calcvt(fpt.vx, fpt.vz));
       this.fizoom.maxvt = this.fizoom.pts.reduce((prev, cur) => prev>this.#calcvt(cur.vx, cur.vz)?prev:this.#calcvt(cur.vx, cur.vz), this.#calcvt(fpt.vx, fpt.vz));
       this.fizoom.minlat = this.fizoom.pts.reduce((prev, cur) => prev<cur.lat?prev:cur.lat, fpt.lat);
@@ -539,9 +547,7 @@ class GraphGPX {
     if (this.isselecting)
       this.selection[1] = this.curidx;
     this.paintmouseinfos();
-    let curpt = this.fizoom.pts[this.curidx];
-    let event = new CustomEvent('onposchanged', {"detail": curpt});
-    this.elem.dispatchEvent(event);
+    this.raisePosChanged();
   }
   
   mousedown(e) {
@@ -1193,15 +1199,15 @@ class GraphGPX {
         this.fi.pts[i].gr = gr;
       }
       if (alt != 0) {
-        if (alt < this.fi.minalt) this.fi.minalt = alt;
-        if (alt > this.fi.maxalt) this.fi.maxalt = alt;
+        if (alt < this.fi.minalt) {this.fi.minalt = alt;this.fi.minaltt = i;}
+        if (alt > this.fi.maxalt) {this.fi.maxalt = alt;this.fi.maxaltt = i;}
         let diffalt = 0;
         if (i > 0 && (diffalt=(alt - this.fi.pts[i - 1].alt)) > 0) this.fi.totaltgain += diffalt;
       }
-      if (vz < this.fi.minvz) this.fi.minvz = vz;
-      if (vz > this.fi.maxvz) this.fi.maxvz = vz;
+      if (vz < this.fi.minvz) {this.fi.minvz = vz;this.fi.minvzt = i;}
+      if (vz > this.fi.maxvz) {this.fi.maxvz = vz;this.fi.maxvzt = i;}
       if (vx < this.fi.minvx) this.fi.minvx = vx;
-      if (vx > this.fi.maxvx) this.fi.maxvx = vx;
+      if (vx > this.fi.maxvx) {this.fi.maxvx = vx;this.fi.maxvxt = i;}
       let vt = this.#calcvt(vx, vz);
       if (vt < this.fi.minvt) this.fi.minvt = vt;
       if (vt > this.fi.maxvt) this.fi.maxvt = vt;
@@ -1323,8 +1329,28 @@ class GraphGPX {
   }
   
   setPos(pt) {
-    this.curidx = this.fizoom.pts.findIndex(p => p.time == pt.time);
+    let i = this.fizoom.pts.findIndex(p => p.time == pt.time);
+    if (i<0 || i>=this.fizoom.pts.length) return;
+    this.curidx=i;
     this.paintmouseinfos();
+    this.raisePosChanged();
+  }
+  
+  goto(index) {
+    if (this.zoomsel[0]>-1) {
+      index-=this.zoomsel[0];
+    }
+    if (index<0 || index>=this.fizoom.pts.length) return;
+    this.curidx = index;
+    this.paintmouseinfos();
+    this.raisePosChanged();
+  }
+  
+  raisePosChanged() {
+    if (this.curidx<0 || this.curidx>=this.fizoom.pts.length) return;
+    let curpt = this.fizoom.pts[this.curidx];
+    let event = new CustomEvent('onposchanged', {"detail": curpt});
+    this.elem.dispatchEvent(event);
   }
 
   arrayMin(arr, prop) {

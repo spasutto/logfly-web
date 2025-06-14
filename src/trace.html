@@ -337,14 +337,14 @@ const urlParams = new URLSearchParams(window.location.search);
     let t = new Date(Date.UTC(1970, 0, 1));
     t.setUTCSeconds(s);
     flstats['durée'] = `${dateToTime(t)}`;
-    flstats['alt max'] = `${Math.round(fi.maxalt)}m`;
-    flstats['alt min'] = `${Math.round(fi.minalt)}m`;
-    flstats['vz max'] = `${Math.round(fi.maxvz*10)/10}m/s`;
-    flstats['vz min'] = `${Math.round(fi.minvz*10)/10}m/s`;
+    flstats['alt max'] = `<a href="#" onclick="event.stopPropagation();graph.goto(fi.maxaltt);setViewIfNotVisible(graph.curLatLon);return false;" title="aller vers ce point">${Math.round(fi.maxalt)}m</a>`;
+    flstats['alt min'] = `<a href="#" onclick="event.stopPropagation();graph.goto(fi.minaltt);setViewIfNotVisible(graph.curLatLon);return false;" title="aller vers ce point">${Math.round(fi.minalt)}m</a>`;
+    flstats['vz max'] = `<a href="#" onclick="event.stopPropagation();graph.goto(fi.maxvzt);setViewIfNotVisible(graph.curLatLon);return false;" title="aller vers ce point">${Math.round(fi.maxvz*10)/10}m/s</a>`;
+    flstats['vz min'] = `<a href="#" onclick="event.stopPropagation();graph.goto(fi.minvzt);setViewIfNotVisible(graph.curLatLon);return false;" title="aller vers ce point">${Math.round(fi.minvz*10)/10}m/s</a>`;
     let i=0;
     let moyvzpos = fi.pts.reduce((acc, cur) => {if (cur.vz > 0){i++;acc.vz+=cur.vz;} return acc;}, {vz:0}).vz / (i||1);
     flstats['vz+ moy'] = `${Math.round(moyvzpos*10)/10}m/s`;
-    flstats['vx max'] = `${Math.round(fi.maxvx)}km/h`;
+    flstats['vx max'] = `<a href="#" onclick="event.stopPropagation();graph.goto(fi.maxvxt);setViewIfNotVisible(graph.curLatLon);return false;" title="aller vers ce point">${Math.round(fi.maxvx)}km/h</a>`;
     flstats['deniv'] = [`${Math.round(fi.pts[0].alt-fi.pts[fi.pts.length-1].alt)}m`, 'dénivelé entre le décollage et l\'atterissage'];
     let totaltgain = Math.round(fi.totaltgain);
     if (totaltgain > 10000) {
@@ -1255,6 +1255,10 @@ const urlParams = new URLSearchParams(window.location.search);
   }
   function tileAt(x, y) {
     return tiles.find(t => t.x == x && t.y == y);
+  }
+  function setViewIfNotVisible(latlon) {
+    if ((latlon.lat==0 && latlon.lng==0) || map.getBounds().contains(latlon)) return;
+    map.panTo(latlon);
   }
   function formatAlt(alt) {
     return alt<1?Math.round(alt*10)/10:Math.round(alt);
