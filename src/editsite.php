@@ -73,24 +73,76 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
   <title>Edition d'un site</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+     integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+     crossorigin=""/>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+     integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+     crossorigin=""></script>
 
   <style>
   .fullwidth {
     width: 100%;
   }
+  form {
+    display: inline-block;
+  }
+  #map {
+    display: inline-block;
+    height: 240px;
+    width: 400px;
+    float: right;
+  }
   </style>
 
 <script type="text/javascript">
+  var map = null;
+  var pin = null;
 
   window.onload = function()
   {
     window.frmsite = document.getElementsByName("site")[0];
     getSiteList();
+    map = L.map('map').setView([45, 6], 7);
+    L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
+      maxZoom: 17,
+      attribution: 'Map data: &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, <a href="http://viewfinderpanoramas.org">SRTM</a> | Map style: &copy; <a href="https://opentopomap.org">OpenTopoMap</a> (<a href="https://creativecommons.org/licenses/by-sa/3.0/">CC-BY-SA</a>)'
+    }).addTo(map);
+    map.on('click', onMapClick);
   };
 
   function message(mesg)
   {
     document.getElementsByName("infobox")[0].innerHTML = mesg;
+  }
+
+  async function onMapClick(e) {
+    if (!confirm("Voulez vous définir l'emplacement du site?")) return;
+    document.getElementsByName("lat")[0].value = e.latlng.lat;
+    document.getElementsByName("lon")[0].value = e.latlng.lng;
+    setPin(e.latlng.lat, e.latlng.lng);
+    let elev = await getElevation(e.latlng.lat, e.latlng.lng);
+    document.getElementsByName("alt")[0].value = elev;
+  }
+  
+  async function getElevation(lat, lng) {
+    let data = new Float32Array([lat, lng]);
+    let response = await fetch('elevation/getElevation.php',{
+      method: 'POST',
+      body: data
+    });
+    let elev = await response.bytes();
+    if (elev.length < 2) return -1;
+    return (new DataView(elev.buffer)).getInt16(0, true);
+  }
+  
+  function setPin(lat, lng) {
+    if (!pin) {
+      pin = L.marker([lat, lng]).addTo(map);
+    } else {
+      var newLatLng = new L.LatLng(lat, lng);
+      pin.setLatLng(newLatLng);
+    }
   }
 
   function clearList()
@@ -152,6 +204,7 @@
         document.getElementsByName("lat")[0].value = sites[1];
         document.getElementsByName("lon")[0].value = sites[2];
         document.getElementsByName("alt")[0].value = sites[3];
+        setPin(parseFloat(sites[1]), parseFloat(sites[2]));
         message("");
       }
     };
@@ -230,6 +283,8 @@
  <p>Altitude : <input type="text" name="alt" /></p>
  <p><input type="submit" value="OK"><input type="button" value="delete" onclick="onsubmitSite(true);"></p>
 </form>
+
+<div id="map"></div>
 
 </body>
 </html>

@@ -409,16 +409,22 @@ function url_with_parameter($paramname, $paramvalue, $paramtoremove = null) {
   <?php echo $lnpages;?>
 
 <TABLE id="details">
-<TR><TH>N&deg;</TH><TH>Date</TH><TH>Heure</TH><TH>Duree</TH><TH>Site</TH><TH>Voile</TH><TH></TH><TH>Trace</TH></TR>
+<TR><TH></TH><TH>N&deg;</TH><TH>Date</TH><TH>Heure</TH><TH>Duree</TH><TH>Site</TH><TH>Voile</TH><TH></TH><TH>Trace</TH></TR>
 <?php
+  function getColor($date) {
+    $d = intval($date->format('m'))*100+intval($date->format('d'));
+    return sprintf('#%06XAA', ($d-100)*0xffffff/1131);
+  }
   /*echo "<TR>";
   echo "<TD colspan=\"3\"><b>temps de vol :</b></TD>";
   echo "<TD>".Utils::timeFromSeconds($vols->tempstotalvol)."</TD>";
   echo "</TR>";*/
   foreach ($vols->vols as $vol)
   {
+    $ccolor = getColor($vol->date);
     echo "<TR class=\"lignevol\">";
-    echo "<TD><a id=\"v".$vol->id."\" href=\"".$root_url."vol/".$vol->id."\">". $vol->id."</a>";
+    echo "<TD style=\"background-color:".$ccolor.";width: 15px;\"></TD>";
+    echo "<TD name=\"tdid\"><a id=\"v".$vol->id."\" href=\"".$root_url."vol/".$vol->id."\">". $vol->id."</a>";
     echo "</TD>";
     $nom_parametredate = "datemin";
     $texte_parametredate = "depuis";
@@ -681,7 +687,7 @@ window.onload = function() {};
   lignes.forEach(function(ligne) {
     ligne.addEventListener('dblclick', function (e) {
       e.preventDefault();
-      editvol(parseInt(e.target.closest("tr").querySelector("td").textContent));
+      editvol(parseInt(e.target.closest("tr").querySelector("td[name='tdid']").textContent));
     });
   });
   document.addEventListener("scroll", (event) => {moveImageTrace();});
