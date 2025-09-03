@@ -65,26 +65,6 @@ if (isset($_GET['dl'])) {
            display: block;
            margin: 0;
        }
-       .ct-legend .ct-series-0:before {
-           background-color: #d70206;
-           border-color: #d70206;
-       }
-       .ct-legend .ct-series-1:before {
-           background-color: #f05b4f;
-           border-color: #f05b4f;
-       }
-       .ct-legend .ct-series-2:before {
-           background-color: #f4c63d;
-           border-color: #f4c63d;
-       }
-       .ct-legend .ct-series-3:before {
-           background-color: #d17905;
-           border-color: #d17905;
-       }
-       .ct-legend .ct-series-4:before {
-           background-color: #453d3f;
-           border-color: #453d3f;
-       }
 
        .ct-chart-line-multipleseries .ct-legend .ct-series-0:before {
            background-color: #d70206;
@@ -125,8 +105,38 @@ if (isset($_GET['dl'])) {
     white-space:nowrap;
   }
 </style>
+<?php
+$stats = $lgfr->getStats();
+$yearsi = array_keys($stats);
+$years = array_map(function($y) {return "'".$y."'";}, $yearsi);
+$count = array_map(function($stat) {return $stat->NombreVols;}, array_values($stats));
+$time = array_map(function($stat) {return $stat->TempsVol/3600;}, array_values($stats));
+//</b> : ".Utils::timeFromSeconds($stat->TempsVol, True)." (".$stat->NombreVols." vols)</p>";
+?>
 <script type="text/javascript">
   function init() {
+    var sheet = [...window.document.styleSheets].find(r => r.href == null);
+    if (sheet) {
+      let colors = [
+        '#d70206',
+        '#f05b4f',
+        '#f4c63d',
+        '#d17905',
+        '#453d3f',
+        '#59922b',
+        '#0544d3',
+        '#6b0392',
+        '#f05b4f',
+        '#dda458',
+        '#eacf7d',
+        '#86797d',
+        '#b2c326',
+        '#6188e2',
+        '#a748ca'];
+      colors.forEach((c,i) => {
+        sheet.insertRule(`.ct-legend .ct-series-${i}:before { background-color: ${c}; border-color: ${c}; }`, sheet.cssRules.length);
+      });
+    }
   }
   function closeWindow() {
     try {
@@ -177,13 +187,6 @@ if (isset($_GET['dl'])) {
 <div class="ct-chart" id="chartYearCountByYear"></div>
 <script type="text/javascript">
 
-<?php
-$stats = $lgfr->getStats();
-$years = array_map(function($y) {return "'".$y."'";}, array_keys($stats));
-$count = array_map(function($stat) {return $stat->NombreVols;}, array_values($stats));
-$time = array_map(function($stat) {return $stat->TempsVol/3600;}, array_values($stats));
-//</b> : ".Utils::timeFromSeconds($stat->TempsVol, True)." (".$stat->NombreVols." vols)</p>";
-?>
 window.addEventListener('load', function(){
   var dataTime = {
 <?php

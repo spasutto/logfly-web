@@ -375,7 +375,7 @@ function url_with_parameter($paramname, $paramvalue, $paramtoremove = null) {
     <?php
     }?>
         &nbsp;<a href="#" onClick="editvol(); return false;" title="editer le carnet de vol"><img src="edit.svg" width="32px" class="filter-imgcolor"></a>
-        &nbsp;<a href="#" style="position: relative;" onClick="MyWindow=window.open('editsite.php','MyWindowSite','width=600,height=380'); return false;" title="editer un site"><span class="editsitetexte">site</span><img src="edit.svg" style="position: absolute;" width="32px" class="filter-imgcolor"></a>
+        &nbsp;<a href="#" style="position: relative;" onClick="MyWindow=window.open('editsite.php','MyWindowSite','width=765,height=260'); return false;" title="editer un site"><span class="editsitetexte">site</span><img src="edit.svg" style="position: absolute;" width="32px" class="filter-imgcolor"></a>
     </div>
 </header>
 <div class="main">
@@ -423,7 +423,7 @@ function url_with_parameter($paramname, $paramvalue, $paramtoremove = null) {
   {
     $ccolor = getColor($vol->date);
     echo "<TR class=\"lignevol\">";
-    echo "<TD style=\"background-color:".$ccolor.";width: 15px;\"></TD>";
+    echo "<TD style=\"background-color:".$ccolor.";width: 10px;\"></TD>";
     echo "<TD name=\"tdid\"><a id=\"v".$vol->id."\" href=\"".$root_url."vol/".$vol->id."\">". $vol->id."</a>";
     echo "</TD>";
     $nom_parametredate = "datemin";

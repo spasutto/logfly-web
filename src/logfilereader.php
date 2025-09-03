@@ -189,12 +189,25 @@ class LogflyReader
     rename("Tracklogs/tempid.igc", "Tracklogs/".$id2.".igc");
   }
 
-  function getVoiles($text='')
+  function getVoiles($needles='')
   {
     $data = array();
     $sql = "SELECT DISTINCT V_Engin from VOL";
-    if (strlen($text)>0) {
-      $sql .= " WHERE V_Engin LIKE '%".str_replace("'", "''", strtoupper($text))."%'";
+    if (is_array($needles)) {
+      $sql .= " WHERE 1=0";
+      $cmpt = 0;
+      foreach ($needles as $needle) {
+        $needle = trim($needle);
+        if (strlen($needle)>0) {
+          $sql .= " OR V_Engin LIKE '%".str_replace("'", "''", strtoupper($needle))."%'";
+          if ($cmpt++ > 5) break;
+        }
+      }
+    } else if (is_string($needles)) {
+      $needle = trim($needles);
+      if (strlen($needle)>0) {
+        $sql .= " WHERE V_Engin LIKE '%".str_replace("'", "''", strtoupper($needle))."%'";
+      }
     }
     $sql .= " order by V_Engin;";
     $ret = $this->db->query($sql);

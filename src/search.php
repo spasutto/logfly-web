@@ -17,6 +17,7 @@
 
   $type = $_REQUEST['type'];
   $needle = strtolower($_REQUEST['s']);
+  $needles = explode(" ", $needle);
 
   switch ($type) {
     case 'sites':
@@ -34,7 +35,7 @@
     case 'voiles':
       echo "[";
       $so = 0;
-      $voiles = $lgfr->getVoiles($needle);
+      $voiles = $lgfr->getVoiles($needles);
       for ($i=0; $i<count($voiles); $i++) {
         //if (strpos(strtolower($voiles[$i]), $needle) === false) continue;
         if ($so>0) echo ",";

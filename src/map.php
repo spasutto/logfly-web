@@ -97,7 +97,7 @@
       sites.forEach(function(s) {
         let sitenom = s.nom + ` (${s.nombrevols} vol${s.nombrevols>1?'s':''})`;
         if (isInLogflyPopup())
-          sitenom = "<a href=\"#\" onclick=\"filtre('"+sitenom.replace('\'', '\\\'')+"');\" title=\"filtrer les vols pour ce site\">"+sitenom+"</a>";
+          sitenom = "<a href=\"#\" onclick=\"filtre('"+s.nom.replace('\'', '\\\'')+"');\" title=\"filtrer les vols pour ce site\">"+sitenom+"</a>";
         let marker = L.marker([s.latitude, s.longitude]).addTo(map).bindPopup(sitenom);
         if (s.nombrevols>1) {
           marker._icon.style.filter = `hue-rotate(${Math.min(160, s.nombrevols)}deg)`;

@@ -84,8 +84,19 @@
   .fullwidth {
     width: 100%;
   }
+  body {
+    font-family: sans-serif, monospace;
+  }
   form {
     display: inline-block;
+  }
+  #infobox {
+    position: absolute;
+    left: 0px;
+    top: 0px;
+    padding-left: 5px;
+    width: 98%;
+    background-color: #62ff00b0;
   }
   #map {
     display: inline-block;
@@ -113,16 +124,19 @@
 
   function message(mesg)
   {
-    document.getElementsByName("infobox")[0].innerHTML = mesg;
+    document.getElementById("infobox").innerHTML = mesg ?? '';
   }
 
   async function onMapClick(e) {
     if (!confirm("Voulez vous définir l'emplacement du site?")) return;
+    message("chargement de l'altitude...");
+    getElevation(e.latlng.lat, e.latlng.lng).then(elev => {
+      document.getElementsByName("alt")[0].value = elev;
+      message();
+    });
     document.getElementsByName("lat")[0].value = e.latlng.lat;
     document.getElementsByName("lon")[0].value = e.latlng.lng;
     setPin(e.latlng.lat, e.latlng.lng);
-    let elev = await getElevation(e.latlng.lat, e.latlng.lng);
-    document.getElementsByName("alt")[0].value = elev;
   }
   
   async function getElevation(lat, lng) {
@@ -275,7 +289,7 @@
 <body>
 
 <form action="<?php echo $_SERVER['REQUEST_URI'];?>" name="formvol" method="post" onsubmit="return onsubmitSite();">
- <p>Site : <select name="site" onchange="onSiteChange(this);"></select><span name="infobox"></span>
+ <p>Site : <select name="site" onchange="onSiteChange(this);"></select><span id="infobox"></span>
 </p>
  <p>Nom : <input type="text" name="nom" /></p>
  <p>Latitude : <input type="text" name="lat" /></p>
