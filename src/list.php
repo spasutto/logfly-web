@@ -1,11 +1,25 @@
 <?php
 require("config.php");
-require("logfilereader.php");
 
 const ELEVATIONSERVICE = "elevation/getElevation.php";
 
 $url =  "//{$_SERVER['HTTP_HOST']}".dirname($_SERVER['PHP_SELF'])."/";
 $root_url = htmlspecialchars( $url, ENT_QUOTES, 'UTF-8' );
+parse_str($_SERVER["QUERY_STRING"]  , $get_array);//print_r($get_array);
+//phpinfo();return;
+//TODO : WEAK
+if (isset($_GET['sites'])) {
+  require("tracklogmanager.php");
+  header('Content-Type: application/json; charset=utf-8');
+  echo TrackLogManager::fetchSitesFFVL();
+  exit(0);
+}
+else if (isset($_GET['sitelat']) && isset($_GET['sitelon'])) {
+  require("tracklogmanager.php");
+  exit(0);
+}
+
+require("logfilereader.php");
 
 try
 {
@@ -17,8 +31,6 @@ catch(Exception $e)
   exit(0);
 }
 
-parse_str($_SERVER["QUERY_STRING"]  , $get_array);//print_r($get_array);
-//phpinfo();return;
 $volid=null;
 $voile=null;
 $site=null;
@@ -27,7 +39,6 @@ $datemax=NULL;
 $resperpage=25;
 $offset=0;
 $text=NULL;
-//TODO : WEAK
 if (isset($_GET['voile'])) {
   $voile = $_GET['voile'];
 }
@@ -199,8 +210,12 @@ function url_with_parameter($paramname, $paramvalue, $paramtoremove = null) {
     color: white;
     text-shadow: #FC0 1px 0 10px;
   }
-  .lien_gmaps {
+  .lien_gmaps, .lien_ffvl {
     float: right;
+  }
+  .lien_ffvl {
+    font-size:0.6em;
+    margin-right:5px;
   }
   a {
     text-decoration : none;
@@ -425,6 +440,7 @@ function url_with_parameter($paramname, $paramvalue, $paramtoremove = null) {
     echo "<TR class=\"lignevol\">";
     echo "<TD style=\"background-color:".$ccolor.";width: 10px;\"></TD>";
     echo "<TD name=\"tdid\"><a id=\"v".$vol->id."\" href=\"".$root_url."vol/".$vol->id."\">". $vol->id."</a>";
+    echo "<input type=\"hidden\" id=\"hascomment".$vol->id."\" value=\"".($vol->commentaire==1?'true':'false')."\">";
     echo "</TD>";
     $nom_parametredate = "datemin";
     $texte_parametredate = "depuis";
@@ -441,7 +457,9 @@ function url_with_parameter($paramname, $paramvalue, $paramtoremove = null) {
     echo "<TD><span title=\"heure de décollage\">&#8613;&nbsp;". $vol->date->format('H:i')."</span><p class=\"small\" title=\"heure de posé\">&#8615;&nbsp;".$datefin->format('H:i')."</p></TD>";
     echo "<TD title=\"".Utils::timeFromSeconds($vol->duree, 3)."\">". Utils::timeFromSeconds($vol->duree > 900 ? round($vol->duree/60)*60 : $vol->duree, 2)."</TD>";
     //echo "<TD>". $vol->sduree."</TD>";
-    echo "<TD><a href=\"".url_with_parameter("site", $vol->site, "offset")."\" title=\"filtrer les vols pour ce site\">".$vol->site."</a>&nbsp;<a href=\"https://maps.google.com/?q=".$vol->latdeco.",".$vol->londeco."\" target=\"_Blank\" class=\"lien_gmaps\" title=\"google maps\">&#9936;</a></TD>";
+    echo "<TD><a href=\"".url_with_parameter("site", $vol->site, "offset")."\" title=\"filtrer les vols pour ce site\">".$vol->site."</a>&nbsp;<a href=\"https://maps.google.com/?q=".$vol->latdeco.",".$vol->londeco."\" target=\"_Blank\" class=\"lien_gmaps\" title=\"google maps\">&#9936;</a>";
+    echo "&nbsp;<a href=\"#\" onclick=\"gotoSiteFFVL(".$vol->latdeco.",".$vol->londeco.")\" class=\"lien_ffvl\" title=\"site FFVL\">FFVL</a>";
+    echo "</TD>";
     echo "<TD><a href=\"".url_with_parameter("voile", $vol->voile, "offset")."\" title=\"filtrer les vols pour cette voile\">".$vol->voile."</a></TD>";
     echo "<TD><a href=\"".url_with_parameter("biplace", $vol->biplace, "offset")."\" title=\"filtrer les vols en biplace\">".($vol->biplace?"bi":"")."</a></TD>";
     echo "<TD";
@@ -610,8 +628,9 @@ function affichComment(id) {
   let zonecarto = document.getElementById('zonecarto'+id);
   let zonecomm = document.getElementById('zonecomm'+id);
   let btncomm = document.getElementById('btncomm'+id);
+  let hascomment = document.getElementById('hascomment'+id).value == 'true';
   if (ligne.style.display != 'table-row') {
-    if (showComment && zonecomm.innerHTML == "") {
+    if (hascomment && showComment && zonecomm.innerHTML == "") {
       loadComment(id);
       zonecomm.innerHTML = "<b>Chargement...</b>";
     }
@@ -679,36 +698,82 @@ function scrollToVol(id) {
   tr.classList.toggle("flash");
   window.setTimeout(function(){tr.classList.toggle("flash");},250);
 }
+function distance(lat1Deg, lon1Deg, lat2Deg, lon2Deg) {
+  function toRad(degree) {
+      return degree * Math.PI / 180;
+  }
+  const lat1 = toRad(lat1Deg);
+  const lon1 = toRad(lon1Deg);
+  const lat2 = toRad(lat2Deg);
+  const lon2 = toRad(lon2Deg);
+  
+  const { sin, cos, sqrt, atan2 } = Math;
+  
+  const R = 6371000; // earth radius in m 
+  const dLat = lat2 - lat1;
+  const dLon = lon2 - lon1;
+  const a = sin(dLat / 2) * sin(dLat / 2)
+          + cos(lat1) * cos(lat2)
+          * sin(dLon / 2) * sin(dLon / 2);
+  const c = 2 * atan2(sqrt(a), sqrt(1 - a)); 
+  const d = R * c;
+  return d; // distance in m
+}
+async function gotoSiteFFVL(lat, lon) {
+  if (!window.sitesffvl) {
+    if (window.isfetchingffvl) return false;
+    window.isfetchingffvl = true;
+    const resp = await fetch('?sites');
+    window.sitesffvl = await resp.json();
+    window.isfetchingffvl = false;
+  }
+  if (!Array.isArray(window.sitesffvl)) {
+    alert('oups! Réessayer plus tard!');
+    [...window.document.querySelectorAll('.lien_ffvl')].forEach(e => e.style.display = 'none');
+    return false;
+  }
+  let site = window.sitesffvl.sort((s1, s2) => distance(s1.latitude, s1.longitude, lat, lon)-distance(s2.latitude, s2.longitude, lat, lon))[0];
+  if (site) {
+    let d = distance(site.latitude, site.longitude, lat, lon);
+    if (d < 500 && site.suid) {
+      window.open('https://federation.ffvl.fr/sites_pratique/voir/'+site.suid, '_blank').focus();
+    } else {
+      alert('pas de site FFVL proche trouvé !');
+    }
+  }
+  
+  return false;
+}
 window.onload = function() {};
 
-  if (volid) scrollToVol(volid);
+if (volid) scrollToVol(volid);
 
-  const lignes = document.querySelectorAll('tr.lignevol,tr.lignecomm');
-  lignes.forEach(function(ligne) {
-    ligne.addEventListener('dblclick', function (e) {
-      e.preventDefault();
-      editvol(parseInt(e.target.closest("tr").querySelector("td[name='tdid']").textContent));
-    });
+const lignes = document.querySelectorAll('tr.lignevol,tr.lignecomm');
+lignes.forEach(function(ligne) {
+  ligne.addEventListener('dblclick', function (e) {
+    e.preventDefault();
+    editvol(parseInt(e.target.closest("tr").querySelector("td[name='tdid']").textContent));
   });
-  document.addEventListener("scroll", (event) => {moveImageTrace();});
-  var zonesimgtrace = [...document.querySelectorAll('.zoneimgtrace')];
-  zonesimgtrace.forEach(z => {
-    let action = (hide, event) => {
-        let zone = event.target;
-        if (!zone.classList.contains('zoneimgtrace')) {
-          zone = zone.closest('.zoneimgtrace');
-          if (!zone) return;
-        }
-        afficheImageTrace(zone, hide);
-    };
-    let affi = action.bind(this, false);
-    let hide = action.bind(this, true);
-    z.addEventListener("mouseover", affi);
-    z.addEventListener("mouseleave", hide);
-    z.addEventListener("touchstart", affi);
-    z.addEventListener("touchend", hide);
-    z.addEventListener("touchmove", moveImageTrace);
-  });
+});
+document.addEventListener("scroll", (event) => {moveImageTrace();});
+var zonesimgtrace = [...document.querySelectorAll('.zoneimgtrace')];
+zonesimgtrace.forEach(z => {
+  let action = (hide, event) => {
+      let zone = event.target;
+      if (!zone.classList.contains('zoneimgtrace')) {
+        zone = zone.closest('.zoneimgtrace');
+        if (!zone) return;
+      }
+      afficheImageTrace(zone, hide);
+  };
+  let affi = action.bind(this, false);
+  let hide = action.bind(this, true);
+  z.addEventListener("mouseover", affi);
+  z.addEventListener("mouseleave", hide);
+  z.addEventListener("touchstart", affi);
+  z.addEventListener("touchend", hide);
+  z.addEventListener("touchmove", moveImageTrace);
+});
 </script>
 </body>
 </html>
