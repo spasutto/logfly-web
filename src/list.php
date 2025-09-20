@@ -764,7 +764,7 @@ async function gotoSiteFFVL(lat, lon) {
   let site = window.sitesffvl.reduce((val,cur) => (distance(cur.latitude, cur.longitude, lat, lon)>distance(val.latitude, val.longitude, lat, lon)) ? val:cur);
   if (site) {
     let d = distance(site.latitude, site.longitude, lat, lon);
-    if (d < 700 && site.suid) {
+    if (d < 1000 && site.suid) {
       window.open('https://federation.ffvl.fr/sites_pratique/voir/'+site.suid, '_blank').focus();
     } else {
       alert('Pas de site FFVL proche trouvé !');
