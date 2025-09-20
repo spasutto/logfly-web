@@ -11,11 +11,7 @@ parse_str($_SERVER["QUERY_STRING"]  , $get_array);//print_r($get_array);
 if (isset($_GET['sites'])) {
   require("tracklogmanager.php");
   header('Content-Type: application/json; charset=utf-8');
-  echo TrackLogManager::fetchSitesFFVL();
-  exit(0);
-}
-else if (isset($_GET['sitelat']) && isset($_GET['sitelon'])) {
-  require("tracklogmanager.php");
+  echo TrackLogManager::fetchSitesFFVL(true);
   exit(0);
 }
 

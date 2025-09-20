@@ -7,7 +7,7 @@ class TrackLogManager
   const FOLDER_TL = 'Tracklogs';
   const FICHIER_SITES_FFVL = 'sites_ffvl.json';
   const URL_SITES_FFVL = 'https://data.ffvl.fr/api?base=terrains&mode=json&key='.CLEFFVL;//'https://data.ffvl.fr/json/sites.json';
-  static function fetchSitesFFVL() {
+  static function fetchSitesFFVL($clean=false) {
     $timestamp = -1;
     $size = 0;
     if (function_exists('curl_version')) {
@@ -57,6 +57,21 @@ class TrackLogManager
       touch(self::FICHIER_SITES_FFVL, $timestamp);
     } else {
       $sites = @file_get_contents(self::FICHIER_SITES_FFVL);
+    }
+    if ($clean) {
+      $tmpsites = @json_decode($sites);
+      if (is_array($tmpsites)) {
+        $apnames = ['suid', 'latitude', 'longitude'];
+        for ($i=0; $i<count($tmpsites); $i++) {
+          $pnames = get_object_vars($tmpsites[$i]);
+          foreach ($pnames as $key => $value) {
+            if (!in_array($key, $apnames)) {
+              unset($tmpsites[$i]->{$key});
+            }
+          }
+        }
+        $sites = @json_encode($tmpsites);
+      }
     }
     return $sites;
   }
