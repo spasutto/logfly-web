@@ -118,6 +118,21 @@ function url_with_parameter($paramname, $paramvalue, $paramtoremove = null) {
   header a {
     color: #beed00;
   }
+  .loadingzone {
+    opacity: 0.5;
+    background: #000;
+    width: 100%;
+    height: 100%;
+    z-index: 10;
+    top: 0;
+    left: 0;
+    position: fixed;
+    font-size: 8em;
+    color: red;
+    text-align: center;
+    vertical-align: middle;
+    line-height: 2;
+  }
   .main {
    padding: 3px;
    overflow-y: auto;
@@ -260,6 +275,20 @@ function url_with_parameter($paramname, $paramvalue, $paramtoremove = null) {
     max-width:320px;
     max-height:320px;
   }
+  .loader {
+    border: 16px solid #f3f3f3; /* Light grey */
+    border-top: 16px solid #3498db; /* Blue */
+    border-radius: 50%;
+    width: 120px;
+    height: 120px;
+    animation: spin 2s linear infinite;
+    margin: 50px auto;
+  }
+  
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
   </style>
 </head>
 
@@ -393,6 +422,7 @@ function url_with_parameter($paramname, $paramvalue, $paramtoremove = null) {
         &nbsp;<a href="#" style="position: relative;" onClick="MyWindow=window.open('editsite.php','MyWindowSite','width=765,height=260'); return false;" title="editer un site"><span class="editsitetexte">site</span><img src="edit.svg" style="position: absolute;" width="32px" class="filter-imgcolor"></a>
     </div>
 </header>
+<div class="loadingzone" style="display:none;"><div class="loader"></div></div>
 <div class="main">
 <div class="inline">
 <?php
@@ -458,7 +488,7 @@ function url_with_parameter($paramname, $paramvalue, $paramtoremove = null) {
     echo "<TD title=\"".Utils::timeFromSeconds($vol->duree, 3)."\">". Utils::timeFromSeconds($vol->duree > 900 ? round($vol->duree/60)*60 : $vol->duree, 2)."</TD>";
     //echo "<TD>". $vol->sduree."</TD>";
     echo "<TD><a href=\"".url_with_parameter("site", $vol->site, "offset")."\" title=\"filtrer les vols pour ce site\">".$vol->site."</a>&nbsp;<a href=\"https://maps.google.com/?q=".$vol->latdeco.",".$vol->londeco."\" target=\"_Blank\" class=\"lien_gmaps\" title=\"google maps\">&#9936;</a>";
-    echo "&nbsp;<a href=\"#\" onclick=\"gotoSiteFFVL(".$vol->latdeco.",".$vol->londeco.")\" class=\"lien_ffvl\" title=\"site FFVL\">FFVL</a>";
+    echo "&nbsp;<a href=\"#\" onclick=\"gotoSiteFFVL(".$vol->latdeco.",".$vol->londeco.");return false;\" class=\"lien_ffvl\" title=\"site FFVL\">FFVL</a>";
     echo "</TD>";
     echo "<TD><a href=\"".url_with_parameter("voile", $vol->voile, "offset")."\" title=\"filtrer les vols pour cette voile\">".$vol->voile."</a></TD>";
     echo "<TD><a href=\"".url_with_parameter("biplace", $vol->biplace, "offset")."\" title=\"filtrer les vols en biplace\">".($vol->biplace?"bi":"")."</a></TD>";
@@ -722,6 +752,7 @@ function distance(lat1Deg, lon1Deg, lat2Deg, lon2Deg) {
 async function gotoSiteFFVL(lat, lon) {
   if (!window.sitesffvl) {
     if (window.isfetchingffvl) return false;
+    loading(true);
     window.isfetchingffvl = true;
     const resp = await fetch('?sites');
     window.sitesffvl = await resp.json();
@@ -730,19 +761,26 @@ async function gotoSiteFFVL(lat, lon) {
   if (!Array.isArray(window.sitesffvl)) {
     alert('oups! Réessayer plus tard!');
     [...window.document.querySelectorAll('.lien_ffvl')].forEach(e => e.style.display = 'none');
+    loading(false);
     return false;
   }
-  let site = window.sitesffvl.sort((s1, s2) => distance(s1.latitude, s1.longitude, lat, lon)-distance(s2.latitude, s2.longitude, lat, lon))[0];
+  loading(true);
+  let site = 0;
+  let site = window.sitesffvl.reduce((val,cur) => (distance(cur.latitude, cur.longitude, lat, lon)>distance(val.latitude, val.longitude, lat, lon)) ? val:cur);
   if (site) {
     let d = distance(site.latitude, site.longitude, lat, lon);
-    if (d < 500 && site.suid) {
+    if (d < 700 && site.suid) {
       window.open('https://federation.ffvl.fr/sites_pratique/voir/'+site.suid, '_blank').focus();
     } else {
       alert('pas de site FFVL proche trouvé !');
     }
   }
-  
+  loading(false);
   return false;
+}
+function loading(isloading) {
+  isloading = !(isloading === false);
+  document.getElementsByClassName ('loadingzone')[0].style.display = isloading?'initial':'none';
 }
 window.onload = function() {};
 
