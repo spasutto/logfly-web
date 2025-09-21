@@ -11,6 +11,8 @@ parse_str($_SERVER["QUERY_STRING"]  , $get_array);//print_r($get_array);
 if (isset($_GET['sites'])) {
   require("tracklogmanager.php");
   header('Content-Type: application/json; charset=utf-8');
+  header("Cache-Control: max-age=86400");
+
   echo TrackLogManager::fetchSitesFFVL(true);
   exit(0);
 }
@@ -113,21 +115,6 @@ function url_with_parameter($paramname, $paramvalue, $paramtoremove = null) {
   }
   header a {
     color: #beed00;
-  }
-  .loadingzone {
-    opacity: 0.5;
-    background: #000;
-    width: 100%;
-    height: 100%;
-    z-index: 10;
-    top: 0;
-    left: 0;
-    position: fixed;
-    font-size: 8em;
-    color: red;
-    text-align: center;
-    vertical-align: middle;
-    line-height: 2;
   }
   .main {
    padding: 3px;
@@ -271,6 +258,21 @@ function url_with_parameter($paramname, $paramvalue, $paramtoremove = null) {
     max-width:320px;
     max-height:320px;
   }
+  .loadingzone {
+    opacity: 0.5;
+    background: #000;
+    width: 100%;
+    height: 100%;
+    z-index: 10;
+    top: 0;
+    left: 0;
+    position: fixed;
+    font-size: 2em;
+    color: #00ff80;
+    text-align: center;
+    vertical-align: middle;
+    line-height: 1;
+  }
   .loader {
     border: 16px solid #f3f3f3; /* Light grey */
     border-top: 16px solid #3498db; /* Blue */
@@ -280,10 +282,38 @@ function url_with_parameter($paramname, $paramvalue, $paramtoremove = null) {
     animation: spin 2s linear infinite;
     margin: 50px auto;
   }
-  
   @keyframes spin {
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
+  }
+  #loadingtext {
+      background-color: rgb(0, 0, 0);
+      background-color: rgba(0, 0, 0, 0.2);
+  }
+  .rainbow {
+      text-align: center;
+      text-decoration: underline;
+      font-size: 32px;
+      font-family: monospace;
+      letter-spacing: 5px;
+  }
+  .rainbow_text_animated {
+      background: linear-gradient(to right, #6666ff, #0099ff , #00ff00, #ff3399, #6666ff);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      animation: rainbow_animation 6s ease-in-out infinite;
+      background-size: 400% 100%;
+  }
+  
+  @keyframes rainbow_animation {
+      0%,100% {
+          background-position: 0 0;
+      }
+  
+      50% {
+          background-position: 100% 0;
+      }
   }
   </style>
 </head>
@@ -418,7 +448,12 @@ function url_with_parameter($paramname, $paramvalue, $paramtoremove = null) {
         &nbsp;<a href="#" style="position: relative;" onClick="MyWindow=window.open('editsite.php','MyWindowSite','width=765,height=260'); return false;" title="editer un site"><span class="editsitetexte">site</span><img src="edit.svg" style="position: absolute;" width="32px" class="filter-imgcolor"></a>
     </div>
 </header>
-<div class="loadingzone" style="display:none;"><div class="loader"></div></div>
+<div class="loadingzone" style="display:none;">
+  <div class="loader"></div>
+  <div id="loadingtext">
+    <h3 class="rainbow rainbow_text_animated"></h3>
+  </div>
+</div>
 <div class="main">
 <div class="inline">
 <?php
@@ -748,13 +783,22 @@ function distance(lat1Deg, lon1Deg, lat2Deg, lon2Deg) {
 async function gotoSiteFFVL(lat, lon) {
   if (!window.sitesffvl) {
     if (window.isfetchingffvl) return false;
-    loading(true);
-    window.isfetchingffvl = true;
-    const resp = await fetch('?sites');
-    window.sitesffvl = await resp.json();
+    loading('Chargement des sites FFVL');
+    try {
+      window.isfetchingffvl = true;
+      const resp = await fetch('?sites');
+      window.sitesffvl = await resp.json();
+    } catch (e) {
+      console.error(e);
+      alert('Impossible de charger les sites FFVL. Veuillez réessayer plus tard');
+      loading(false);
+      window.isfetchingffvl = false;
+      return false;
+    }
     window.isfetchingffvl = false;
   }
   if (!Array.isArray(window.sitesffvl)) {
+    window.sitesffvl = null;
     alert('oups! Réessayer plus tard!');
     [...window.document.querySelectorAll('.lien_ffvl')].forEach(e => e.style.display = 'none');
     loading(false);
@@ -773,8 +817,16 @@ async function gotoSiteFFVL(lat, lon) {
   loading(false);
   return false;
 }
-function loading(isloading) {
+function loading() {
+  let isloading, message;
+  for (let i=0; i<arguments.length && i<2; i++) {
+    if (typeof arguments[i] === 'boolean') isloading = arguments[i];
+    else if (typeof arguments[i] === 'string') message = arguments[i];
+  }
+  isloading = typeof isloading === 'boolean' ? isloading : true;
+  message = isloading && typeof message === 'string' ? message : '';
   isloading = !(isloading === false);
+  document.getElementById('loadingtext').firstElementChild.innerHTML = message;
   document.getElementsByClassName ('loadingzone')[0].style.display = isloading?'initial':'none';
 }
 window.onload = function() {};
