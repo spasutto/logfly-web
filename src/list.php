@@ -551,7 +551,7 @@ function url_with_parameter($paramname, $paramvalue, $paramtoremove = null) {
     } else {
       echo "<TD></TD>";
     }
-    echo "<TR class=\"lignecomm none\"><TD class=\"hidden\">".$vol->id."</TD><TD id=\"comm".$vol->id."\" colspan=\"8\" class=\"desc\"><div id=\"zonecomm".$vol->id."\"></div>";
+    echo "<TR class=\"lignecomm none\"><TD name=\"tdid\" class=\"hidden\">".$vol->id."</TD><TD id=\"comm".$vol->id."\" colspan=\"8\" class=\"desc\"><div id=\"zonecomm".$vol->id."\"></div>";
     echo "<div>météo de ce jour : ";
     //https://www.infoclimat.fr/fr/cartes/observations-meteo/archives/vent_moyen/18/mai/2022/14h/carte-interactive.html
     $libmois = ['janvier', 'fevrier', 'mars', 'avril', 'mai', 'juin', 'juillet', 'aout', 'septembre', 'octobre', 'novembre', 'decembre'];
