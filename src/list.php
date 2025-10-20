@@ -117,6 +117,9 @@ function url_with_parameter($paramname, $paramvalue, $paramtoremove = null) {
   header a {
     color: #beed00;
   }
+  .removed {
+    display:none;
+  }
   .main {
    padding: 3px;
    overflow-y: auto;
@@ -659,7 +662,7 @@ function loadComment(id) {
   let zonecarto = document.getElementById('zonecarto'+id);
   let btncomm = document.getElementById('btncomm'+id);
   try {
-    getWind(id).then(wind => document.getElementById('balises'+id).innerHTML = "<u><b>Balises au moment du déco :</b></u><br>"+formatWind(wind));
+    getWind(id).then(wind => document.getElementById('balises'+id).innerHTML = `<u onclick="document.getElementById('balrelev${id}').classList.toggle('removed')" style="cursor: pointer"><b>afficher les relevés des balises au moment du déco</b></u><br><span id="balrelev${id}" class="removed">${formatWind(wind)}</span>`);
     var xhttp = new XMLHttpRequest();
       xhttp.responseType = 'text';
       xhttp.onreadystatechange = function() {

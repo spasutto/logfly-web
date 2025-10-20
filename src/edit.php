@@ -287,7 +287,7 @@ if (isset($_POST['site']) && isset($_POST['date']) && isset($_POST['heure']) && 
         if (winddata?.constructor !== Array || (winddata.length && typeof winddata[0].nom !== "string")) {
           if (resp.latdeco && resp.londeco) {
             windbtn.style.pointerEvents = 'none';
-            updateWind(id, resp.latdeco, resp.londeco, resp.timestamp, true).then(displayWind);
+            updateWindData(true);
           }
         } else displayWind(winddata);
         document.getElementsByName("date")[0].value = resp.date;
@@ -323,6 +323,10 @@ if (isset($_POST['site']) && isset($_POST['date']) && isset($_POST['heure']) && 
   {
     btnSave.disabled = true;
     if (!isvalideVol()) {
+      btnSave.disabled = false;
+      return false;
+    }
+    if ((window.su || window.wu) && !confirm('Un traitement est en cours, êtes vous sûr de vouloir l\'abandonner?')) {
       btnSave.disabled = false;
       return false;
     }
@@ -375,13 +379,15 @@ if (isset($_POST['site']) && isset($_POST['date']) && isset($_POST['heure']) && 
     xhttp.send(urlEncodedData);
   }
   
-  function updateWindData() {
+  function updateWindData(silent=false) {
     let windbtn = document.getElementById('windbtn');
     windbtn.style.pointerEvents = 'none';
     document.getElementById('windval').innerHTML = '<i>chargement...</i>';
-    updateWind(voldata.id, voldata.latdeco, voldata.londeco, voldata.timestamp).then(displayWind);
+    window.wu = true;
+    updateWind(voldata.id, voldata.latdeco, voldata.londeco, voldata.timestamp, silent).then(displayWind);
   }
   function displayWind(wind) {
+    window.wu = false;
     document.getElementById('windval').innerHTML = formatWind(wind);
     windbtn.style.pointerEvents = '';
   }
@@ -546,15 +552,17 @@ if (isset($_POST['site']) && isset($_POST['date']) && isset($_POST['heure']) && 
         message("calcul...");
         try {
           score(this.responseText, (score) => {
+            window.su = false;
             message("");
             if (confirm ("Le score calculé est de " + Math.round(score.score*10)/10 + " points pour "+Math.round(score.scoreInfo.distance*10)/10+"km, mettre à jour?")) {
               message("enregistrement...");
               postFlightScore(id, score).then((msg) => {message("");alert(msg == "OK"?"Fait!":"Il semble qu'il y'ai eu un problème : " + msg);});
             }
           });
-        } catch(e) {alert(e);}
+        } catch(e) {window.su = false;alert(e);}
       }
     };
+    window.su = true;
     xhttp.open("GET", "<?php echo strtok($_SERVER["REQUEST_URI"], '?');?>?igc&id="+id, true);
     xhttp.send();
   }
