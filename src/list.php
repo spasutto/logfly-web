@@ -662,7 +662,12 @@ function loadComment(id) {
   let zonecarto = document.getElementById('zonecarto'+id);
   let btncomm = document.getElementById('btncomm'+id);
   try {
-    getWind(id).then(wind => document.getElementById('balises'+id).innerHTML = `<u onclick="document.getElementById('balrelev${id}').classList.toggle('removed')" style="cursor: pointer"><b>afficher les relevés des balises au moment du déco</b></u><br><span id="balrelev${id}" class="removed">${formatWind(wind)}</span>`);
+    getWind(id).then(wind => {
+      if (!wind.length) return;
+      document.getElementById('balises'+id).innerHTML =
+        `<u onclick="document.getElementById('balrelev${id}').classList.toggle('removed')" style="cursor: pointer"><b>afficher les relevés des balises au moment du déco</b></u><br>
+        <span id="balrelev${id}" class="removed">${formatWind(wind)}</span>`;
+    });
     var xhttp = new XMLHttpRequest();
       xhttp.responseType = 'text';
       xhttp.onreadystatechange = function() {
