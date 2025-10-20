@@ -262,7 +262,7 @@ if (isset($_POST['site']) && isset($_POST['date']) && isset($_POST['heure']) && 
     return new Promise(async (res) => {
       document.getElementById('zonescore').style.display = 'none';
       document.getElementById('zonewind').style.display = 'none';
-      document.getElementById('windval').innerHTML = '';
+      document.getElementById('windval').innerHTML = 'Chargement...';
       if (id > 0) getVignette(id);// document.getElementById('vignette').src = 'image.php?id='+id;
       else document.getElementById('zonevignette').style.display = 'none';
       //document.getElementById('zonevignette').style.display = id > 0 ? 'initial' : 'none';
@@ -286,6 +286,7 @@ if (isset($_POST['site']) && isset($_POST['date']) && isset($_POST['heure']) && 
         document.getElementById('zonewind').style.display = 'block';
         if (winddata?.constructor !== Array || (winddata.length && typeof winddata[0].nom !== "string")) {
           if (resp.latdeco && resp.londeco) {
+            windbtn.style.pointerEvents = 'none';
             updateWind(id, resp.latdeco, resp.londeco, resp.timestamp, true).then(displayWind);
           }
         } else displayWind(winddata);
@@ -658,19 +659,21 @@ vol à editer/créer :<BR><select name="vol" onchange="onVolChange(this.value)">
   <p>Durée : <input type="text" name="dureeheures" onKeyUp="calcsecondes()"/>(<span name="dureeHMS"></span>)&nbsp;soit&nbsp;<span name="duree">0</span>&nbsp;secondes</p>
   <p>Voile : <input type="text" name="voile" /> <label for="biplace">Biplace : </label><input type="checkbox" name="biplace" id="biplace" /></p>
   <p>Commentaire : <textarea name="commentaire" class="fullwidth" rows="10"></textarea></p>
-  <div style="/*height:40px*/display:inline-block;">
-    <input type="checkbox" name="deligc" id="cbdeligc" value="1"><label for="cbdeligc">supprimer le fichier IGC</label><BR>
-    <span id="vigntext"></span>
-    <div id="zonevignette" style="display:none">
-      <a href="#" onclick="regenVignette()">regénérer la vignette</a><BR>
-      <img id="vignette" style="max-width:256px;max-height:256px" src=""></div>
+  <div>
+    <div style="/*height:40px*/display:inline-block;">
+      <input type="checkbox" name="deligc" id="cbdeligc" value="1"><label for="cbdeligc">supprimer le fichier IGC</label><BR>
+      <span id="vigntext"></span>
+      <div id="zonevignette" style="display:none">
+        <a href="#" onclick="regenVignette()">regénérer la vignette</a><BR>
+        <img id="vignette" style="max-width:256px;max-height:256px" src="">
+      </div>
     </div>
-    <div style="display: inline-block">
-      <div id="zonescore" style="display:none;vertical-align:top;/*float:right*/text-align: right;background-color: #d4ffc9;padding:2px;">
+    <div style="display: inline-block;vertical-align: top;">
+      <div id="zonescore" style="display:none;text-align: right;background-color: #d4ffc9;padding:2px;">
         <span id="score" style="display:block"></span>
         <a href="#" onclick="calcFlightScore()">recalculer le score</a>
       </div>
-      <div id="zonewind" style="display:none;vertical-align:top;/*float:right*/text-align: right;background-color: #d4ffc9;padding:2px;margin-top:5px;">
+      <div id="zonewind" style="display:none;text-align: right;background-color: #d4ffc9;padding:2px;margin-top:5px;">
         <a href="#" id="windbtn" onclick="updateWindData()">recharger les balises</a>
         <span id="windval" style="display:block"></span>
       </div>

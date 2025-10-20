@@ -30,7 +30,7 @@ function getListeVentBalisesAUneHeure($lat, $lon, $timestamp) {
     if($d < MAX_DIST*1000) { // - de 20km
       $data = getVentBalise($balises[$i]->idBalise, $timestamp, $N);
       if (!$data) continue;
-      $balisesproches[] = ["nom" => $balises[$i]->nom, "distance" => round($d), "lat" => $balises[$i]->latitude, "lon" => $balises[$i]->longitude, "vent" => $data];
+      $balisesproches[] = ["nom" => $balises[$i]->nom, "altitude" => $balises[$i]->altitude, "distance" => round($d), "lat" => $balises[$i]->latitude, "lon" => $balises[$i]->longitude, "vent" => $data];
     }
   }
   usort($balisesproches, function($a, $b) {
@@ -88,7 +88,7 @@ function majListeBalises() {
   return $data;
 }
 function filtrerBalises($balises) {
-  $propkeep = ["idBalise", "nom", "latitude", "longitude", "decalageHoraire"];
+  $propkeep = ["idBalise", "nom", "altitude", "latitude", "longitude", "decalageHoraire"];
   for ($i=0; $i<count($balises); $i++) {
     foreach (get_object_vars($balises[$i]) as $key => $value) {
       if (!in_array($key, $propkeep)) {
