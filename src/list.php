@@ -95,6 +95,7 @@ function url_with_parameter($paramname, $paramvalue, $paramtoremove = null) {
   <title>Carnet de vol</title>
   <meta name="viewport" content="initial-scale=0.75, maximum-scale=1.0, user-scalable=no" />
   <base href="<?php echo $root_url;?>">
+  <script src="wind.js"></script>
   <style type="text/css">
   html {
     background-color: #1a88a71f;
@@ -552,6 +553,7 @@ function url_with_parameter($paramname, $paramvalue, $paramtoremove = null) {
       echo "<TD></TD>";
     }
     echo "<TR class=\"lignecomm none\"><TD name=\"tdid\" class=\"hidden\">".$vol->id."</TD><TD id=\"comm".$vol->id."\" colspan=\"8\" class=\"desc\"><div id=\"zonecomm".$vol->id."\"></div>";
+    echo "<div id=\"balises".$vol->id."\"></div>";
     echo "<div>météo de ce jour : ";
     //https://www.infoclimat.fr/fr/cartes/observations-meteo/archives/vent_moyen/18/mai/2022/14h/carte-interactive.html
     $libmois = ['janvier', 'fevrier', 'mars', 'avril', 'mai', 'juin', 'juillet', 'aout', 'septembre', 'octobre', 'novembre', 'decembre'];
@@ -657,6 +659,7 @@ function loadComment(id) {
   let zonecarto = document.getElementById('zonecarto'+id);
   let btncomm = document.getElementById('btncomm'+id);
   try {
+    getWind(id).then(wind => document.getElementById('balises'+id).innerHTML = "<u><b>Balises au moment du déco :</b></u><br>"+formatWind(wind));
     var xhttp = new XMLHttpRequest();
       xhttp.responseType = 'text';
       xhttp.onreadystatechange = function() {

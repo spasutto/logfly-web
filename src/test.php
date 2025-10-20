@@ -1,5 +1,12 @@
 <?php
-
+exit(0);return;
+require('tracklogmanager.php');
+$lgfr = new LogflyReader();
+var_dump($lgfr->getSite( 45.119805, 6.1030066666666665, 'distance'));
+exit(0);return;
+header("Content-Type: text/plain");
+require('tracklogmanager.php');
+var_dump(TrackLogManager::getSiteFFVL( 45.119805, 6.1030066666666665));
 exit(0);return;
 header("Content-Type: text/plain");
 require('tracklogmanager.php');

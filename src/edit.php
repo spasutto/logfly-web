@@ -50,6 +50,8 @@ if ($id > 0)
       $date = $vol->date;
       $vol->date = $date->format('d/m/Y');
       $vol->heure = $date->format('H:i:s');
+      $vol->timestamp = $date->getTimestamp();
+      header('Content-Type: application/json');
       echo json_encode($vol);
       exit(0);
     }
@@ -115,6 +117,7 @@ if (isset($_POST['site']) && isset($_POST['date']) && isset($_POST['heure']) && 
   <title>Edition d'un vol</title>
   <script src="lib/igc-xc-score.js"></script>
   <script src="score.js"></script>
+  <script src="wind.js"></script>
   <script src="autocomplete.js"></script>
 
   <style>
@@ -256,8 +259,10 @@ if (isset($_POST['site']) && isset($_POST['date']) && isset($_POST['heure']) && 
   }
 
   function loadVol(id, keeplatlon=false) {
-    return new Promise((res) => {
+    return new Promise(async (res) => {
       document.getElementById('zonescore').style.display = 'none';
+      document.getElementById('zonewind').style.display = 'none';
+      document.getElementById('windval').innerHTML = '';
       if (id > 0) getVignette(id);// document.getElementById('vignette').src = 'image.php?id='+id;
       else document.getElementById('zonevignette').style.display = 'none';
       //document.getElementById('zonevignette').style.display = id > 0 ? 'initial' : 'none';
@@ -267,46 +272,49 @@ if (isset($_POST['site']) && isset($_POST['date']) && isset($_POST['heure']) && 
         return;
       }
       loadFlightScore(id).then(score => {
-        document.getElementById('zonescore').style.display = 'inline-block';
+        document.getElementById('zonescore').style.display = 'block';
         let scoreinfo = 'pas de score';
         if (score && score.scoreInfo && typeof score.scoreInfo.distance === 'number' && typeof score.scoreInfo.score === 'number') {
           scoreinfo = `score: ${score.scoreInfo.score}, distance : ${score.scoreInfo.distance}km`;
         }
         document.getElementById('score').innerHTML = scoreinfo;
       }).catch(console.error);
-      let xhttp = new XMLHttpRequest();
-      xhttp.responseType = 'json';
-      xhttp.onreadystatechange = function() {
-        if (this.readyState == 4 && this.status == 200) {
-          if (!this.response) {
-            res();
-            return;
+      try {
+        reqvol = fetch("<?php echo strtok($_SERVER["REQUEST_URI"], '?');?>?vol&id="+id).then(r => r.json());
+        const [resp, winddata] = await Promise.all([reqvol, getWind(id)]);
+        window.voldata = resp;
+        document.getElementById('zonewind').style.display = 'block';
+        if (winddata?.constructor !== Array || (winddata.length && typeof winddata[0].nom !== "string")) {
+          if (resp.latdeco && resp.londeco) {
+            updateWind(id, resp.latdeco, resp.londeco, resp.timestamp, true).then(displayWind);
           }
-          document.getElementsByName("date")[0].value = this.response.date;
-          document.getElementsByName("heure")[0].value = this.response.heure;
-          document.getElementsByName("duree")[0].innerText = this.response.duree;
-          document.getElementsByName("dureeheures")[0].value = this.response.duree.toString().toHHMMSS();//this.response.sduree;
-          document.getElementsByName("dureeHMS")[0].innerText = this.response.duree.toString().toHMS();//this.response.sduree;
-          document.getElementsByName("voile")[0].value = this.response.voile;
-          document.getElementsByName("biplace")[0].checked = this.response.biplace;
-          document.getElementsByName("commentaire")[0].value = this.response.commentaire;
-          cursite = this.response.site;
-          if (this.response.site.trim().length > 0)
-            document.getElementsByName("site")[0].value = this.response.site;
-          else
-            document.getElementsByName("site")[0].selectedIndex  = 0;
-          if (!keeplatlon && this.response.latdeco && this.response.londeco) {
-            document.getElementsByName("lat")[0].value = this.response.latdeco;
-            document.getElementsByName("lon")[0].value = this.response.londeco;
-            document.getElementsByName("alt")[0].value = this.response.altdeco;
-          }
-          onSiteChange(document.getElementsByName("site")[0].value);
-          document.getElementsByName("vol")[0].value = id;
-          res();
+        } else displayWind(winddata);
+        document.getElementsByName("date")[0].value = resp.date;
+        document.getElementsByName("heure")[0].value = resp.heure;
+        document.getElementsByName("duree")[0].innerText = resp.duree;
+        document.getElementsByName("dureeheures")[0].value = resp.duree.toString().toHHMMSS();//resp.sduree;
+        document.getElementsByName("dureeHMS")[0].innerText = resp.duree.toString().toHMS();//resp.sduree;
+        document.getElementsByName("voile")[0].value = resp.voile;
+        document.getElementsByName("biplace")[0].checked = resp.biplace;
+        document.getElementsByName("commentaire")[0].value = resp.commentaire;
+        cursite = resp.site;
+        if (resp.site.trim().length > 0)
+          document.getElementsByName("site")[0].value = resp.site;
+        else
+          document.getElementsByName("site")[0].selectedIndex  = 0;
+        if (!keeplatlon && resp.latdeco && resp.londeco) {
+          document.getElementsByName("lat")[0].value = resp.latdeco;
+          document.getElementsByName("lon")[0].value = resp.londeco;
+          document.getElementsByName("alt")[0].value = resp.altdeco;
         }
-      };
-      xhttp.open("GET", "<?php echo strtok($_SERVER["REQUEST_URI"], '?');?>?vol&id="+id, true);
-      xhttp.send();
+        onSiteChange(document.getElementsByName("site")[0].value);
+        document.getElementsByName("vol")[0].value = id;
+        res();
+      } catch(e) {
+        console.error(e);
+        res();
+        return;
+      }
     });
   }
 
@@ -364,6 +372,17 @@ if (isset($_POST['site']) && isset($_POST['date']) && isset($_POST['heure']) && 
     xhttp.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');
     save = true;
     xhttp.send(urlEncodedData);
+  }
+  
+  function updateWindData() {
+    let windbtn = document.getElementById('windbtn');
+    windbtn.style.pointerEvents = 'none';
+    document.getElementById('windval').innerHTML = '<i>chargement...</i>';
+    updateWind(voldata.id, voldata.latdeco, voldata.londeco, voldata.timestamp).then(displayWind);
+  }
+  function displayWind(wind) {
+    document.getElementById('windval').innerHTML = formatWind(wind);
+    windbtn.style.pointerEvents = '';
   }
 
   function addOption(list, nom, value, selected)
@@ -646,9 +665,15 @@ vol à editer/créer :<BR><select name="vol" onchange="onVolChange(this.value)">
       <a href="#" onclick="regenVignette()">regénérer la vignette</a><BR>
       <img id="vignette" style="max-width:256px;max-height:256px" src=""></div>
     </div>
-    <div id="zonescore" style="display:none;vertical-align:top;/*float:right*/text-align: right;background-color: #d4ffc9;padding:2px">
-      <span id="score" style="display:block"></span>
-      <a href="#" onclick="calcFlightScore()">recalculer le score</a>
+    <div style="display: inline-block">
+      <div id="zonescore" style="display:none;vertical-align:top;/*float:right*/text-align: right;background-color: #d4ffc9;padding:2px;">
+        <span id="score" style="display:block"></span>
+        <a href="#" onclick="calcFlightScore()">recalculer le score</a>
+      </div>
+      <div id="zonewind" style="display:none;vertical-align:top;/*float:right*/text-align: right;background-color: #d4ffc9;padding:2px;margin-top:5px;">
+        <a href="#" id="windbtn" onclick="updateWindData()">recharger les balises</a>
+        <span id="windval" style="display:block"></span>
+      </div>
     </div>
   </div>
   <p style="text-align:right;padding-bottom:32px"><input id="btnSave" type="button" value="Enregistrer" onclick="saveVol()"></p>

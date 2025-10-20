@@ -1,12 +1,14 @@
 <?php
 const MAX_FILE_SIZE = 10000000;
-if (isset($_POST['flightscore']) && isset($_GET['id']) && preg_match('/^\d+$/', $_GET['id'])) {
+if (isset($_GET['id']) && preg_match('/^\d+$/', $_GET['id'])) {
   $id = intval($_GET['id']);
-  //echo $_POST['flightscore'];
-  require("tracklogmanager.php");
-  $mgr = new TrackLogManager();
-  echo $mgr->putFlightScore($id, $_POST['flightscore']) ? "OK":"KO";
-  exit(0);
+  if (isset($_POST['flightscore'])) {
+    //echo $_POST['flightscore'];
+    require("tracklogmanager.php");
+    $mgr = new TrackLogManager();
+    echo $mgr->putFlightScore($id, $_POST['flightscore']) ? "OK":"KO";
+    exit(0);
+  }
 }
 ?>
 <?php
@@ -415,7 +417,7 @@ return;*/
     let editlnk = `edit.php?id=${ret.tracks[0].id}&lat=${encodeURIComponent(ret.tracks[0].fptlat)}&lon=${encodeURIComponent(ret.tracks[0].fptlon)}&alt=${encodeURIComponent(ret.tracks[0].fptalt)}`;
     document.body.innerHTML += `<BR><a href="${editlnk}">&eacute;diter le vol</a>`;
     // on trie pour éditer éventuellement le premier vol qui n'a pas d'erreur
-    ret.tracks = ret.tracks.sort((a,b) => (a.error||'').localeCompare(b.error||''))
+    ret.tracks = ret.tracks.sort((a,b) => (a.error||'').localeCompare(b.error||''));
     if (window.opener !== window && !window.menubar.visible) {
       window.opener.location.reload();
       setTimeout(function(){

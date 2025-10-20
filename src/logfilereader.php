@@ -327,7 +327,7 @@ class LogflyReader
     return FALSE;
   }
 
-  function getSite($lat, $lon) {
+  function getSite($lat, $lon, $distance) {
     $sites = $this->getSites();
     $site = "";
     $dist = 1000000000;
@@ -336,7 +336,7 @@ class LogflyReader
       for ($i=0; $i<count($sites); $i++) {
         $sitetmp = $this->getInfoSite($sites[$i]);
         if (is_float($sitetmp->latitude) && is_float($sitetmp->longitude))
-          $distmp = distance($sitetmp->latitude, $sitetmp->longitude, $lat, $lon);
+          $distmp = $distance($sitetmp->latitude, $sitetmp->longitude, $lat, $lon);
         if ($distmp<$dist) {
           $dist = $distmp;
           $site = new \StdClass();

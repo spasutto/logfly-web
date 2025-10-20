@@ -172,7 +172,7 @@ class TrackLogManager
         $duree = 0;
         if (isset($tfreader->duration))
           $duree = $tfreader->duration;
-        $osite = $lgfr->getSite($fpt->latitude, $fpt->longitude);
+        $osite = $lgfr->getSite($fpt->latitude, $fpt->longitude, 'distance');
         if (!$osite)
           $osite = TrackLogManager::getSiteFFVL($fpt->latitude, $fpt->longitude);
         $dist = 0;
