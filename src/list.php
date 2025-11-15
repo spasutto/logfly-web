@@ -519,7 +519,9 @@ function url_with_parameter($paramname, $paramvalue, $paramtoremove = null) {
     $datefin = clone $vol->date;
     $vol->duree = is_int($vol->duree) && $vol->duree > 0 ? $vol->duree : 0;
     $datefin = $datefin->add(new DateInterval("PT".$vol->duree."S"));
-    echo "<TD><span title=\"heure de décollage\">&#8613;&nbsp;". $vol->date->format('H:i')."</span><p class=\"small\" title=\"heure de posé\">&#8615;&nbsp;".$datefin->format('H:i')."</p></TD>";
+    echo "<TD>
+    <input type=\"hidden\" id=\"ts".$vol->id."\" value=\"".$vol->date->getTimestamp()."\">
+    <span title=\"heure de décollage\">&#8613;&nbsp;". $vol->date->format('H:i')."</span><p class=\"small\" title=\"heure de posé\">&#8615;&nbsp;".$datefin->format('H:i')."</p></TD>";
     echo "<TD title=\"".Utils::timeFromSeconds($vol->duree, 3)."\">". Utils::timeFromSeconds($vol->duree > 900 ? round($vol->duree/60)*60 : $vol->duree, 2)."</TD>";
     //echo "<TD>". $vol->sduree."</TD>";
     echo "<TD><a href=\"".url_with_parameter("site", $vol->site, "offset")."\" title=\"filtrer les vols pour ce site\">".$vol->site."</a>&nbsp;<a href=\"https://maps.google.com/?q=".$vol->latdeco.",".$vol->londeco."\" target=\"_Blank\" class=\"lien_gmaps\" title=\"google maps\">&#9936;</a>";
@@ -662,12 +664,6 @@ function loadComment(id) {
   let zonecarto = document.getElementById('zonecarto'+id);
   let btncomm = document.getElementById('btncomm'+id);
   try {
-    getWind(id).then(wind => {
-      if (!wind.length) return;
-      document.getElementById('balises'+id).innerHTML =
-        `<u onclick="document.getElementById('balrelev${id}').classList.toggle('removed')" style="cursor: pointer"><b>afficher les relevés des balises au moment du déco</b></u><br>
-        <span id="balrelev${id}" class="removed">${formatWind(wind)}</span>`;
-    });
     var xhttp = new XMLHttpRequest();
       xhttp.responseType = 'text';
       xhttp.onreadystatechange = function() {
@@ -701,6 +697,16 @@ function affichComment(id) {
   let zonecomm = document.getElementById('zonecomm'+id);
   let btncomm = document.getElementById('btncomm'+id);
   let hascomment = document.getElementById('hascomment'+id).value == 'true';
+  let windzone = document.getElementById('balises'+id);
+  let timestamp = parseInt(document.getElementById('ts'+id).value);
+  if (!windzone.innerHTML.trim().length) {
+    getWind(id).then(wind => {
+      if (!wind.length) return;
+      windzone.innerHTML =
+        `<u onclick="document.getElementById('balrelev${id}').classList.toggle('removed')" style="cursor: pointer"><b>afficher/masquer les relevés des balises au moment du déco</b></u><br>
+        <span id="balrelev${id}" class="removed">${formatWind(wind, timestamp)}</span>`;
+    });
+  }
   if (ligne.style.display != 'table-row') {
     if (hascomment && showComment && zonecomm.innerHTML == "") {
       loadComment(id);

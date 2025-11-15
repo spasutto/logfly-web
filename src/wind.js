@@ -7,7 +7,21 @@ function getDirection(angle) {
 	let section = parseInt( angle/22.5 + 0.5 );
 	return directions[section % 16];
 }
-function formatWind(wind) {
+function formatTime(t) {
+  let s = Math.sign(t) < 0 ? '-' : '+';
+  let u = 's', d = 1;
+  t = Math.abs(t);
+  if (t > 3600) {
+    t/=3600;
+    d = 10;
+    u = 'h';
+  } else if (t > 60) {
+    t/=60;
+    u = 'min';
+  }
+  return s+Math.round(t*d)/d+u;
+}
+function formatWind(wind, timestampref) {
   let data = `<style>
   .tablebalises td {
     border-color: #b5b5b5;
@@ -20,7 +34,7 @@ function formatWind(wind) {
   </style>
   <table class="tablebalises">`;
   data += wind.map(w => `<tr><td><a href="https://maps.google.com/?q=${w.lat},${w.lon}" target="_Blank" title="afficher l'emplacement sur google maps">${w.nom}</a>
-  <small>(<span title="distance à vol d'oiseau depuis le déco">${w.distance} km</span> / <span title="altitude de la balise">${w.altitude} m</span>)</small></td>
+  <small>(<span title="distance à vol d'oiseau depuis le déco">${w.distance} km</span> / <span title="altitude de la balise">${w.altitude} m</span> / <span title="relevé à ${new Date(w.vent.timestamp*1000).toLocaleTimeString()}">${formatTime(w.vent.timestamp-timestampref)}</span>)</small></td>
   <td><span style="transform: rotate(${w.vent.dir+180}deg);float: left" title="${w.vent.dir}°${getDirection(w.vent.dir)} (direction instantanée)">&#8679;</span>
   ${w.vent.min}&nbsp;/&nbsp;${w.vent.moy}<span style="transform: rotate(${w.vent.dirm+180}deg)" title="${w.vent.dirm}°${getDirection(w.vent.dirm)} (direction moyenne)">&#8679;</span>&nbsp;/&nbsp;${w.vent.max}</td>
   </tr>`).join('');
@@ -28,6 +42,8 @@ function formatWind(wind) {
   return data;
 }
 async function getWind(id) {
+  if (typeof window.lfwinddata !== 'object') window.lfwinddata = {};
+  if (lfwinddata.hasOwnProperty(id)) return lfwinddata[id];
   let data = null;
   try {
     const r = await fetch(`Tracklogs/w${id}.json`);
@@ -37,6 +53,7 @@ async function getWind(id) {
     console.error(e);
   }
   if (data == null) return;
+  lfwinddata[id] = data;
   return data;
 }
 async function updateWind(id, lat, lon, ts, silent = false) {
@@ -64,4 +81,3 @@ async function updateWind(id, lat, lon, ts, silent = false) {
   }
   return data;
 }
-
