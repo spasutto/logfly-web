@@ -294,3 +294,11 @@ function afficherSitesFFVL(map, afficher=true) {
   if (afficher) map.addLayer(sites_ffvl_markers);
   else map.removeLayer(sites_ffvl_markers);
 }
+function addMarker(lat, lon, text) {
+  text = text ?? '';
+  if (window.tempMarker) {
+    map.removeLayer(tempMarker);
+  }
+  window.tempMarker = new L.marker(new L.LatLng(lat, lon)).bindTooltip(text).addTo(map);
+  map.setView(tempMarker.getLatLng());
+}

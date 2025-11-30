@@ -388,7 +388,7 @@ if (isset($_POST['site']) && isset($_POST['date']) && isset($_POST['heure']) && 
   }
   function displayWind(wind) {
     window.wu = false;
-    document.getElementById('windval').innerHTML = formatWind(wind);
+    document.getElementById('windval').innerHTML = formatWind(wind, voldata.timestamp);
     windbtn.style.pointerEvents = '';
   }
 

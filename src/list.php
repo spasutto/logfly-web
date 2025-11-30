@@ -690,6 +690,14 @@ function loadComment(id) {
     zonecomm.innerHTML = e;
   }
 }
+function addMarker(id, lat, lon, text) {
+  try {
+    document.getElementById('ifr'+id).contentWindow.addMarker(lat, lon, text);
+  } catch (e) {
+    console.error(e);
+  }
+  return false;
+}
 function affichComment(id) {
   hideImagesTrace();
   let ligne = document.getElementById('comm'+id).parentElement;
@@ -702,9 +710,14 @@ function affichComment(id) {
   if (!windzone.innerHTML.trim().length) {
     getWind(id).then(wind => {
       if (!wind.length) return;
+      let windActionLink = (w) => {
+        let cleanAttr = (t) => t.replaceAll('"', '&quot;').replaceAll('\'', '\\\'').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('\n', '');
+        let baltext = `balise &quot;${cleanAttr(w.nom)}&quot; (${w.altitude} m)<BR>${cleanAttr(w.windvaluestext)} @ ${new Date(w.vent.timestamp*1000).toLocaleTimeString()}`;
+        return `<a href="#" target="_Blank" onclick="addMarker(${id}, ${w.lat}, ${w.lon}, '${baltext}');return false;" title="afficher l'emplacement sur la carte">${w.nom}</a>`;
+      }
       windzone.innerHTML =
         `<u onclick="document.getElementById('balrelev${id}').classList.toggle('removed')" style="cursor: pointer"><b>afficher/masquer les relevés des balises au moment du déco</b></u><br>
-        <span id="balrelev${id}" class="removed">${formatWind(wind, timestamp)}</span>`;
+        <span id="balrelev${id}" class="removed">${formatWind(wind, timestamp, windActionLink)}</span>`;
     });
   }
   if (ligne.style.display != 'table-row') {
@@ -716,7 +729,7 @@ function affichComment(id) {
       let url = document.getElementById('traceurl_'+id).href;
       if (url.trim().length > 0) {
         url += "&disablescroll=1";
-        zonecarto.innerHTML += "<iframe src=\""+url+"\" width=\"99%\" height=\"658px\"></iframe>";
+        zonecarto.innerHTML += "<iframe id=\"ifr"+id+"\" src=\""+url+"\" width=\"99%\" height=\"658px\"></iframe>";
       }
     }
     ligne.style.display = 'table-row';

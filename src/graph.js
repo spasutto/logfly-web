@@ -497,7 +497,9 @@ class GraphGPX {
     }
 
     if (e.touches.length > 0 && typeof e.touches[0].pageX === 'number') {
-      this.curidx = this.indexforx(e.touches[0].pageX);
+      let pagex = e.touches[0].pageX;
+      if (pagex<0) pagex=0;
+      this.curidx = this.indexforx(pagex);
       if (this.curidx > this.fizoom.pts.length-1) {
         this.curidx = this.fizoom.pts.length-1;
       }
@@ -539,6 +541,7 @@ class GraphGPX {
     if (!Array.isArray(this.fizoom.pts) || this.fizoom.pts.length <= 0)
       return;
     let x = e.clientX - this.bdrect.left;
+    if (x < 0) x=0;
     this.curidx = this.indexforx(x);
     if (this.curidx > this.fizoom.pts.length-1) {
       this.curidx = this.fizoom.pts.length-1;

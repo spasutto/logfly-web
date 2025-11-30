@@ -21,7 +21,23 @@ function formatTime(t) {
   }
   return s+Math.round(t*d)/d+u;
 }
-function formatWind(wind, timestampref) {
+function formatWind(wind, timestampref, actpos) {
+  let bts = typeof timestampref == 'number' && timestampref > 0;
+  let sts = bts ? (tref, ts) => ` / <span title="relevé à ${new Date(ts*1000).toLocaleTimeString()}">${formatTime(ts-tref)}</span>` : _ => '';
+  let cw = (w) => {
+    let c = null;
+    if (w >= 25) c = 'ff0000';
+    else if (w > 15) c = 'ff8400';
+    if (c) return `<span style="color:#${c}">${w}</span>`;
+    return w;
+  };
+  if (typeof actpos != 'function') {
+    actpos = (w) => `<a href="https://maps.google.com/?q=${w.lat},${w.lon}" target="_Blank" title="afficher l'emplacement sur google maps">${w.nom}</a>`;
+  }
+  wind.forEach(w => {
+    w.windvaluestext = `<span style="transform: rotate(${w.vent.dir+180}deg);float: left" title="${w.vent.dir}°${getDirection(w.vent.dir)} (direction instantanée)">&#8679;</span>
+    ${cw(w.vent.min)}&nbsp;/&nbsp;${cw(w.vent.moy)}<span style="transform: rotate(${w.vent.dirm+180}deg)" title="${w.vent.dirm}°${getDirection(w.vent.dirm)} (direction moyenne)">&#8679;</span>&nbsp;/&nbsp;${cw(w.vent.max)}`;
+  });
   let data = `<style>
   .tablebalises td {
     border-color: #b5b5b5;
@@ -33,11 +49,9 @@ function formatWind(wind, timestampref) {
   }
   </style>
   <table class="tablebalises">`;
-  data += wind.map(w => `<tr><td><a href="https://maps.google.com/?q=${w.lat},${w.lon}" target="_Blank" title="afficher l'emplacement sur google maps">${w.nom}</a>
-  <small>(<span title="distance à vol d'oiseau depuis le déco">${w.distance} km</span> / <span title="altitude de la balise">${w.altitude} m</span> / <span title="relevé à ${new Date(w.vent.timestamp*1000).toLocaleTimeString()}">${formatTime(w.vent.timestamp-timestampref)}</span>)</small></td>
-  <td><span style="transform: rotate(${w.vent.dir+180}deg);float: left" title="${w.vent.dir}°${getDirection(w.vent.dir)} (direction instantanée)">&#8679;</span>
-  ${w.vent.min}&nbsp;/&nbsp;${w.vent.moy}<span style="transform: rotate(${w.vent.dirm+180}deg)" title="${w.vent.dirm}°${getDirection(w.vent.dirm)} (direction moyenne)">&#8679;</span>&nbsp;/&nbsp;${w.vent.max}</td>
-  </tr>`).join('');
+  data += wind.map(w => `<tr><td>${actpos(w)}
+  <small>(<span title="distance à vol d'oiseau depuis le déco">${w.distance} km</span> / <span title="altitude de la balise">${w.altitude} m</span>${sts(timestampref, w.vent.timestamp)})</small></td>
+  <td>${w.windvaluestext}</td></tr>`).join('');
   data += '</table>';
   return data;
 }
