@@ -100,9 +100,15 @@ class TrackLogManager
     $ret = array();
     if (count($tmpfnames)<=0) return;
     $arrigc = array();
+    $totduration = 0;
     for ($i=0; $i<count($tmpfnames); $i++) {
       $igc = TrackfileLoader::load($tmpfnames[$i], 'igc');
-      $fpt = $igc->getFirstRecord();
+      $rec = $igc->getRecords();
+      if (!$igc || !isset($igc->duration)) {
+        continue;
+      }
+      $totduration += $igc->duration;
+      $fpt = $rec[0];
       if ($fpt->date instanceof DateTime) {
         $arrigc[] = array($tmpfnames[$i], $igc->datetime->getTimestamp(), $i);
       }
@@ -130,7 +136,7 @@ class TrackLogManager
         $file2 = implode("\n", array_filter(explode("\n", $file2), function($val) {return substr(strtoupper(trim($val)), 0, 1) == 'B';}));
         fwrite($firstfile, $file2);
       }
-      $curret = $this->uploadIGC($arrigc[0][0], $id);
+      $curret = $this->uploadIGC($arrigc[0][0], $id, $totduration);
       $curret->indice = 0;
       $ret[] = $curret;
     } else {
@@ -143,7 +149,7 @@ class TrackLogManager
     return $ret;
   }
 
-  public function uploadIGC($tmpfname, $id = null) {
+  public function uploadIGC($tmpfname, $id = null, $totduration = -1) {
     $ret = null;
     $fpt = null;
     $tfreader = TrackfileLoader::load($tmpfname, 'igc');
@@ -170,7 +176,9 @@ class TrackLogManager
           return (object) ['error' => "vol ".$previd." déjà existant", 'id' => $previd, 'fpt' => $fpt, 'newvol'=> 0, 'igcfname' => $igcfname];
         }
         $duree = 0;
-        if (isset($tfreader->duration))
+        if ($totduration > 0)
+          $duree = $totduration;
+        else if (isset($tfreader->duration))
           $duree = $tfreader->duration;
         $osite = $lgfr->getSite($fpt->latitude, $fpt->longitude, 'distance');
         if (!$osite)
