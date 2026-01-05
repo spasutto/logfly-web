@@ -24,7 +24,7 @@ return;
 function getListeVentBalisesAUneHeure($lat, $lon, $timestamp) {
   $balises = getListeBalises();
   $balisesproches = [];
-  $N = ceil((abs(time() - $timestamp)) / 3600); // temps depuis lequel récupérer l'historique
+  $N = ceil((abs(time() - $timestamp)) / 3600)+1; // temps depuis lequel récupérer l'historique
   for ($i=0; $i<count($balises); $i++) {
     $d = distance($lat, $lon, $balises[$i]->latitude, $balises[$i]->longitude);
     if($d < MAX_DIST*1000) { // - de 20km

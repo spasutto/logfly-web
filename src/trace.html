@@ -789,7 +789,11 @@ const urlParams = new URLSearchParams(window.location.search);
       igccont = document.getElementById('igccont').value;
       document.getElementById('formcont').style.display = 'none';
     }
-    if (calcfs === true) await calcFlightScore(igccont);
+    if (calcfs === true) {
+      try {
+        await calcFlightScore(igccont);
+      } catch (e) {}
+    }
     let lines = igccont.split(/\r?\n/);
     //0000000000111111111
     //0123456789012345678
