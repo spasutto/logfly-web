@@ -250,6 +250,10 @@ class LogflyReader
     $ret2 = FALSE;
     $nom = str_replace("'", "''", strtoupper($nom));
     $newnom = strtoupper(str_replace("'", "''", $newnom));
+    if(class_exists('Transliterator')){
+      $transliterator = Transliterator::createFromRules(':: Any-Latin; :: Latin-ASCII; :: NFD; :: [:Nonspacing Mark:] Remove; :: Upper(); :: NFC;', Transliterator::FORWARD);
+      $newnom = $transliterator->transliterate($newnom);
+    }
     $sql = "UPDATE SITE set S_Latitude='".$lat."', S_Longitude='".$lon."', S_Alti='".$alt."', S_Nom='".$newnom."' WHERE S_Nom='".$nom."';";
     //echo $sql."<BR>\n";
     $ret1 = $this->db->query($sql);
