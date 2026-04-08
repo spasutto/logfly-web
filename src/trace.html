@@ -979,6 +979,7 @@ const urlParams = new URLSearchParams(window.location.search);
   }
   function displayFlightScore(flightscore) {
     window.flightscore = flightscore;
+    graph.setFlightInfo(flightscore);
     let isTriangle = function() { return (flightscore.opt.scoring.code == 'tri' || flightscore.opt.scoring.code == 'fai'); };
     flstats['flightscore'] = '';
     if (typeof flightscore.scoreInfo == 'object') {

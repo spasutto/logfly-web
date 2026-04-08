@@ -159,13 +159,24 @@ $time = array_map(function($stat) {return $stat->TempsVol/3600;}, array_values($
   }
   $d1 = $vols->vols[0]->date;
   $d2 = $vols->vols[$nbrvols-1]->date;
-  $monthsdiff = $d1->diff($d2)->m + ($d1->diff($d2)->y*12);
-  if ($monthsdiff <= 0)
-  $monthsdiff = 1;
-  $nbjoursparan=365.25;
-  // en dessous d'une année de pratique on affiche le nombre total comme nombre par an
-  $nbvolsparan = round($nbjoursparan*$nbrvols/(max($nbjoursparan, ($d2->getTimestamp()-$d1->getTimestamp())/(60*60*24))));
+  $interval = $d1->diff($d2);
+  //$interval = $d1->diff( new DateTimeImmutable('2019-06-23'));
+  
   echo "<h1>Statistiques de vol (".$nbrvols." vols, ".Utils::timeFromSeconds($vols->tempstotalvol, TRUE).") :<a href=\"?dl\"><img src=\"csv.svg\" width=\"32px\" title=\"télécharger un fichier csv\"></a></h1>";
+  $iportions = [];
+  $nbvolsparan = 0;
+  if ($interval->days > 364) {
+    if ($interval->y > 0) $iportions[] = $interval->y. " année";
+    if ($interval->y > 1) $iportions[0] .= "s";
+    if ($interval->m > 0) $iportions[] = $interval->m. " mois";
+    $nbvolsparan = round($nbrvols / ($interval->days/365));
+    $monthsdiff = $interval->m + ($interval->y*12);
+  } else {
+    $iportions[] = $interval->days. " jours";
+    $nbvolsparan = $interval->days;
+    $monthsdiff = 1;
+  }
+  echo "ancienneté de pratique : ".implode(" et ", $iportions)."<br>";
   echo "moyenne : ".$nbvolsparan." vols par ans, ".round($nbrvols/$monthsdiff)." vols par mois, ".Utils::timeFromSeconds($vols->tempstotalvol/$nbrvols, TRUE)." par vol<BR>";
   $longer = array_reduce($vols->vols, function($a, $b){
     return $a->duree > $b->duree ? $a : $b;

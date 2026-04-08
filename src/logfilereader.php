@@ -553,7 +553,7 @@ class LogflyReader
       $sql .= " AND V_Date>='".$datemin->format('Y-m-d')."'";
     if ($datemax instanceof DateTime && $datemax !== FALSE)
       $sql .= " AND V_Date<='".$datemax->format('Y-m-d')."'";
-    $sql .= " group by V_Engin order by TempsVol DESC, V_Engin;";
+    $sql .= " group by V_Engin order by V_Engin;";//order by TempsVol DESC, V_Engin
     $ret = $this->db->query($sql);
     while($row = $ret->fetchArray(SQLITE3_ASSOC))
     {

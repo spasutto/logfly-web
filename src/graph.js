@@ -102,7 +102,8 @@ class GraphGPX {
         vt: "#22af00",//facc15
         gr: "#2200af",
         gndalt: "#ff0000",
-        debug: "#ff0000"
+        debug: "#ff0000",
+        turnpoints: "#ff4d4d"
       }
     }
   }
@@ -750,6 +751,40 @@ class GraphGPX {
     this.ctx.closePath();
     this.ctx.stroke();
 
+    // Turnpoints du parcours
+    if (this.finfo) {
+      this.legspos = [];
+      try {
+        let lpos = this.finfo.scoreInfo.legs.map(l => ({'lat': l.finish.y, 'lon': l.finish.x}));
+        lpos.forEach(lp => {
+          let ldist = Number.MAX_SAFE_INTEGER;
+          let pti = -1;
+          this.fi.pts.forEach((pt, i) => {
+            let t = GraphGPX.distance(pt.lat, pt.lon, lp.lat, lp.lon);
+            if (t < ldist) {
+              ldist = t;
+              pti = i;
+            }
+          });
+          if (pti>-1) {
+            this.legspos.push(pti);
+          }
+        });
+        this.legspos.forEach(leg => {
+          if (this.zoomsel[1] != -1 && (this.zoomsel[0] > leg || this.zoomsel[1] < leg)) return;
+          this.ctx.strokeStyle = this.options.colors.turnpoints;
+          this.ctx.fillStyle = 'rgba(0,0,0,0.7)';
+          this.ctx.beginPath();
+          x = this.xforindex(leg);
+          this.ctx.moveTo(x, 0);
+          this.ctx.lineTo(x, this.canvas.height);
+          this.ctx.closePath();
+          this.ctx.stroke();
+        });
+        //this.fi.pts.sort(a,b) => GraphGPX.distance(a.lat, a.lon, lpos.lat, lpos.lon)-GraphGPX.distance(b.lat, b.lon, lpos.lat, lpos.lon)[0]
+      } catch(e){}
+    }
+
     // gnd alt
     if (typeof this.fizoom.pts[0].gndalt == 'number') {
       this.ctx.fillStyle = this.options.colors.axissecondary;
@@ -1253,6 +1288,11 @@ class GraphGPX {
     this.paintmouseinfos();
     this.launchAnalysers();
     return this.fi;
+  }
+  
+  setFlightInfo(finfo) {
+    this.finfo = finfo;
+    this.paint();
   }
   
   launchAnalysers() {
