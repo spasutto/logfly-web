@@ -7,7 +7,7 @@ function encodept(current, previous, factor) {
   previous = py2_round(previous * factor);
   var coordinate = (current - previous) * 2;
   if (coordinate < 0) {
-    coordinate = -coordinate - 1
+    coordinate = -coordinate - 1;
   }
   var output = '';
   while (coordinate >= 0x20) {
@@ -76,6 +76,7 @@ function decode(encodedPath, precision = 5) {
 
   return path;
 }
+
 
 class GraphGPX {
   analysers = [];
@@ -753,7 +754,7 @@ class GraphGPX {
 
     // Turnpoints du parcours
     if (this.finfo) {
-      this.legspos = [];
+      this.tppos = [];
       try {
         let lpos = this.finfo.scoreInfo.legs.map(l => ({'lat': l.finish.y, 'lon': l.finish.x}));
         lpos.forEach(lp => {
@@ -767,15 +768,14 @@ class GraphGPX {
             }
           });
           if (pti>-1) {
-            this.legspos.push(pti);
+            this.tppos.push(pti);
           }
         });
-        this.legspos.forEach(leg => {
-          if (this.zoomsel[1] != -1 && (this.zoomsel[0] > leg || this.zoomsel[1] < leg)) return;
+        this.tppos.forEach(tp => {
+          if (this.zoomsel[1] != -1 && (this.zoomsel[0] > tp || this.zoomsel[1] < tp)) return;
           this.ctx.strokeStyle = this.options.colors.turnpoints;
-          this.ctx.fillStyle = 'rgba(0,0,0,0.7)';
           this.ctx.beginPath();
-          x = this.xforindex(leg);
+          x = this.xforindex(tp);
           this.ctx.moveTo(x, 0);
           this.ctx.lineTo(x, this.canvas.height);
           this.ctx.closePath();
@@ -1151,9 +1151,14 @@ class GraphGPX {
   }
 
   zoom(reset) {
-    reset = reset === true || this.zoomsel[0] >= this.zoomsel[1];
+    reset = reset === true || Math.abs(this.zoomsel[0] - this.zoomsel[1]) < 10;// || this.zoomsel[0] >= this.zoomsel[1];
     if (reset)
       this.zoomsel = [-1,-1];
+    else if (this.zoomsel[0] >= this.zoomsel[1]) {
+      let c = this.zoomsel[0];
+      this.zoomsel[0] = this.zoomsel[1];
+      this.zoomsel[1] = c;
+    }
     this.updateZoom();
     this.paint();
     this.paintmouseinfos();
@@ -1272,13 +1277,13 @@ class GraphGPX {
         locations.push(this.fi.pts[i].lat);
         locations.push(this.fi.pts[i].lon);
         if (i && i % 9999 == 0) {
-          this.getElevation(locations, curelev, 10000);
+          this.getElevations(locations, curelev, 10000);
           curelev = i + 1;
           locations = [];
         }
       }
       if (curelev < this.fi.pts.length)
-        this.getElevation(locations, curelev, this.fi.pts.length - curelev);
+        this.getElevations(locations, curelev, this.fi.pts.length - curelev);
     } else {
       let event = new CustomEvent('ondataloaded', { "detail": this.fi });
       this.elem.dispatchEvent(event);
@@ -1305,7 +1310,13 @@ class GraphGPX {
     }
   }
 
-  getElevation(locations, index, count) {
+  async getElevation(lat, lon) {
+    return new Promise(res => {
+      this.getElevations([lat, lon], 0, 1, res);
+    });
+  }
+
+  getElevations(locations, index, count, getfirstalt=null) {
     var xhttp = new XMLHttpRequest();
     /*locations = locations.reduce((arr, cur, i) => {if (i%2==0) arr.push([cur]); else arr[arr.length-1].push(cur); return arr;}, []);
     let data = {
@@ -1315,7 +1326,7 @@ class GraphGPX {
       "interpolate": false
     };*/
     // Float64Array pour double float
-    // attention au conflits d'endianness, getElevation.php décode en little endian
+    // attention au conflits d'endianness, getElevations.php décode en little endian
     let data = new Float32Array(locations);
     xhttp.responseType = 'text';
     let minusalt = 0;
@@ -1325,11 +1336,13 @@ class GraphGPX {
           try {
             //let dv = (new DataView(new Uint8Array(xhttp.responseText.split('').map(v => v.charCodeAt(0))).buffer));
             //let alts = JSON.parse(xhttp.responseText);
-            let altdiff = 0;
+            let altdiff = 0, gndalt = 0;
             for (let i=index,j=0; i < index+count; i++,j+=2) {
               //this.fi.pts[i].gndalt = alts[j++];
               //this.fi.pts[i].gndalt = (j+2>dv.byteLength) ? 0 : dv.getInt16(j, true);
-              this.fi.pts[i].gndalt = (j+2>xhttp.responseText.length) ? 0 : (new DataView(new Uint8Array([xhttp.responseText.charCodeAt(j), xhttp.responseText.charCodeAt(j+1)]).buffer)).getInt16(0, true);
+              gndalt = (j+2>xhttp.responseText.length) ? 0 : (new DataView(new Uint8Array([xhttp.responseText.charCodeAt(j), xhttp.responseText.charCodeAt(j+1)]).buffer)).getInt16(0, true);
+              if (getfirstalt) getfirstalt(gndalt);
+              this.fi.pts[i].gndalt = gndalt;
               if (this.fi.pts[i].alt == 0)
                 this.fi.pts[i].alt = this.fi.pts[i].gndalt;
               altdiff = this.fi.pts[i].alt - this.fi.pts[i].gndalt;

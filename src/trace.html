@@ -15,6 +15,7 @@
     <link href='lib/leaflet.fullscreen.css' rel='stylesheet' />
     <script src='lib/leaflet.hotline.js'></script>
     <script src="lib/leaflet.rotatedMarker.js"></script>
+    <script src="igc.js"></script>
     <script src="carto.js"></script>
     <script src="graph.js"></script>
     <script src="anatrace.js"></script>
@@ -166,7 +167,7 @@
 <label for="file-selector">Sélectionnez un fichier IGC : </label>
 <input type="file" id="file-selector" accept=".igc" multiple><HR>
 Ou placez directement le contenu du fichier IGC :
-<form id="formigc" method="post" onsubmit="loadIGC(undefined, true);return false;">
+<form id="formigc" method="post" onsubmit="computeIGC(undefined, true);return false;">
 <div style="max-width: 640px">
   <textarea type="text" id="igccont" style="width:100%;height:80px"></textarea><BR>
   <input type="submit" id="frmsub" style="display:none;float: right;" value="afficher">
@@ -176,10 +177,10 @@ Ou placez directement le contenu du fichier IGC :
 
 <div id="dispmodes" class="replie">
   <div id="dispmodes_closed">
-    <p class="clickable gras centre" onclick="dispmodes.classList.toggle('replie')">+</p>
+    <p class="clickable gras centre" onclick="event.stopImmediatePropagation();dispmodes.classList.toggle('replie');">+</p>
   </div>
   <div id="dispmodes_open">
-    <p class="clickable gras centre souligne" onclick="dispmodes.classList.toggle('replie')">Couleur trace :</p>
+    <p class="clickable gras centre souligne" onclick="event.stopImmediatePropagation();dispmodes.classList.toggle('replie');">Couleur trace :</p>
     <input type="radio" id="dmVz" name="dispmodes" value="vz" onclick="window.dispmode=this.value;redrawFlight();" checked><label for="dmVz">vz</label><BR>
     <input type="radio" id="dmVx" name="dispmodes" value="vx" onclick="window.dispmode=this.value;redrawFlight();"><label for="dmVx">vx</label><BR>
     <input type="radio" id="dmGR" name="dispmodes" value="GR" onclick="window.dispmode=this.value;redrawFlight();"><label for="dmGR">finesse</label><BR>
@@ -215,7 +216,7 @@ const urlParams = new URLSearchParams(window.location.search);
           document.getElementById('igccont').value = igccont;
           filecount--;
           document.getElementById('formcont').style.display = 'none';
-          if (filecount <= 0) loadIGC(igccont, true);
+          if (filecount <= 0) computeIGC(igccont, true);
         });
         reader.readAsText(file);
     });
@@ -268,6 +269,16 @@ const urlParams = new URLSearchParams(window.location.search);
   //graph.addAnalyser(new AnaDiffTrace(graph));
   loadCarto(clegeoportail, document.getElementById('map_elem'), disablescroll, document.getElementById('mapcont')).then(map => {
     window.map = map;
+    map.on('click', async function(e) {
+      if (!e.latlng) return;
+      let alt = await graph.getElevation(e.latlng.lat, e.latlng.lng);
+      if (!window.posmarker) {
+        window.posmarker = L.marker(e.latlng).addTo(map);
+      } else {
+        window.posmarker.setLatLng(e.latlng);
+      }
+      window.posmarker.bindPopup('<p>altitude : ' + alt + 'm</p>').openPopup();
+    });
 
     window.marker = L.marker([0,0]).addTo(map);
     //var svg = '<svg viewBox="0 0 24 24" height="32" width="32" fill="transparent" stroke="black" stroke-width="2" stroke-linecap="round" xmlns="http://www.w3.org/2000/svg"> <g> <path d="M1 1 l22 22"/> <path d="M1 23 l22 -22"/> </g> </svg>';
@@ -462,7 +473,9 @@ const urlParams = new URLSearchParams(window.location.search);
     }
   });
   graph.addEventListener('onzoom', function(e) {
-    if (e.detail.reset != true) {
+    if (e.detail.reset) {
+      map.fitBounds(gpx_bounds/*, {padding: [35,35]}*/);
+    } else {
       map.fitBounds(L.latLngBounds(L.latLng(e.detail.minlat, e.detail.minlon), L.latLng(e.detail.maxlat, e.detail.maxlon))/*, {padding: [35,35]}*/);
     }
   });
@@ -726,170 +739,43 @@ const urlParams = new URLSearchParams(window.location.search);
     divTraceInfos.onclick = updateInfoVisibility;
     updateInfoVisibility(true);
   }
+  async function safecalcFlightScore(igccont, calcfs) {
+    if (calcfs === true) {
+      try {
+        return await calcFlightScore(igccont);
+      } catch (e) {
+        alert(e);
+      }
+    }
+  }
   function updateInfoVisibility(notoggle) {
+    if (notoggle instanceof Event) notoggle.stopImmediatePropagation();
     if (notoggle !== true) binfos = !binfos;
     document.getElementById('ctinfos').style.display = binfos ? 'none':'block';
     document.getElementById('iinfos').style.display = !binfos ? 'none':'block';
   }
-  function parseIRecord(line) {
-    const extensions = {};
-    line = line??'';
-    const IRE = /I(\d\d)(\d{4}.{3})+/;
-    const EXTRE = /(\d{2})(\d{2})(.{3})/;
-    if (IRE.test(line)) {
-      let matches = line.match(IRE);
-      let nbr = parseInt(matches[1]);
-      line = line.substring(3);
-      for (let i = 0; i < nbr; i++) {
-        matches = line.match(EXTRE);
-        if (matches == null || matches.length != 4) continue;
-        extensions[matches[3]] = {'start': parseInt(matches[1])-1, 'end': parseInt(matches[2])};
-        line = line.substring(i+7);
-      }
-    }
-    return extensions;
-  }
-  function parseBRecord(r) {
-    //0000000000111111111122222222223333333
-    //0123456789012345678901234567890123456
-    //B0925064454728N00535480EA016100161528
-    let date = new Date(startdate);
-    date.setHours(parseInt(r.substr(1,2)));
-    date.setMinutes(parseInt(r.substr(3,2)));
-    date.setSeconds(parseInt(r.substr(5,2))+tzoffset);
-    let altbaro = parseInt(r.substr(25,5));
-    let altgps = parseInt(r.substr(30,5));
-    //if (alt == 0) alt = altgps;
-    let lat = parseFloat(r.substr(7,2));
-    let mmmext = 0;
-    if (extensions.hasOwnProperty('LAD')) {
-      mmmext = parseInt(r.substring(extensions['LAD'].start, extensions['LAD'].end));
-    }
-    lat += parseFloat((r.substr(9,2)+'.'+r.substr(11,3)+mmmext))/60;
-    lat *=  r[14]=='N'?1:-1;
-    let lon = parseFloat(r.substr(15,3));
-    mmmext = 0;
-    if (extensions.hasOwnProperty('LOD')) {
-      mmmext = parseInt(r.substring(extensions['LOD'].start, extensions['LOD'].end));
-    }
-    lon += parseFloat((r.substr(18,2)+'.'+r.substr(20,3)+mmmext))/60;
-    lon *=  r[23]=='E'?1:-1;
-    return {
-      lat: lat,
-      lon: lon,
-      time: date,
-      /*alt: {
-        baro: parseInt(r.substr(25,5)),
-        gps: parseInt(r.substr(30,5))
-      },*/
-      alt: window.dispmodealt!='baro'?altgps:altbaro,
-      altbaro: altbaro,
-      altgps: altgps
-    };
-  }
-  async function loadIGC(igccont, calcfs) {
+  async function computeIGC(igccont, calcfs) {
     if (typeof igccont !== 'string') {
       igccont = document.getElementById('igccont').value;
       document.getElementById('formcont').style.display = 'none';
     }
-    if (calcfs === true) {
-      try {
-        await calcFlightScore(igccont);
-      } catch (e) {}
-    }
-    let lines = igccont.split(/\r?\n/);
-    //0000000000111111111
-    //0123456789012345678
-    //HFDTEDATE:100522,01
-    window.startdate = new Date();
-    // todo : remplacer ces deux lignes par un reduce
-    let startflightsection = -1, endflightsection = -1;
-    let startlinesindex = lines.filter(l => l=l.trim().startsWith('HFDTE')).map(l => lines.indexOf(l));
-    startlinesindex.forEach(i => {
-      let startdateline = lines[i];
-      let tmpstartdate = new Date();
-      if (startdateline) {
-        let sidx = startdateline.startsWith('HFDTEDATE')?10:5;
-        tmpstartdate.setDate(parseInt(startdateline.substring(sidx,sidx+2)));
-        tmpstartdate.setMonth(parseInt(startdateline.substring(sidx+2,sidx+4))-1);
-        let year = 2000+parseInt(startdateline.substring(sidx+4,sidx+6));
-        if (year > tmpstartdate.getFullYear()) year -= 100;
-        tmpstartdate.setFullYear(year);
-      }
-      if (tmpstartdate < startdate) {
-        startdate = tmpstartdate;
-        startflightsection = i;
-      }
-    });
-    if (startlinesindex.length>1 && !confirm('concaténer les vols?')) {
-      endflightsection = startlinesindex.find(i => i>startflightsection) ?? lines.length;
-      lines=lines.filter((l,i) => i>=startflightsection&&i<endflightsection);
-      //let otherlines=lines.filter((l,i) => i<startflightsection||i>=endflightsection);
-    }
-    window.extensions = parseIRecord(lines.find(l => l.trim().startsWith('I')));
-    let records = lines.filter(l => l.trim().startsWith('B'));
-    window.pilotname = lines.find(l => l.trim().startsWith('HFPLTPILOTINCHARGE'))?.split(':')[1];
-    window.paraglidername = urlParams.get('paraglidername');
-    if (!paraglidername) {
-      window.paraglidername = lines.find(l => l.trim().startsWith('HFGTYGLIDERTYPE'))?.split(':')[1];
-    }
-    if (typeof tzoffset !== 'number' || tzoffset < 0) {
-      window.tzoffset = 0;
-      if (records.length > 0) {
-        // si le décalage horaire n'a pas été fourni on essaie de le deviner à partir de la date de décollage
-        if (typeof launchtime?.getMonth === 'function') {
-          let fpt = parseBRecord(records[0]);
-          tzoffset = (launchtime.getTime()-fpt.time.getTime())/1000;
-        } else if (cletimezonedb.length > 0) { // sinon on essaie de le trouver via l'api timezonedb
-          let p = parseBRecord(records[0]);
-          let url = `https://api.timezonedb.com/v2.1/get-time-zone?key=${cletimezonedb}&format=json&by=position&lat=${p.lat}&lng=${p.lon}&time=${Math.trunc(p.time.getTime()/1000)}`;
-          let data = await fetch(url).then(response => response.json()).catch(err => {});
-          //.then(response => response.text())
-          //.then(str => new window.DOMParser().parseFromString(str, "text/xml"))
-          tzoffset = data && typeof data.gmtOffset === 'number' ? data.gmtOffset : 0;
-          //tzoffset = parseInt(data.getElementsByTagName("gmtOffset")[0].textContent);
-        }
-      }
-    }
-
-    window.points = [];
-    records.forEach(r => {
-      points.push(parseBRecord(r));
-    });
-    if (!points.some(p => p.altbaro != 0)) {
-      points = points.map(pt => {pt.alt=pt.altbaro=pt.altgps;return pt})
-    }
-    points.sort((a, b) => a.time-b.time);
-    let interval = Math.ceil((points[points.length - 1].time.getTime() - points[0].time.getTime())/points.length);
-    interval = Math.round(interval/1000)*1000;
-    let gap = 0;
-    let j = 0, k = 0;
-    let clone = null;
-    for (let i=1; i<points.length; i++) {
-      gap = points[i].time.getTime() - points[i-1].time.getTime();
-      if (gap > interval) {
-        //let url = location.protocol+'//'+location.hostname+(location.port?":"+location.port:"")+location.pathname+(location.search?location.search:"");
-        //\n${url}#${points[i].time.getTime()}
-        j = i+gap/interval;
-        k = i-1;
-        // TODO : tracer les points manquants entre pos/alt[i] et pos/alt[i+1]
-        console.log(`trou dans la trace de ${gap}ms @${points[i].time.toLocaleString()}, comblé par ${j-i} point(s) virtuel(s)`);
-        for (; i<j; i++) {
-          clone = JSON.parse(JSON.stringify(points[i-1]));
-          clone.time = new Date(new Date(clone.time).getTime() + interval);
-          points.splice(i, 0, clone);
-        }
-      }
-    }
+    let [score, igcres] = await Promise.all([safecalcFlightScore(igccont, calcfs), parseIGC(igccont, launchtime, urlParams.get('paraglidername'), cletimezonedb, tzoffset)]);
+    window.points = igcres.points;
+    window.startdate = igcres.startdate;
+    window.pilotname= igcres.pilotname;
+    window.paraglidername = igcres.paraglidername;
+    window.tzoffset = igcres.tzoffset;
     redrawAltData();
     window.gpx_bounds = hotlineLayer.getBounds();
     map.fitBounds(gpx_bounds/*, {padding: [35,35]}*/);
+    if (score)
+      displayFlightScore(score);
 
     let btndl = document.getElementById('btnDlTrace');
-    btndl.onclick = function() {downloadIGC(igccont, startdate);/*window.location = "data:application/octet-stream,"+encodeURI(igccont);*/};
+    btndl.onclick = function(e) {e.stopImmediatePropagation();downloadIGC(igccont, startdate);/*window.location = "data:application/octet-stream,"+encodeURI(igccont);*/};
     btndl.style.display = 'block';
     let btnkmz = document.getElementById('btnDlKMZ');
-    btnkmz.onclick = function() {downloadKMZ(igccont, startdate);};
+    btnkmz.onclick = function(e) {e.stopImmediatePropagation();downloadKMZ(igccont, startdate);};
     btnkmz.style.display = 'block';
     let divDispMode = document.getElementById('divDispMode');
     divDispMode.appendChild(document.getElementById('dispmodes'))
@@ -898,7 +784,8 @@ const urlParams = new URLSearchParams(window.location.search);
     btnCalcCone.onclick = clickCalcCone.bind(null, null);
     btnCalcCone.style.display = 'block';
   }
-  async function clickCalcCone(startpoint=null) {
+  async function clickCalcCone(startpoint=null, e) {
+    if (e instanceof Event) e.stopImmediatePropagation();
     startpoint = startpoint || window.curpoint;
     if (window.conecalculating) {
       window.conecalculating = false;
@@ -959,7 +846,7 @@ const urlParams = new URLSearchParams(window.location.search);
           if (this.status == 200 && this.responseText) {
             window.igccontent = this.response;
             document.getElementById('formcont').style.display = 'none';
-            await loadIGC(this.response, typeof finfo !== 'string');
+            await computeIGC(this.response, typeof finfo !== 'string');
             document.getElementById('igccont').value = this.response;
             chargement(false);
             res();
@@ -1031,7 +918,11 @@ const urlParams = new URLSearchParams(window.location.search);
       }
     }
     flstats['score'] = `${Math.round(flightscore.score*10)/10}pts`;
-    flstats['vit.'] = `${Math.round(36000*flightscore.scoreInfo.distance/(flightscore.opt.landing-flightscore.opt.launch))/10}km/h`;
+    let ptinterval = 1;
+    try {
+      ptinterval = (points[1].time.getTime()-points[0].time.getTime())/1000;
+    } catch (e) {}
+    flstats['vit.'] = `${Math.round(36000*flightscore.scoreInfo.distance/((flightscore.opt.landing-flightscore.opt.launch)/ptinterval))/10}km/h`;
     calcParcoursSpeed(); // on recalcule la vraie vitesse si on a déjà l'IGC
     updateTraceInfos();
   }
@@ -1059,8 +950,7 @@ const urlParams = new URLSearchParams(window.location.search);
             score = score.value;
           }
           if (score && typeof score.opt == 'object' && typeof score.opt.flight == 'object') delete score.opt.flight;
-          displayFlightScore(score);
-          res();
+          res(score);
         });
       } catch(e) {console.error(e);rej(e);}
     });
@@ -1074,8 +964,7 @@ const urlParams = new URLSearchParams(window.location.search);
           if (this.status == 200) {
             try {
               if (typeof this.response == 'object') {
-                displayFlightScore(this.response);
-                res();
+                res(this.response);
               } else throw new Error('impossible de charger le score');
             } catch(e) {window.finfo=null;calcFlightScore(window.igccontent).then(res).catch(rej);}
           } else {
@@ -1123,10 +1012,12 @@ const urlParams = new URLSearchParams(window.location.search);
     if (igc) {
       chargement();
       document.getElementById('formcont').style.display = 'none';
-      Promise.all([getIGC(igc), finfo?loadFlightScore(finfo):null]).then(() => {
+      Promise.all([getIGC(igc), finfo?loadFlightScore(finfo):null]).then(([_, score]) => {
+        if (score)
+          displayFlightScore(score);
         calcParcoursSpeed();
         updateTraceInfos();
-      });
+      }).catch(console.error);
     } else {
       chargement(false);
       document.getElementById('formcont').style.display = 'block';

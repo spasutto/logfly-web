@@ -20,27 +20,21 @@ async function loadCarto(clegeoportail=null, mapelem=null, disablescrollzoom=fal
 
   if (typeof L.Control.Fullscreen == 'function') {
     let options = {'element' : rootfselem};
-    map.on('fullscreenchange', function () {
+    if (disablescrollzoom) {
+      map.on('fullscreenchange', function () {
         if (map.isFullscreen()) {
-            map.scrollWheelZoom.enable();
-            map.dragging.enable();
+          map.scrollWheelZoom.enable();
+          map.dragging.enable();
         } else {
-            map.scrollWheelZoom.disable();
-            isTouchDevice()?map.dragging.disable():map.dragging.enable();
+          map.scrollWheelZoom.disable();
+          isTouchDevice()?map.dragging.disable():map.dragging.enable();
         }
-    });
+      });
+    }
     map.addControl(new L.Control.Fullscreen(options));
   }
 
   let baseMaps = {};
-  /*baseMaps["MapBox"] = L.tileLayer('https://api.mapbox.com/styles/v1/{id}/tiles/{z}/{x}/{y}?access_token=pk.eyJ1IjoibWFwYm94IiwiYSI6ImNpejY4NXVycTA2emYycXBndHRqcmZ3N3gifQ.rJcFIG214AriISLbB6B5aw', {
-    maxZoom: 18,
-    attribution: 'Map data &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, ' +
-      'Imagery © <a href="https://www.mapbox.com/">Mapbox</a>',
-    id: 'mapbox/streets-v11',
-    tileSize: 512,
-    zoomOffset: -1
-  });*/
   if (useign) {
     clegeoportail = 'ign_scan_ws';
     //baseMaps["Photos Satellite"] = L.tileLayer("https://wxs.ign.fr/decouverte/geoportail/wmts?&REQUEST=GetTile&SERVICE=WMTS&VERSION=1.0.0&STYLE=normal&TILEMATRIXSET=PM&FORMAT=image/jpeg&LAYER=ORTHOIMAGERY.ORTHOPHOTOS&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}",
@@ -75,7 +69,24 @@ async function loadCarto(clegeoportail=null, mapelem=null, disablescrollzoom=fal
   }
   L.control.layers(baseMaps, null, {position: 'topleft'}).addTo(map);
 
-  if (!loadffvl) {
+  let LeafIcon = L.Icon.extend({
+    options: {
+      iconAnchor:   [12, 40], // point of the icon which will correspond to marker's location
+      popupAnchor:  [1,-33] // point from which the popup should open relative to the iconAnchor
+    }
+  });
+  startIcon = new LeafIcon({ iconUrl: 'marker-start.png' });
+  finishIcon = new LeafIcon({ iconUrl: 'marker-finish.png' });
+  turnpointIcon = new LeafIcon({ iconUrl: 'marker-tp.png', iconAnchor: [4, 38], popupAnchor:  [10, -30] });
+  deco_icon = new LeafIcon({ iconUrl: 'ddvl_deco32.png', iconAnchor: [10, 15], popupAnchor:  [10, 15] });
+  attero_icon = new LeafIcon({ iconUrl: 'ffvl_attero32.png', iconAnchor: [10, 15], popupAnchor:  [10, 15] });
+
+  if (loadffvl) {
+    if (await loadSitesFFVL()) {
+      await preAfficherSitesFFVL(map);
+      afficherSitesFFVL(map);
+    }
+  } else {
     L.Control.ShowFFVL = L.Control.extend({
       onAdd: function(map) {
         let btn = L.DomUtil.create('button');
@@ -83,16 +94,15 @@ async function loadCarto(clegeoportail=null, mapelem=null, disablescrollzoom=fal
         btn.dataset.show = false;
         btn.innerHTML = 'FFVL';
         btn.onclick = (async (btn, e) => {
+          e.stopImmediatePropagation();
           btn.disabled = true;
           let show = btn.dataset.show == "false";
           btn.setAttribute('title', (show?'Masquer':'Afficher')+' les sites FFVL');
           if (!window.sites_ffvl) {
             if (await loadSitesFFVL())
-              preAfficherSitesFFVL(map);
+              await preAfficherSitesFFVL(map);
           }
-          if (window.sites_ffvl) {
-            afficherSitesFFVL(map, show);
-          }
+          afficherSitesFFVL(map, show);
           btn.dataset.show = show;
           btn.disabled = false;
         }).bind(null, btn);
@@ -201,22 +211,7 @@ async function loadCarto(clegeoportail=null, mapelem=null, disablescrollzoom=fal
       onRemove: function(map) {}
     });
     new L.Control.CalcCone({ position: 'topleft' }).addTo(map);
-  } else {
-    if (await loadSitesFFVL())
-      preAfficherSitesFFVL(map);
   }
-
-  let LeafIcon = L.Icon.extend({
-    options: {
-      iconAnchor:   [12, 40], // point of the icon which will correspond to marker's location
-      popupAnchor:  [1,-33] // point from which the popup should open relative to the iconAnchor
-    }
-  });
-  startIcon = new LeafIcon({ iconUrl: 'marker-start.png' });
-  finishIcon = new LeafIcon({ iconUrl: 'marker-finish.png' });
-  turnpointIcon = new LeafIcon({ iconUrl: 'marker-tp.png', iconAnchor: [4, 38], popupAnchor:  [10, -30] });
-  deco_icon = new LeafIcon({ iconUrl: 'ddvl_deco32.png', iconAnchor: [10, 15], popupAnchor:  [10, 15] });
-  attero_icon = new LeafIcon({ iconUrl: 'ffvl_attero32.png', iconAnchor: [10, 15], popupAnchor:  [10, 15] });
 
   return map;
 }
@@ -238,18 +233,20 @@ async function loadSitesFFVL() {
   return false;
 }
 function preAfficherSitesFFVL(map) {
-  let link = document.createElement('link');
-  link.setAttribute('rel', 'stylesheet');
-  link.setAttribute('href', 'https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css');
-  document.head.appendChild(link);
-  link = document.createElement('link');
-  link.setAttribute('rel', 'stylesheet');
-  link.setAttribute('href', 'https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css');
-  document.head.appendChild(link);
-  link = document.createElement('script');
-  link.onload = () => afficherSitesFFVL(map);
-  link.setAttribute('src', 'https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster-src.js');
-  document.head.appendChild(link);
+  return new Promise(res => {
+    let link = document.createElement('link');
+    link.setAttribute('rel', 'stylesheet');
+    link.setAttribute('href', 'https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css');
+    document.head.appendChild(link);
+    link = document.createElement('link');
+    link.setAttribute('rel', 'stylesheet');
+    link.setAttribute('href', 'https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css');
+    document.head.appendChild(link);
+    link = document.createElement('script');
+    link.onload = res;
+    link.setAttribute('src', 'https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster-src.js');
+    document.head.appendChild(link);
+  });
 }
 function afficherSitesFFVL(map, afficher=true) {
   if (!window.sites_ffvl) return;
@@ -261,7 +258,6 @@ function afficherSitesFFVL(map, afficher=true) {
     let parse = (s) => s?.replaceAll(regurl, '<a href="$&" target="_blank">$&</a>') ?? '';
     let decode = (s) => parse(/*decodeURIComponent(escape(s))*/s).replaceAll('\\\'', '\'') ?? '';
     sites_ffvl.forEach(site => {
-      if (site.suid == 854) debugger;
       let nomsite = `${site.flying_functions == 2?'Atterissage':'Décollage'} FFVL <b>"${decode(site.toponym)}"</b>`;
       //if (site.toponym.trim().length > 0) {
       //  nomsite += ` (${decode(site.toponym)})`;
@@ -283,6 +279,7 @@ function afficherSitesFFVL(map, afficher=true) {
         infos += `<BR><b>dangers : </b>${decode(site.restrictions)}`;
       }
       infos += `<BR><a href="https://federation.ffvl.fr/sites_pratique/voir/${site.suid}" target="_blank" style="float:right">fiche FFVL</a><BR>`;
+      infos += `<a href="https://www.xcontest.org/world/en/flights-search/?filter%5Bpoint%5D=${site.longitude}+${site.latitude}&filter%5Bradius%5D=1000&filter%5Bmode%5D=START&filter%5Bdate_mode%5D=dmy&filter%5Bdate%5D=&filter%5Bvalue_mode%5D=dst&filter%5Bmin_value_dst%5D=&filter%5Bcatg%5D=&filter%5Broute_types%5D=&filter%5Bavg%5D=&filter%5Bpilot%5D=&list%5Bsort%5D=time_start" target="_blank" style="float:right">vols XContest</a><BR>`;
       if (site.flying_functions == 2) {
     		sites_ffvl_markers.addLayer(L.marker(new L.LatLng(site.latitude, site.longitude), { icon: attero_icon }).bindTooltip(nomsite).bindPopup(infos));
       } else {

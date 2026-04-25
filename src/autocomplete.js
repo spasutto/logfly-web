@@ -20,6 +20,7 @@ class AutoComplete {
   constructor(elem, searchaction, options) {
     this.loaded = false;
     this.results = [];
+    this.cache = new Map();
     this.options = {...AC_DEFAULT_OPTIONS, ...options};
     if (elem instanceof HTMLElement) {
       this.input = elem;
@@ -88,22 +89,27 @@ class AutoComplete {
     this.createItems();
     this.ul.style.display='block';
     if (this.curText.length >= this.options.minlength) {
-      // TODO : délai avant de lancer la recherche, le temps de finir de taper
-      if (this.predicate) {
-        this.results = await this.predicate(this.curText);
-      } else if (this.searchurl) {
-        let url = new URL(this.searchurl, window.location.href);
-        url.searchParams.append(this.options.searchterm, this.curText);
-        const reponse = await fetch(url);
-        this.results = await reponse.json();
-      }
-      if (!this.results) {
-        this.results = [];
-      } else if (!Array.isArray(this.results)) {
-        this.results = [this.results];
-      } else if (this.results.length > this.options.maxresults) {
-        this.results = this.results.slice(0, this.options.maxresults);
-        this.results.push({'text':'[...]', 'active':false});
+      this.results = this.cache.get(this.curText);
+      if (!this.results?.length) {
+        if (this.predicate) {
+          this.results = await this.predicate(this.curText);
+        } else if (this.searchurl) {
+          let url = new URL(this.searchurl, window.location.href);
+          url.searchParams.append(this.options.searchterm, this.curText);
+          const reponse = await fetch(url);
+          this.results = await reponse.json();
+        }
+        if (!this.results) {
+          this.results = [];
+        } else if (!Array.isArray(this.results)) {
+          this.results = [this.results];
+        } else if (this.results.length > this.options.maxresults) {
+          this.results = this.results.slice(0, this.options.maxresults);
+          this.results.push({'text':'[...]', 'active':false});
+        }
+        if (this.results.length) {
+          this.cache.set(this.curText, this.results);
+        }
       }
     } else if (this.options.minlength > 0) {
       this.results = [{'text':`Taper au moins ${this.options.minlength} caractères`, 'active':false}];

@@ -115,6 +115,7 @@ if (isset($_POST['site']) && isset($_POST['date']) && isset($_POST['heure']) && 
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
   <title>Edition d'un vol</title>
+  <script src="igc.js"></script>
   <script src="lib/igc-xc-score.js"></script>
   <script src="score.js"></script>
   <script src="wind.js"></script>
@@ -316,6 +317,8 @@ if (isset($_POST['site']) && isset($_POST['date']) && isset($_POST['heure']) && 
         res();
         return;
       }
+      // calcul de la fin de vol
+      //loadIGC(id).then(parseIGC).then(res => { debugger; });
     });
   }
 
@@ -655,8 +658,8 @@ vol à editer/créer :<BR><select name="vol" onchange="onVolChange(this.value)">
   //foreach ($lgfr->getSites() as $site)
   //echo "  <option value=\"".$site."\">".$site."</option>\n";
 ?>
-<input type="text" name="autresite"/>
 </select>
+<input type="text" name="autresite"/>
 </p>
   <input type="hidden" name="id" value="<?php echo $id;?>">
   <input type="hidden" name="lat" value="<?php echo $lat;?>">
