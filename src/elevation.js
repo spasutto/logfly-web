@@ -7,18 +7,20 @@ async function getElevation(lat, lon) {
 async function getElevations(locations) {
   // Float64Array pour double float
   // attention au conflits d'endianness, getElevations.php décode en little endian
+  let gndalt = [];
   let data = new Float32Array(locations);
   let r = await fetch('elevation/getElevation.php', { method: 'POST', body: data });
-  let resptext = await r.text();
-  let gndalt = [];
 
   try {
-    for (let j=0; j<resptext.length; j+=2) {
-      gndalt.push((j+2>resptext.length) ? 0 : (new DataView(new Uint8Array([resptext.charCodeAt(j), resptext.charCodeAt(j+1)]).buffer)).getInt16(0, true));
+    let resp = await r.bytes();
+    if (resp.length > 2) {
+      resp = new DataView(resp.buffer);
+      for (let j=0; j<resp.byteLength; j+=2) {
+        gndalt.push(resp.getInt16(j, true));
+      }
     }
   }
-  catch (e) { console.log("error \"" + e + "\" while eval " + resptext); }
+  catch (e) { console.error("error \"" + e + "\" while eval " + resp); }
 
-  //xhttp.overrideMimeType("text/plain; charset=x-user-defined");
   return gndalt;
 }

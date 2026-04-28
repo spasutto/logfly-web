@@ -16,6 +16,7 @@
     <script src='lib/leaflet.hotline.js'></script>
     <script src="lib/leaflet.rotatedMarker.js"></script>
     <script src="igc.js"></script>
+    <script src="elevation.js"></script>
     <script src="carto.js"></script>
     <script src="graph.js"></script>
     <script src="anatrace.js"></script>
@@ -262,9 +263,8 @@ const urlParams = new URLSearchParams(window.location.search);
   var disablescroll = getParameter("disablescroll", true);disablescroll = disablescroll == "true" || disablescroll == "1";
   var clegeoportail = getParameter("clegeoportail");
   var cletimezonedb = getParameter("cletimezonedb") || '';
-  var elevationservice = getParameter("elevationservice") || 'elevation/getElevation.php';
 
-  var graph = new GraphGPX(document.getElementById("graph"), {elevationservice:elevationservice, disablescrollzoom: disablescroll});
+  var graph = new GraphGPX(document.getElementById("graph"), {disablescrollzoom: disablescroll});
   graph.addAnalyser(new AnaTrace(graph));
   //graph.addAnalyser(new AnaDiffTrace(graph));
   loadCarto(clegeoportail, document.getElementById('map_elem'), disablescroll, document.getElementById('mapcont')).then(map => {
@@ -754,17 +754,33 @@ const urlParams = new URLSearchParams(window.location.search);
     document.getElementById('ctinfos').style.display = binfos ? 'none':'block';
     document.getElementById('iinfos').style.display = !binfos ? 'none':'block';
   }
-  async function computeIGC(igccont, calcfs) {
-    if (typeof igccont !== 'string') {
-      igccont = document.getElementById('igccont').value;
-      document.getElementById('formcont').style.display = 'none';
-    }
-    let [score, igcres] = await Promise.all([safecalcFlightScore(igccont, calcfs), parseIGC(igccont, launchtime, urlParams.get('paraglidername'), cletimezonedb, tzoffset)]);
+  async function parseIGCAndGetElevation(igccont) {
+    let igcres = await parseIGC(igccont, launchtime, urlParams.get('paraglidername'), cletimezonedb, tzoffset);
     window.points = igcres.points;
     window.startdate = igcres.startdate;
     window.pilotname= igcres.pilotname;
     window.paraglidername = igcres.paraglidername;
     window.tzoffset = igcres.tzoffset;
+    let ptalts = points.reduce((acc, cur) => {
+      acc.push(cur.lat, cur.lon);
+      return acc;
+    }, []);
+    try {
+      let gndalts = await getElevations(ptalts);
+      for (let i=0; i<gndalts.length; i++) {
+        points[i].altgnd = gndalts[i];
+      }
+    } catch(e) {
+      console.error(e);
+    }
+    return igcres;
+  }
+  async function computeIGC(igccont, calcfs) {
+    if (typeof igccont !== 'string') {
+      igccont = document.getElementById('igccont').value;
+      document.getElementById('formcont').style.display = 'none';
+    }
+    let [score, _] = await Promise.all([safecalcFlightScore(igccont, calcfs), parseIGCAndGetElevation(igccont)]);
     redrawAltData();
     window.gpx_bounds = hotlineLayer.getBounds();
     map.fitBounds(gpx_bounds/*, {padding: [35,35]}*/);

@@ -83,7 +83,6 @@ class GraphGPX {
   #DEBUG = false;
   static get DEFAULT_CONF() {
     return {
-      elevationservice:undefined,
       disablescrollzoom: false,
       showvz: false,
       showvx: false,
@@ -114,9 +113,6 @@ class GraphGPX {
     this.options = {...GraphGPX.DEFAULT_CONF, ...options};
     this.elem = elem;
     this.options.disablescrollzoom = this.options.disablescrollzoom === true;
-    if (typeof this.options.elevationservice !== 'string' || this.options.elevationservice.trim().length <= 0) {
-      this.options.elevationservice = undefined;
-    }
     this.options.showvz = this.options.showvz === true;
     this.options.showvx = this.options.showvx === true;
     this.options.showvt = this.options.showvt === true;
@@ -213,7 +209,6 @@ class GraphGPX {
     // à chaque changement impacter aussi fizoom dans updateZoom()
     this.fi = { 'pts': [], maxalt: -1000, maxaltt:0, minalt: 100000, minaltt:0, totaltgain: 0, maxvz:-1000, maxvzt:0, minvz:100000, minvzt:0, maxvx:-1000, maxvxt:0, minvx:100000, maxvt:-1000, minvt:100000, maxgr:-1000, mingr:100000, minaltdiff:100000, maxaltdiff:-1000, minlat:190, maxlat:-190, minlon:190, maxlon:-190, start: new Date };
     //this.fizoom = JSON.parse(JSON.stringify(this.fi)); // clone ne fonctionne pas pour la date
-    this.elevcalls = 0;
     this.starttouch = 0;
     this.endtouch = 0;
     this.firstmovetouch = 0;
@@ -238,8 +233,8 @@ class GraphGPX {
       let fpt = this.fizoom.pts[0];
       this.fizoom.minalt = this.fizoom.pts.reduce((prev, cur, i) => {if (prev<cur.alt) return prev; else {this.fizoom.minaltt=i;return cur.alt;}}, fpt.alt);
       this.fizoom.maxalt = this.fizoom.pts.reduce((prev, cur, i) => {if (prev>cur.alt) return prev; else {this.fizoom.maxaltt=i;return cur.alt;}}, fpt.alt);
-      this.fizoom.minaltdiff = this.fizoom.pts.reduce((prev, cur) => prev<(cur.alt-cur.gndalt)?prev:cur.alt-cur.gndalt, fpt.alt-fpt.gndalt);
-      this.fizoom.maxaltdiff = this.fizoom.pts.reduce((prev, cur) => prev>(cur.alt-cur.gndalt)?prev:cur.alt-cur.gndalt, fpt.alt-fpt.gndalt);
+      this.fizoom.minaltdiff = this.fizoom.pts.reduce((prev, cur) => prev<(cur.alt-cur.altgnd)?prev:cur.alt-cur.altgnd, fpt.alt-fpt.altgnd);
+      this.fizoom.maxaltdiff = this.fizoom.pts.reduce((prev, cur) => prev>(cur.alt-cur.altgnd)?prev:cur.alt-cur.altgnd, fpt.alt-fpt.altgnd);
       this.fizoom.minvx = this.fizoom.pts.reduce((prev, cur) => prev<cur.vx?prev:cur.vx, fpt.vx);
       this.fizoom.maxvx = this.fizoom.pts.reduce((prev, cur, i) => {if (prev>cur.vx) return prev; else {this.fizoom.maxvxt=i;return cur.vx;}}, fpt.vx);
       this.fizoom.minvz = this.fizoom.pts.reduce((prev, cur, i) => {if(prev<cur.vz) return prev; else {this.fizoom.minvzt=i;return cur.vz;}}, fpt.vz);
@@ -642,8 +637,8 @@ class GraphGPX {
       this.ctx2.fillStyle = this.options.colors.axis;
       let posx=this.canvas2.width - 70, posy = 0;
       this.ctx2.fillText(curpt.alt + ' m AMSL', posx, posy+=10);
-      if (typeof curpt.gndalt == 'number')
-        this.ctx2.fillText(Math.round(curpt.alt-curpt.gndalt)+' m AGL', posx, posy+=10);
+      if (typeof curpt.altgnd == 'number')
+        this.ctx2.fillText(Math.round(curpt.alt-curpt.altgnd)+' m AGL', posx, posy+=10);
       this.ctx2.fillStyle = this.options.colors.vz;
       this.ctx2.fillText(curpt.vz + ' m/s', posx, posy+=10);
       this.ctx2.fillStyle = this.options.colors.vx;
@@ -787,15 +782,15 @@ class GraphGPX {
     }
 
     // gnd alt
-    if (typeof this.fizoom.pts[0].gndalt == 'number') {
+    if (typeof this.fizoom.pts[0].altgnd == 'number') {
       this.ctx.fillStyle = this.options.colors.axissecondary;
       this.ctx.strokeStyle = this.options.colors.axis;
       x = 0;
-      y = getY(this.fizoom.pts[0].gndalt);
+      y = getY(this.fizoom.pts[0].altgnd);
       this.ctx.beginPath();
       this.ctx.moveTo(0, y);
       for (t = 0; t < this.fizoom.pts.length; t += this.incr) {
-        y = getY(this.fizoom.pts[t].gndalt);
+        y = getY(this.fizoom.pts[t].altgnd);
         y = Math.min(this.canvas.height, y);
         if (y >= 0) {
           this.ctx.lineTo(x, y);
@@ -913,11 +908,11 @@ class GraphGPX {
     if (this.options.showgndalt) {
       this.ctx.strokeStyle = this.options.colors.gndalt;
       x = 0;
-      y = getYGndAlt(this.fizoom.pts[0].alt-this.fizoom.pts[0].gndalt);
+      y = getYGndAlt(this.fizoom.pts[0].alt-this.fizoom.pts[0].altgnd);
       this.ctx.beginPath();
       this.ctx.moveTo(x, y);
       for (t = 0; t < this.fizoom.pts.length; t += this.incr) {
-        y = getYGndAlt(this.fizoom.pts[t].alt-this.fizoom.pts[t].gndalt);
+        y = getYGndAlt(this.fizoom.pts[t].alt-this.fizoom.pts[t].altgnd);
         y = Math.min(this.canvas.height, y);
         if (y >= 0) {
           this.ctx.lineTo(x, y);
@@ -1180,10 +1175,11 @@ class GraphGPX {
     const VZMIN = -30;
     const MININTEGTIME = 15; // 15s pour la vz
     this.resetInfos();
-    let i = 0, j = 0, k = 0, alt = 0, lat = 0, lon = 0, latvx = 0, lonvx = 0, vz = 0, vx = 0, gr = 0, tdiff = 0, vzm = [], vxm = [], nbintegvz = null;
+    let i = 0, j = 0, k = 0, alt = 0, altgnd = 0, lat = 0, lon = 0, latvx = 0, lonvx = 0, vz = 0, vx = 0, gr = 0, tdiff = 0, vzm = [], vxm = [], nbintegvz = null, altdiff = 0;
     let time;
     for (i=0; i<points.length; i++) {
       alt = points[i].alt;
+      altgnd = points[i].altgnd ?? 0;
       time = points[i].time;
       lat = points[i].lat;
       lon = points[i].lon;
@@ -1192,7 +1188,7 @@ class GraphGPX {
           'lat': lat,
           'lon': lon,
           'alt': alt,
-          //'gndalt': 0, // todo voir pourquoi bug, parfois un élément du tableau n'a pas de gndalt
+          'altgnd': altgnd, // todo voir pourquoi bug, parfois un élément du tableau n'a pas de altgnd
           'time': time,
           'vz': 0,
           'vx': 0,
@@ -1261,6 +1257,10 @@ class GraphGPX {
       if (lat > this.fi.maxlat) this.fi.maxlat = lat;
       if (lon < this.fi.minlon) this.fi.minlon = lon;
       if (lon > this.fi.maxlon) this.fi.maxlon = lon;
+
+      altdiff = this.fi.pts[i].alt - this.fi.pts[i].altgnd;
+      if (altdiff < this.fi.minaltdiff) this.fi.minaltdiff = altdiff;
+      if (altdiff > this.fi.maxaltdiff) this.fi.maxaltdiff = altdiff;
     }
     // TODO : faire mieux (évaluer vz?)
     this.fi.minalt = Math.max(0, this.fi.minalt);
@@ -1271,24 +1271,12 @@ class GraphGPX {
     this.fi.maxvx = Math.min(200, this.fi.maxvx);
     this.fi.minvt = Math.max(0, this.fi.minvt);
     this.fi.maxvt = Math.min(300, this.fi.maxvt);
-    if (typeof this.options.elevationservice === 'string') {
-      let curelev = 0;
-      let locations = [];
-      for (let i = 0; i < this.fi.pts.length; i++) {
-        locations.push(this.fi.pts[i].lat);
-        locations.push(this.fi.pts[i].lon);
-        if (i && i % 9999 == 0) {
-          this.getElevations(locations, curelev, 10000);
-          curelev = i + 1;
-          locations = [];
-        }
-      }
-      if (curelev < this.fi.pts.length)
-        this.getElevations(locations, curelev, this.fi.pts.length - curelev);
-    } else {
-      let event = new CustomEvent('ondataloaded', { "detail": this.fi });
-      this.elem.dispatchEvent(event);
-    }
+    this.fi.minaltdiff = Math.max(0, this.fi.minaltdiff);
+    this.fi.maxaltdiff = Math.min(10000, this.fi.maxaltdiff);
+
+    let event = new CustomEvent('ondataloaded', { "detail": this.fi });
+    this.elem.dispatchEvent(event);
+
     this.updateZoom();
     this.paint();
     this.paintmouseinfos();
@@ -1311,80 +1299,6 @@ class GraphGPX {
     }
   }
 
-  async getElevation(lat, lon) {
-    return new Promise(res => {
-      this.getElevations([lat, lon], 0, 1, res);
-    });
-  }
-
-  getElevations(locations, index, count, getfirstalt=null) {
-    var xhttp = new XMLHttpRequest();
-    /*locations = locations.reduce((arr, cur, i) => {if (i%2==0) arr.push([cur]); else arr[arr.length-1].push(cur); return arr;}, []);
-    let data = {
-      //"locations": locations,
-      "locations": encode(locations, 6),
-      "doInfills": false,
-      "interpolate": false
-    };*/
-    // Float64Array pour double float
-    // attention au conflits d'endianness, getElevations.php décode en little endian
-    let data = new Float32Array(locations);
-    xhttp.responseType = 'text';
-    let minusalt = 0;
-    xhttp.onreadystatechange = function() {
-      if (xhttp.readyState == 4 && xhttp.status == 200) {
-        if (xhttp.responseText) {
-          try {
-            //let dv = (new DataView(new Uint8Array(xhttp.responseText.split('').map(v => v.charCodeAt(0))).buffer));
-            //let alts = JSON.parse(xhttp.responseText);
-            let altdiff = 0, gndalt = 0;
-            for (let i=index,j=0; i < index+count; i++,j+=2) {
-              //this.fi.pts[i].gndalt = alts[j++];
-              //this.fi.pts[i].gndalt = (j+2>dv.byteLength) ? 0 : dv.getInt16(j, true);
-              gndalt = (j+2>xhttp.responseText.length) ? 0 : (new DataView(new Uint8Array([xhttp.responseText.charCodeAt(j), xhttp.responseText.charCodeAt(j+1)]).buffer)).getInt16(0, true);
-              if (getfirstalt) getfirstalt(gndalt);
-              this.fi.pts[i].gndalt = gndalt;
-              if (this.fi.pts[i].alt == 0)
-                this.fi.pts[i].alt = this.fi.pts[i].gndalt;
-              altdiff = this.fi.pts[i].alt - this.fi.pts[i].gndalt;
-              if (altdiff < this.fi.minaltdiff) this.fi.minaltdiff = altdiff;
-              if (altdiff > this.fi.maxaltdiff) this.fi.maxaltdiff = altdiff;
-            }
-            // réalignement sur l'altitude d'atterissage ; dangereux si la trace est coupée, on se retrouve avec tout le vol sous terre
-            //if (typeof this.fi.pts[this.fi.pts.length-1].gndalt == 'number')
-            //  minusalt = this.fi.pts[this.fi.pts.length-1].alt - this.fi.pts[this.fi.pts.length-1].gndalt;
-          }
-          catch (e) { console.log("error \"" + e + "\" while eval " + xhttp.responseText); }
-          if (minusalt != 0)
-            this.fi.pts.forEach(function (pt) { pt.alt -= minusalt; });
-          this.fi.maxalt = this.arrayMax(this.fi.pts, 'alt');
-          this.fi.minalt = this.arrayMin(this.fi.pts, 'alt');
-          this.fi.minalt = Math.max(0, this.fi.minalt);
-          this.fi.maxalt = Math.min(10000, this.fi.maxalt);
-          this.fi.minaltdiff = Math.max(0, this.fi.minaltdiff);
-          this.fi.maxaltdiff = Math.min(10000, this.fi.maxaltdiff);
-        }
-        this.elevcalls--;
-        if (this.elevcalls <= 0) {
-          this.updateZoom();
-          this.paint();
-          let event = new CustomEvent('ondataloaded', {"detail": this.fi});
-          this.elem.dispatchEvent(event);
-        }
-      }
-    }.bind(this);
-    xhttp.onerror=function(e) {
-      let event = new CustomEvent('ondataloaded', {"detail": this.fi});
-      this.elem.dispatchEvent(event);
-    };
-    xhttp.open("POST", this.options.elevationservice, true);
-    //xhttp.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');
-    //xhttp.send(JSON.stringify(data));
-    xhttp.overrideMimeType("text/plain; charset=x-user-defined");
-    xhttp.send(data);
-    this.elevcalls++;
-  }
-  
   setPos(pt) {
     let i = this.fizoom.pts.findIndex(p => p.time == pt.time);
     if (i<0 || i>=this.fizoom.pts.length) return;
