@@ -7,7 +7,6 @@ print_r($files);
 
 require("config.php");
 include("logfilereader.php");
-const ELEVATIONSERVICE = "elevation/getElevation.php";
 
 $vols = [];
 foreach ((new LogflyReader())->getRecords()->vols as $vol) {

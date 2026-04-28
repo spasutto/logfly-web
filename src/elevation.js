@@ -13,7 +13,7 @@ async function getElevations(locations) {
 
   try {
     let resp = await r.bytes();
-    if (resp.length > 2) {
+    if (resp.length >= 2) {
       resp = new DataView(resp.buffer);
       for (let j=0; j<resp.byteLength; j+=2) {
         gndalt.push(resp.getInt16(j, true));

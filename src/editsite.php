@@ -79,6 +79,7 @@
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
      integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
      crossorigin=""></script>
+  <script src="elevation.js"></script>
 
   <style>
   .fullwidth {
@@ -138,18 +139,7 @@
     document.getElementsByName("lon")[0].value = e.latlng.lng;
     setPin(e.latlng.lat, e.latlng.lng);
   }
-  
-  async function getElevation(lat, lng) {
-    let data = new Float32Array([lat, lng]);
-    let response = await fetch('elevation/getElevation.php',{
-      method: 'POST',
-      body: data
-    });
-    let elev = await response.bytes();
-    if (elev.length < 2) return -1;
-    return (new DataView(elev.buffer)).getInt16(0, true);
-  }
-  
+
   function setPin(lat, lng) {
     if (!pin) {
       pin = L.marker([lat, lng]).addTo(map);
