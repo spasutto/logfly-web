@@ -269,16 +269,6 @@ const urlParams = new URLSearchParams(window.location.search);
   //graph.addAnalyser(new AnaDiffTrace(graph));
   loadCarto(clegeoportail, document.getElementById('map_elem'), disablescroll, document.getElementById('mapcont')).then(map => {
     window.map = map;
-    map.on('click', async function(e) {
-      if (!e.latlng) return;
-      let alt = await graph.getElevation(e.latlng.lat, e.latlng.lng);
-      if (!window.posmarker) {
-        window.posmarker = L.marker(e.latlng).addTo(map);
-      } else {
-        window.posmarker.setLatLng(e.latlng);
-      }
-      window.posmarker.bindPopup('<p>altitude : ' + alt + 'm</p>').openPopup();
-    });
 
     window.marker = L.marker([0,0]).addTo(map);
     //var svg = '<svg viewBox="0 0 24 24" height="32" width="32" fill="transparent" stroke="black" stroke-width="2" stroke-linecap="round" xmlns="http://www.w3.org/2000/svg"> <g> <path d="M1 1 l22 22"/> <path d="M1 23 l22 -22"/> </g> </svg>';
@@ -301,9 +291,18 @@ const urlParams = new URLSearchParams(window.location.search);
       marker.setIcon(icon);
     });
     let closegraphcfg = function() {graph.opencfg(true);};
-    map.on('click', function(e) {
-      setCursorFromMap(e.latlng);
+    map.on('click', async function(e) {
+      e.originalEvent.stopPropagation();
       closegraphcfg();
+      if (setCursorFromMap(e.latlng) < (istouch?10:100)) return;
+      if (!e.latlng) return;
+      let alt = await graph.getElevation(e.latlng.lat, e.latlng.lng);
+      if (!window.posmarker) {
+        window.posmarker = L.marker(e.latlng).addTo(map);
+      } else {
+        window.posmarker.setLatLng(e.latlng);
+      }
+      window.posmarker.bindPopup('<p>altitude : ' + alt + 'm</p>').openPopup();
     });
     map.on('mousemove', function(e) {
       setCursorFromMap(e.latlng);
@@ -551,7 +550,7 @@ const urlParams = new URLSearchParams(window.location.search);
   }
 
   function setCursorFromMap(latlng) {
-    if (typeof window.fi === 'undefined' || !Array.isArray(window.fi.pts)) return;
+    if (typeof window.fi === 'undefined' || !Array.isArray(window.fi.pts)) return -1;//Number.MAX_SAFE_INTEGER;
     /*// slice pour éviter de modifier l'ordre du tableau originel
     let nearest = window.fi.pts.slice().sort(function(a, b) {
       let la = L.latLng(a.lat, a.lon);
@@ -566,7 +565,7 @@ const urlParams = new URLSearchParams(window.location.search);
     let c1 = map.latLngToLayerPoint(latlng);
     let c2 = map.latLngToLayerPoint(L.latLng(nearest.lat, nearest.lon));
     let dist = Math.sqrt(Math.pow(c2.x-c1.x, 2) + Math.pow(c2.y-c1.y, 2));
-    if (dist>100) return;
+    if (dist>100) return dist;
     window.curpoint = nearest;
     //if (L.latLng(nearest.lat, nearest.lon).distanceTo(latlng)>5000) return;
     let mktxt = nearest.time.toLocaleString('fr-FR', { /*timeZone: 'UTC'*/ }).substr(-8, 5);
@@ -580,6 +579,7 @@ const urlParams = new URLSearchParams(window.location.search);
     marker.setLatLng([nearest.lat, nearest.lon]).update();
     graph.setPos(nearest);
     updateIcon(nearest);
+    return dist;
   }
 
   function updateIcon(pt) {

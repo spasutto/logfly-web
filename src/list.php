@@ -1,8 +1,6 @@
 <?php
 require("config.php");
 
-const ELEVATIONSERVICE = "elevation/getElevation.php";
-
 $url =  "//{$_SERVER['HTTP_HOST']}".dirname($_SERVER['PHP_SELF'])."/";
 $root_url = htmlspecialchars( $url, ENT_QUOTES, 'UTF-8' );
 parse_str($_SERVER["QUERY_STRING"]  , $get_array);//print_r($get_array);

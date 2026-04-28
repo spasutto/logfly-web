@@ -4,4 +4,5 @@ const CLEGEOPORTAIL2 = "VOTRECLEGEOPORTAILNONPROTEGEE"; // Clé sans protection 
 const CLETIMEZONEDB = "VOTRECLETIMEZONEDB";
 const CLEFFVL = 'VOTRECLEFFVL';
 const FOLDER_TL = 'Tracklogs';
+const ELEVATIONSERVICE = "elevation/getElevation.php";
 ?>

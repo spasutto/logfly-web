@@ -720,8 +720,8 @@ class GraphGPX {
       this.incr = 1 / this.incx;
       this.incx = 1;
     }
-    this.incx = Math.floor(this.incx);
-    this.incr = Math.ceil(this.incr);
+    this.incx = Math.floor(this.incx); // le nombre de pixels à sauter pour avancer d'un point (si > 1 c'est que le nombre de points est plus petit que la largeur du graph)
+    this.incr = Math.ceil(this.incr); // le nombre de points à sauter pour se déplacer d'un pixel (si > 1 c'est que le nombre de points est plus grand que la largeur du graph)
 
     // grille de fond alt
     this.ctx.strokeStyle = this.options.colors.axistertiary;
@@ -738,9 +738,10 @@ class GraphGPX {
 
     // heures (barres)
     let firsthour = new Date(this.fizoom.start); firsthour.setMilliseconds(0); firsthour.setSeconds(0); firsthour.setMinutes(0);
-    firsthour = 3600 - ((this.fizoom.start - firsthour) / 1000);
+    firsthour = 3600 - ((this.fizoom.start - firsthour) / 1000); // nombre de secondes jusqu'à la première heure pile
     let secstotal = (this.fizoom.pts[this.fizoom.pts.length - 1].time - this.fizoom.start) / 1000;
-    let inct = (secstotal / (this.incx * this.fizoom.pts.length)) / this.incr;
+    let ptinterval = (this.fizoom.pts[1].time-this.fizoom.pts[0].time) / 1000;
+    let inct = (secstotal / (this.incx * this.fizoom.pts.length * Math.pow(ptinterval, 2))) / this.incr;
     this.ctx.strokeStyle = this.options.colors.axissecondary;
     this.ctx.beginPath();
     x = 0;
