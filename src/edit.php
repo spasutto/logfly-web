@@ -345,8 +345,7 @@ if (isset($_POST['site']) && isset($_POST['date']) && isset($_POST['heure']) && 
     let landingtime = points[points.length-1].time;
     let moy = [], m=0;
     let ptinterval = (points[1].time.getTime()-points[0].time.getTime())/1000;
-    //let nbmax = 60/ptinterval; // moyenne glissante sur 1'
-    let nbmax = 120/ptinterval; // moyenne glissante sur 1'
+    let nbmax = 120/ptinterval; // moyenne glissante sur 2'
     let moyalts = points.map((cur, i) => {
       if (moy.length < nbmax) {
         moy.push(cur.agl);
@@ -360,14 +359,14 @@ if (isset($_POST['site']) && isset($_POST['date']) && isset($_POST['heure']) && 
     let att = moyalts.toReversed().findIndex(a => a>20);
     if (att > 0) {
       att = points.length-att;
-      //let att2 = moyalts.findIndex((a,i) => i>att && a < 5);
-      //if (att2>-1) alert('Attéro trouvé à ' + points[att2].time.toLocaleString());
       landingtime = new Date(points[att].time.getTime()+10000); // on ajoute 10 secondes pour le temps de poser
     }
+    let duree = Math.trunc((landingtime.getTime()-points[0].time.getTime())/1000); //parseInt(document.getElementsByName("duree")[0].innerText, 10)
     if (landingtime<points[points.length-1].time) {
-      if (confirm(`Atterissage trouvé à ${landingtime.toLocaleTimeString()} UTC (au lieu de ${points[points.length-1].time.toLocaleTimeString()} UTC), voulez vous mettre à jour la durée du vol?`)) {
-        let duree = (landingtime.getTime()-points[0].time.getTime())/1000; //parseInt(document.getElementsByName("duree")[0].innerText, 10)
-        document.getElementsByName("duree")[0].innerText = Math.trunc(duree);
+      if (duree == parseInt(document.getElementsByName("duree")[0].innerText, 10)) {
+        alert('La durée de vol semble déjà mise à jour !');
+      } else if (confirm(`Atterissage trouvé à ${landingtime.toLocaleTimeString()} UTC (au lieu de ${points[points.length-1].time.toLocaleTimeString()} UTC), voulez vous mettre à jour la durée du vol?`)) {
+        document.getElementsByName("duree")[0].innerText = duree;
         calcheures();
         calcsecondes(); // pour MAJ dureeheures en HMS
       }
