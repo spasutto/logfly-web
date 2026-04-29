@@ -116,6 +116,7 @@ if (isset($_POST['site']) && isset($_POST['date']) && isset($_POST['heure']) && 
   <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
   <title>Edition d'un vol</title>
   <script src="igc.js"></script>
+  <script src="elevation.js"></script>
   <script src="lib/igc-xc-score.js"></script>
   <script src="score.js"></script>
   <script src="wind.js"></script>
@@ -140,6 +141,10 @@ if (isset($_POST['site']) && isset($_POST['date']) && isset($_POST['heure']) && 
     vertical-align: middle;
     text-align: center;
     border: solid 1px #81B9E1;
+  }
+  #autolanding {
+    display: none;
+    margin-left: 20em;
   }
   </style>
 </head>
@@ -311,15 +316,65 @@ if (isset($_POST['site']) && isset($_POST['date']) && isset($_POST['heure']) && 
         }
         onSiteChange(document.getElementsByName("site")[0].value);
         document.getElementsByName("vol")[0].value = id;
+        document.getElementById('autolanding').style.display = 'block';
         res();
       } catch(e) {
         console.error(e);
         res();
         return;
       }
-      // calcul de la fin de vol
-      //loadIGC(id).then(parseIGC).then(res => { debugger; });
     });
+  }
+  
+  async function findLanding() {
+    if (window.findingLanding) return;
+    window.findingLanding = true;
+    if (!window.points) {
+      let res = await loadIGC(id).then(parseIGC);
+      window.points = res.points;
+      let ptalts = points.reduce((acc, cur) => {
+        acc.push(cur.lat, cur.lon);
+        return acc;
+      }, []);
+      let gndalts = await getElevations(ptalts);
+      for (let i=0; i<gndalts.length; i++) {
+        points[i].gndalt = gndalts[i];
+        points[i].agl = points[i].alt - gndalts[i];
+      }
+    }
+    let landingtime = points[points.length-1].time;
+    let moy = [], m=0;
+    let ptinterval = (points[1].time.getTime()-points[0].time.getTime())/1000;
+    //let nbmax = 60/ptinterval; // moyenne glissante sur 1'
+    let nbmax = 120/ptinterval; // moyenne glissante sur 1'
+    let moyalts = points.map((cur, i) => {
+      if (moy.length < nbmax) {
+        moy.push(cur.agl);
+      } else {
+        moy[i%nbmax] = cur.agl;
+      }
+      m = Math.round(moy.reduce((a,c) => a+c, 0)/moy.length);
+      return m < 0 ? 0 : Math.round(m / 10) * 10;
+    });
+    //console.log(moyalts.map((p,i) => `${i} ${p}`).join('\n'))  ==> https://www.quickplotter.com/
+    let att = moyalts.toReversed().findIndex(a => a>20);
+    if (att > 0) {
+      att = points.length-att;
+      //let att2 = moyalts.findIndex((a,i) => i>att && a < 5);
+      //if (att2>-1) alert('Attéro trouvé à ' + points[att2].time.toLocaleString());
+      landingtime = new Date(points[att].time.getTime()+10000); // on ajoute 10 secondes pour le temps de poser
+    }
+    if (landingtime<points[points.length-1].time) {
+      if (confirm(`Atterissage trouvé à ${landingtime.toLocaleTimeString()} UTC (au lieu de ${points[points.length-1].time.toLocaleTimeString()} UTC), voulez vous mettre à jour la durée du vol?`)) {
+        let duree = (landingtime.getTime()-points[0].time.getTime())/1000; //parseInt(document.getElementsByName("duree")[0].innerText, 10)
+        document.getElementsByName("duree")[0].innerText = Math.trunc(duree);
+        calcheures();
+        calcsecondes(); // pour MAJ dureeheures en HMS
+      }
+    } else {
+      alert('L\'heure d\'atterissage semble correcte !');
+    }
+    window.findingLanding = false;
   }
 
   function saveVol()
@@ -667,7 +722,8 @@ vol à editer/créer :<BR><select name="vol" onchange="onVolChange(this.value)">
   <input type="hidden" name="alt" value="<?php echo $alt;?>">
   <p>Date : <input type="text" name="date" value="<?php echo date('d/m/Y');?>" onKeyUp="calcdate();"/>&nbsp;&nbsp;<span name="jrsem"></span>
   Heure : <input type="text" name="heure" value="<?php echo date('H:i:s');?>"/></p>
-  <p>Durée : <input type="text" name="dureeheures" onKeyUp="calcsecondes()"/>(<span name="dureeHMS"></span>)&nbsp;soit&nbsp;<span name="duree">0</span>&nbsp;secondes</p>
+  <p>Durée : <input type="text" name="dureeheures" onKeyUp="calcsecondes()"/>(<span name="dureeHMS"></span>)&nbsp;soit&nbsp;<span name="duree">0</span>&nbsp;secondes<br>
+  <small><a href="#" onclick="findLanding()" id="autolanding">détecter l'atterissage</a></small></p>
   <p>Voile : <input type="text" name="voile" /> <label for="biplace">Biplace : </label><input type="checkbox" name="biplace" id="biplace" /></p>
   <p>Commentaire : <textarea name="commentaire" class="fullwidth" rows="10"></textarea></p>
   <div>
