@@ -182,16 +182,16 @@ Ou placez directement le contenu du fichier IGC :
   </div>
   <div id="dispmodes_open">
     <p class="clickable gras centre souligne" onclick="event.stopImmediatePropagation();dispmodes.classList.toggle('replie');">Couleur trace :</p>
-    <input type="radio" id="dmVz" name="dispmodes" value="vz" onclick="window.dispmode=this.value;redrawFlight();" checked><label for="dmVz">vz</label><BR>
-    <input type="radio" id="dmVx" name="dispmodes" value="vx" onclick="window.dispmode=this.value;redrawFlight();"><label for="dmVx">vx</label><BR>
-    <input type="radio" id="dmGR" name="dispmodes" value="GR" onclick="window.dispmode=this.value;redrawFlight();"><label for="dmGR">finesse</label><BR>
-    <input type="radio" id="dmAlt" name="dispmodes" value="alt" onclick="window.dispmode=this.value;redrawFlight();"><label for="dmAlt">altitude</label><BR>
-    <input type="radio" id="dmAltSol" name="dispmodes" value="altsol" onclick="window.dispmode=this.value;redrawFlight();"><label for="dmAltSol">altitude sol</label><BR>
+    <input type="radio" id="dmVz" name="dispmodes" value="vz" onclick="event.stopImmediatePropagation();window.dispmode=this.value;redrawFlight();" checked><label for="dmVz">vz</label><BR>
+    <input type="radio" id="dmVx" name="dispmodes" value="vx" onclick="event.stopImmediatePropagation();window.dispmode=this.value;redrawFlight();"><label for="dmVx">vx</label><BR>
+    <input type="radio" id="dmGR" name="dispmodes" value="GR" onclick="event.stopImmediatePropagation();window.dispmode=this.value;redrawFlight();"><label for="dmGR">finesse</label><BR>
+    <input type="radio" id="dmAlt" name="dispmodes" value="alt" onclick="event.stopImmediatePropagation();window.dispmode=this.value;redrawFlight();"><label for="dmAlt">altitude</label><BR>
+    <input type="radio" id="dmAltSol" name="dispmodes" value="altsol" onclick="event.stopImmediatePropagation();window.dispmode=this.value;redrawFlight();"><label for="dmAltSol">altitude sol</label><BR>
     <div id="opts_dispanalysers"></div>
-    <input type="radio" id="dmNone" name="dispmodes" value="none" onclick="window.dispmode=this.value;redrawFlight();"><label for="dmNone">aucune</label>
-    <p class="clickable gras centre souligne" onclick="dispmodes.classList.toggle('replie')">Mode altitude :</p>
-    <input type="radio" id="dmGpsAlt" name="dispmodesalt" value="gps" onclick="redrawAltData(this.value);" checked><label for="dmGpsAlt">GPS</label><BR>
-    <input type="radio" id="dmBaroAlt" name="dispmodesalt" value="baro" onclick="redrawAltData(this.value);"><label for="dmBaroAlt">Barométrique</label><BR>
+    <input type="radio" id="dmNone" name="dispmodes" value="none" onclick="event.stopImmediatePropagation();window.dispmode=this.value;redrawFlight();"><label for="dmNone">aucune</label>
+    <p class="clickable gras centre souligne" onclick="event.stopImmediatePropagation();dispmodes.classList.toggle('replie')">Mode altitude :</p>
+    <input type="radio" id="dmGpsAlt" name="dispmodesalt" value="gps" onclick="event.stopImmediatePropagation();redrawAltData(this.value);" checked><label for="dmGpsAlt">GPS</label><BR>
+    <input type="radio" id="dmBaroAlt" name="dispmodesalt" value="baro" onclick="event.stopImmediatePropagation();redrawAltData(this.value);"><label for="dmBaroAlt">Barométrique</label><BR>
   </div>
 </div>
 
@@ -296,7 +296,7 @@ const urlParams = new URLSearchParams(window.location.search);
       closegraphcfg();
       if (setCursorFromMap(e.latlng) < (istouch?10:100)) return;
       if (!e.latlng) return;
-      let alt = await graph.getElevation(e.latlng.lat, e.latlng.lng);
+      let alt = await getElevation(e.latlng.lat, e.latlng.lng);
       if (!window.posmarker) {
         window.posmarker = L.marker(e.latlng).addTo(map);
       } else {
@@ -395,6 +395,7 @@ const urlParams = new URLSearchParams(window.location.search);
       vzelem.setGradient(rgbToHex(r,g,0), 'white');
     }
     updateIcon(e.detail);
+    window.cursorpt = e.detail;
     /*if (istouch && !map.getBounds().contains(marker.getLatLng())) {
       map.setView(marker.getLatLng());
     }*/
@@ -532,7 +533,7 @@ const urlParams = new URLSearchParams(window.location.search);
     csv += portion.map(pt => {
       return pt.time.toISOString().replace('T',' ').replaceAll('-', '/').slice(0, -1)+csvsep+
         pt.alt+csvsep+
-        pt.gndalt+csvsep+
+        pt.altgnd+csvsep+
         pt.lat+csvsep+
         pt.lon+csvsep+
         pt.vx+csvsep+
@@ -569,7 +570,7 @@ const urlParams = new URLSearchParams(window.location.search);
     window.curpoint = nearest;
     //if (L.latLng(nearest.lat, nearest.lon).distanceTo(latlng)>5000) return;
     let mktxt = nearest.time.toLocaleString('fr-FR', { /*timeZone: 'UTC'*/ }).substr(-8, 5);
-    mktxt+='&nbsp;:&nbsp;'+nearest.alt+'m ('+Math.round(nearest.alt-nearest.gndalt)+'m AGL)';
+    mktxt+='&nbsp;:&nbsp;'+nearest.alt+'m ('+Math.round(nearest.alt-nearest.altgnd)+'m AGL)';
     mktxt+='<BR>' + nearest.vz+'m/s&nbsp;&nbsp;&nbsp;'+nearest.vx+'km/h';
     //let gr = Math.round(Math.min(12, Math.max(1, nearest.gr)));
     //let gr = 8;
@@ -579,11 +580,13 @@ const urlParams = new URLSearchParams(window.location.search);
     marker.setLatLng([nearest.lat, nearest.lon]).update();
     graph.setPos(nearest);
     updateIcon(nearest);
+    window.cursorpt = nearest;
     return dist;
   }
 
   function updateIcon(pt) {
-    if (typeof window.fi === 'undefined' || !Array.isArray(window.fi.pts)) return;
+    pt = pt ?? window.cursorpt;
+    if (typeof window.fi === 'undefined' || !Array.isArray(window.fi.pts) || typeof pt !== 'object') return;
     let dispmode = window.dispmode ?? 'alt';
     let iconText = '';
     switch (dispmode) {
@@ -597,7 +600,7 @@ const urlParams = new URLSearchParams(window.location.search);
         iconText = pt.gr;
         break;
       case 'altsol':
-        iconText = (pt.alt - pt.gndalt) + ' m';
+        iconText = (pt.alt - pt.altgnd) + ' m';
         break;
       case 'alt':
       default:
@@ -646,7 +649,7 @@ const urlParams = new URLSearchParams(window.location.search);
       hotlineLayer.setLatLngs(window.fi.pts.map(pt => ([pt.lat, pt.lon, pt.gr])));
       hotlineLayer.setStyle({'min':0/*fi.minvx*/, 'max':40/*55*/});
     } else if (dispmode == 'altsol') {
-      let pts = window.fi.pts.map(pt => ([pt.lat, pt.lon, pt.alt - pt.gndalt]));
+      let pts = window.fi.pts.map(pt => ([pt.lat, pt.lon, pt.alt - pt.altgnd]));
       let ptsr = pts.map(p => p[2]);
       let min = Number.MAX_SAFE_INTEGER;
       let max = Number.MIN_SAFE_INTEGER;
@@ -678,6 +681,7 @@ const urlParams = new URLSearchParams(window.location.search);
       }
     });*/
     hotlineLayer.redraw();
+    updateIcon();
   }
   function redrawAltData(dmalt) {
     window.dispmodealt = typeof window.dispmodealt === 'string'?window.dispmodealt:'baro';

@@ -182,6 +182,7 @@ if (isset($_POST['site']) && isset($_POST['date']) && isset($_POST['heure']) && 
   }
   function loading(ld=true) {
     message(ld?"chargement...":"");
+    document.querySelectorAll('input,select,textarea').forEach(i => i.disabled = !!ld);
   }
   window.onload = function()
   {
@@ -264,73 +265,75 @@ if (isset($_POST['site']) && isset($_POST['date']) && isset($_POST['heure']) && 
     });
   }
 
-  function loadVol(id, keeplatlon=false) {
-    return new Promise(async (res) => {
-      document.getElementById('zonescore').style.display = 'none';
-      document.getElementById('zonewind').style.display = 'none';
-      document.getElementById('windval').innerHTML = 'Chargement...';
-      if (id > 0) getVignette(id);// document.getElementById('vignette').src = 'image.php?id='+id;
-      else document.getElementById('zonevignette').style.display = 'none';
-      //document.getElementById('zonevignette').style.display = id > 0 ? 'initial' : 'none';
-      document.getElementById('score').innerHTML = '';
-      if (id <= 0) {
-        res();
-        return;
+  async function loadVol(id, keeplatlon=false) {
+    document.getElementById('zonescore').style.display = 'none';
+    document.getElementById('autolanding').style.display = 'none';
+    document.getElementById('zonewind').style.display = 'none';
+    document.getElementById('windval').innerHTML = 'Chargement...';
+    if (id > 0) getVignette(id);// document.getElementById('vignette').src = 'image.php?id='+id;
+    else document.getElementById('zonevignette').style.display = 'none';
+    //document.getElementById('zonevignette').style.display = id > 0 ? 'initial' : 'none';
+    document.getElementById('score').innerHTML = '';
+    if (id <= 0) {
+      return;
+    }
+    try {
+      reqvol = fetch("<?php echo strtok($_SERVER["REQUEST_URI"], '?');?>?vol&id="+id).then(r => r.json());
+      const [resp, score, winddata] = await Promise.all([reqvol, loadFlightScore(id), getWind(id)]);
+      window.voldata = resp;
+      document.getElementById('zonescore').style.display = 'block';
+      let scoreinfo = 'pas de score';
+      if (score && score.scoreInfo && typeof score.scoreInfo.distance === 'number' && typeof score.scoreInfo.score === 'number') {
+        scoreinfo = `score: ${score.scoreInfo.score}, distance : ${score.scoreInfo.distance}km`;
       }
-      loadFlightScore(id).then(score => {
-        document.getElementById('zonescore').style.display = 'block';
-        let scoreinfo = 'pas de score';
-        if (score && score.scoreInfo && typeof score.scoreInfo.distance === 'number' && typeof score.scoreInfo.score === 'number') {
-          scoreinfo = `score: ${score.scoreInfo.score}, distance : ${score.scoreInfo.distance}km`;
+      document.getElementById('score').innerHTML = scoreinfo;
+      document.getElementById('zonewind').style.display = 'block';
+      if (winddata?.constructor !== Array || (winddata.length && typeof winddata[0].nom !== "string")) {
+        if (resp.latdeco && resp.londeco) {
+          windbtn.style.pointerEvents = 'none';
+          updateWindData(true);
         }
-        document.getElementById('score').innerHTML = scoreinfo;
-      }).catch(console.error);
-      try {
-        reqvol = fetch("<?php echo strtok($_SERVER["REQUEST_URI"], '?');?>?vol&id="+id).then(r => r.json());
-        const [resp, winddata] = await Promise.all([reqvol, getWind(id)]);
-        window.voldata = resp;
-        document.getElementById('zonewind').style.display = 'block';
-        if (winddata?.constructor !== Array || (winddata.length && typeof winddata[0].nom !== "string")) {
-          if (resp.latdeco && resp.londeco) {
-            windbtn.style.pointerEvents = 'none';
-            updateWindData(true);
-          }
-        } else displayWind(winddata);
-        document.getElementsByName("date")[0].value = resp.date;
-        document.getElementsByName("heure")[0].value = resp.heure;
-        document.getElementsByName("duree")[0].innerText = resp.duree;
-        document.getElementsByName("dureeheures")[0].value = resp.duree.toString().toHHMMSS();//resp.sduree;
-        document.getElementsByName("dureeHMS")[0].innerText = resp.duree.toString().toHMS();//resp.sduree;
-        document.getElementsByName("voile")[0].value = resp.voile;
-        document.getElementsByName("biplace")[0].checked = resp.biplace;
-        document.getElementsByName("commentaire")[0].value = resp.commentaire;
-        cursite = resp.site;
-        if (resp.site.trim().length > 0)
-          document.getElementsByName("site")[0].value = resp.site;
-        else
-          document.getElementsByName("site")[0].selectedIndex  = 0;
-        if (!keeplatlon && resp.latdeco && resp.londeco) {
-          document.getElementsByName("lat")[0].value = resp.latdeco;
-          document.getElementsByName("lon")[0].value = resp.londeco;
-          document.getElementsByName("alt")[0].value = resp.altdeco;
-        }
-        onSiteChange(document.getElementsByName("site")[0].value);
-        document.getElementsByName("vol")[0].value = id;
+      } else displayWind(winddata);
+      document.getElementsByName("date")[0].value = resp.date;
+      document.getElementsByName("heure")[0].value = resp.heure;
+      document.getElementsByName("duree")[0].innerText = resp.duree;
+      document.getElementsByName("dureeheures")[0].value = resp.duree.toString().toHHMMSS();//resp.sduree;
+      document.getElementsByName("dureeHMS")[0].innerText = resp.duree.toString().toHMS();//resp.sduree;
+      document.getElementsByName("voile")[0].value = resp.voile;
+      document.getElementsByName("biplace")[0].checked = resp.biplace;
+      document.getElementsByName("commentaire")[0].value = resp.commentaire;
+      cursite = resp.site;
+      if (resp.site.trim().length > 0)
+        document.getElementsByName("site")[0].value = resp.site;
+      else
+        document.getElementsByName("site")[0].selectedIndex  = 0;
+      if (!keeplatlon && resp.latdeco && resp.londeco) {
+        document.getElementsByName("lat")[0].value = resp.latdeco;
+        document.getElementsByName("lon")[0].value = resp.londeco;
+        document.getElementsByName("alt")[0].value = resp.altdeco;
+      }
+      onSiteChange(document.getElementsByName("site")[0].value);
+      document.getElementsByName("vol")[0].value = id;
+      if (resp.igc) {
         document.getElementById('autolanding').style.display = 'block';
-        res();
-      } catch(e) {
-        console.error(e);
-        res();
-        return;
       }
-    });
+      return;
+    } catch(e) {
+      console.error(e);
+      return;
+    }
   }
-  
+
   async function findLanding() {
     if (window.findingLanding) return;
-    window.findingLanding = true;
+    window.findingLanding = true;loading();
     if (!window.points) {
       let res = await loadIGC(id).then(parseIGC);
+      if (!Array.isArray(res?.points)) {
+        window.findingLanding = false;loading(false);
+        alert('Le fichier IGC est introuvable ou semble invalide')
+        return;
+      }
       window.points = res.points;
       let ptalts = points.reduce((acc, cur) => {
         acc.push(cur.lat, cur.lon);
@@ -373,7 +376,7 @@ if (isset($_POST['site']) && isset($_POST['date']) && isset($_POST['heure']) && 
     } else {
       alert('L\'heure d\'atterissage semble correcte !');
     }
-    window.findingLanding = false;
+    window.findingLanding = false;loading(false);
   }
 
   function saveVol()
@@ -440,10 +443,12 @@ if (isset($_POST['site']) && isset($_POST['date']) && isset($_POST['heure']) && 
     let windbtn = document.getElementById('windbtn');
     windbtn.style.pointerEvents = 'none';
     document.getElementById('windval').innerHTML = '<i>chargement...</i>';
+    loading();
     window.wu = true;
     updateWind(voldata.id, voldata.latdeco, voldata.londeco, voldata.timestamp, silent).then(displayWind);
   }
   function displayWind(wind) {
+    loading(false);
     window.wu = false;
     document.getElementById('windval').innerHTML = formatWind(wind, voldata.timestamp);
     windbtn.style.pointerEvents = '';
@@ -629,12 +634,18 @@ if (isset($_POST['site']) && isset($_POST['date']) && isset($_POST['heure']) && 
   function getVignette(id, regen=false) {
     document.getElementById('vigntext').innerHTML = "chargement de la vignette...";
     document.getElementById('zonevignette').style.display = 'none';
-    fetch("image.php?id="+id+(regen?"&force=1":""), {cache: "reload"}).then(r => r.blob()).then(img => {
+    fetch("image.php?id="+id+(regen?"&force=1":""), {cache: "reload"}).then(r => {
+      if (r.status == 404) throw new Error(404);
+      return r.blob();
+    }).then(img => {
       document.getElementById('vignette').src = URL.createObjectURL(img);
       document.getElementById('zonevignette').style.display = 'initial';
     }).finally(() => {
       document.getElementById('vigntext').innerHTML = "";
-    }).catch((err)=>{if (!window.closing) alert('oups '+err);console.log(err);});
+    }).catch((err)=>{
+      if (err?.message == 404) return;
+      else if (!window.closing) alert('oups '+err);console.log(err);
+    });
   }
 
   String.prototype.toHMS = function () {

@@ -56,7 +56,7 @@ function parseBRecord(r) {
   };
 }
 async function parseIGC(igccont, launchtime=null, paraglidername=null, cletimezonedb=null, tzoffset=null) {
-  if (!igccont) return;
+  if (typeof igccont !== 'string' || !igccont.length) return null;
   let points = [];
   fl_tzoffset = tzoffset;
   let lines = igccont.split(/\r?\n/);
@@ -153,6 +153,8 @@ async function loadIGC(id) {
   let filename = `Tracklogs/${id}.igc`;
   try {
     let r = await fetch(filename);
+    const contentType = r.headers.get("content-type");
+    if (contentType && contentType.indexOf("application/json") < 0) throw new Error('Bad IGC file/Not found');
     return await r.text();
   } catch (e) {
     console.error(e);

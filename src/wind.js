@@ -80,7 +80,13 @@ async function updateWind(id, lat, lon, ts, silent = false) {
     console.error(e);
   }
   if (data?.constructor !== Array) return;
-  if (!silent && !confirm(`${data.length} balises trouvées, mettre à jour?`)) return data;
+  if (!silent) {
+    if (!data.length) {
+      alert('Aucune balise trouvée !');
+      return data;
+    }
+    else if (!confirm(`${data.length} balises trouvées, mettre à jour?`)) return data;
+  }
   try {
     fetch("wind.php?wind&id="+id, {
       method: 'POST',
