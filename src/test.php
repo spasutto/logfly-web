@@ -1,5 +1,16 @@
 <?php
 exit(0);return;
+require("tracklogmanager.php");
+$db = new LogFlyDB("Logfly.db");
+$sql = "UPDATE Vol SET V_Engin='X-Alps 4' WHERE V_Engin='SKYWALK X-Alps 4';";
+//echo $sql."<BR>\n";
+$ret = $db->query($sql);
+if(!$ret)
+{
+  echo $db->lastErrorMsg();
+}
+else echo "success.";
+exit(0);return;
 require('tracklogmanager.php');
 $lgfr = new LogflyReader();
 var_dump($lgfr->getSite( 45.119805, 6.1030066666666665, 'distance'));

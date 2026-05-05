@@ -284,7 +284,7 @@ if (isset($_POST['site']) && isset($_POST['date']) && isset($_POST['heure']) && 
       document.getElementById('zonescore').style.display = 'block';
       let scoreinfo = 'pas de score';
       if (score && score.scoreInfo && typeof score.scoreInfo.distance === 'number' && typeof score.scoreInfo.score === 'number') {
-        scoreinfo = `score: ${score.scoreInfo.score}, distance : ${score.scoreInfo.distance}km`;
+        scoreinfo = `score: ${Math.round(score.scoreInfo.score*10)/10}, distance : ${Math.round(score.scoreInfo.distance*10)/10}km`;
       }
       document.getElementById('score').innerHTML = scoreinfo;
       document.getElementById('zonewind').style.display = 'block';
@@ -323,12 +323,12 @@ if (isset($_POST['site']) && isset($_POST['date']) && isset($_POST['heure']) && 
       return;
     }
   }
-
   async function findLanding() {
     if (window.findingLanding) return;
     window.findingLanding = true;loading();
     if (!window.points) {
-      let res = await loadIGC(id).then(parseIGC);
+      window.igc = await loadIGC(id);
+      let res = await parseIGC(igc);
       if (!Array.isArray(res?.points)) {
         window.findingLanding = false;loading(false);
         alert('Le fichier IGC est introuvable ou semble invalide')
@@ -359,10 +359,10 @@ if (isset($_POST['site']) && isset($_POST['date']) && isset($_POST['heure']) && 
       return m < 0 ? 0 : Math.round(m / 10) * 10;
     });
     //console.log(moyalts.map((p,i) => `${i} ${p}`).join('\n'))  ==> https://www.quickplotter.com/
-    let att = moyalts.toReversed().findIndex(a => a>20);
-    if (att > 0) {
-      att = points.length-att;
-      landingtime = new Date(points[att].time.getTime()+10000); // on ajoute 10 secondes pour le temps de poser
+    let attidx = moyalts.toReversed().findIndex(a => a>20);
+    if (attidx > 0) {
+      attidx = points.length-attidx;
+      landingtime = new Date(points[attidx].time.getTime()+10000); // on ajoute 10 secondes pour le temps de poser
     }
     let duree = Math.trunc((landingtime.getTime()-points[0].time.getTime())/1000); //parseInt(document.getElementsByName("duree")[0].innerText, 10)
     if (landingtime<points[points.length-1].time) {
@@ -372,6 +372,14 @@ if (isset($_POST['site']) && isset($_POST['date']) && isset($_POST['heure']) && 
         document.getElementsByName("duree")[0].innerText = duree;
         calcheures();
         calcsecondes(); // pour MAJ dureeheures en HMS
+        if (confirm('Voulez-vous mettre à jour le score?')) {
+          let lines = window.igc.split(/\r?\n/);
+          // filtrage des enregistrements B
+          let bcnt = 0;
+          lines = lines.filter(l => !l.trim().startsWith('B') || bcnt++ < attidx);
+          window.igc = lines.join('\r\n');
+          calcFlightScore();
+        }
       }
     } else {
       alert('L\'heure d\'atterissage semble correcte !');
@@ -606,27 +614,22 @@ if (isset($_POST['site']) && isset($_POST['date']) && isset($_POST['heure']) && 
     }
     //window.location = "?del&id=" + document.getElementsByName("id")[0].value;
   }
-  function calcFlightScore() {
-    let xhttp = new XMLHttpRequest();
-    message("chargement...");
-    xhttp.onreadystatechange = function() {
-      if (this.readyState == 4 && this.status == 200) {
-        message("calcul...");
-        try {
-          score(this.responseText, (score) => {
-            window.su = false;
-            message("");
-            if (confirm ("Le score calculé est de " + Math.round(score.score*10)/10 + " points pour "+Math.round(score.scoreInfo.distance*10)/10+"km, mettre à jour?")) {
-              message("enregistrement...");
-              postFlightScore(id, score).then((msg) => {message("");alert(msg == "OK"?"Fait!":"Il semble qu'il y'ai eu un problème : " + msg);});
-            }
-          });
-        } catch(e) {window.su = false;alert(e);}
-      }
-    };
+  async function calcFlightScore() {
+    if (!window.igc) {
+      window.igc = await loadIGC(id);
+    }
+    message("calcul...");
     window.su = true;
-    xhttp.open("GET", "<?php echo strtok($_SERVER["REQUEST_URI"], '?');?>?igc&id="+id, true);
-    xhttp.send();
+    try {
+      score(igc, (score) => {
+        window.su = false;
+        message("");
+        if (confirm ("Le score calculé est de " + Math.round(score.score*10)/10 + " points pour "+Math.round(score.scoreInfo.distance*10)/10+"km, mettre à jour?")) {
+          message("enregistrement...");
+          postFlightScore(id, score).then((msg) => {message("");alert(msg == "OK"?"Fait!":"Il semble qu'il y'ai eu un problème : " + msg);});
+        }
+      });
+    } catch(e) {window.su = false;alert(e);}
   }
   function regenVignette() {
     getVignette(id, true);
