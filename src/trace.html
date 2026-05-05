@@ -710,7 +710,11 @@ const urlParams = new URLSearchParams(window.location.search);
       outlineColor: '#000000',
       outlineWidth: 0.5
     });
-    graph.setData(points);
+    let tmppoints = points;
+    if (duration>0) {
+      tmppoints = points.slice(0, duration/ptinterval);
+    }
+    graph.setData(tmppoints);
     hotlineLayer.addTo(map);
   }
   function updateTraceInfos() {
@@ -768,6 +772,10 @@ const urlParams = new URLSearchParams(window.location.search);
     window.pilotname= igcres.pilotname;
     window.paraglidername = igcres.paraglidername;
     window.tzoffset = igcres.tzoffset;
+    window.ptinterval = 1;
+    try {
+      ptinterval = (points[1].time.getTime()-points[0].time.getTime())/1000;
+    } catch (e) {}
     let ptalts = points.reduce((acc, cur) => {
       acc.push(cur.lat, cur.lon);
       return acc;
@@ -941,10 +949,6 @@ const urlParams = new URLSearchParams(window.location.search);
       }
     }
     flstats['score'] = `${Math.round(flightscore.score*10)/10}pts`;
-    let ptinterval = 1;
-    try {
-      ptinterval = (points[1].time.getTime()-points[0].time.getTime())/1000;
-    } catch (e) {}
     flstats['vit.'] = `${Math.round(36000*flightscore.scoreInfo.distance/((flightscore.opt.landing-flightscore.opt.launch)/ptinterval))/10}km/h`;
     calcParcoursSpeed(); // on recalcule la vraie vitesse si on a déjà l'IGC
     updateTraceInfos();

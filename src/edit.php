@@ -372,14 +372,12 @@ if (isset($_POST['site']) && isset($_POST['date']) && isset($_POST['heure']) && 
         document.getElementsByName("duree")[0].innerText = duree;
         calcheures();
         calcsecondes(); // pour MAJ dureeheures en HMS
-        if (confirm('Voulez-vous mettre à jour le score?')) {
-          let lines = window.igc.split(/\r?\n/);
-          // filtrage des enregistrements B
-          let bcnt = 0;
-          lines = lines.filter(l => !l.trim().startsWith('B') || bcnt++ < attidx);
-          window.igc = lines.join('\r\n');
-          calcFlightScore();
-        }
+        // recalcul du score : suppression des enregistrements B post atterissage
+        let lines = window.igc.split(/\r?\n/);
+        let bcnt = 0;
+        lines = lines.filter(l => !l.trim().startsWith('B') || bcnt++ < attidx);
+        window.igc = lines.join('\r\n');
+        calcFlightScore();
       }
     } else {
       alert('L\'heure d\'atterissage semble correcte !');
