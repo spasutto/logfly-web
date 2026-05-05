@@ -299,8 +299,9 @@ const urlParams = new URLSearchParams(window.location.search);
       if (setCursorFromMap(e.latlng) < (istouch?10:100)) return;
       if (!e.latlng) return;
       let alt = await getElevation(e.latlng.lat, e.latlng.lng);
+      let removePopup = _ => {window.posmarker?.remove();window.posmarker=null;};
       if (!window.posmarker) {
-        window.posmarker = L.marker(e.latlng).addTo(map);
+        window.posmarker = L.marker(e.latlng).addTo(map).on('click', removePopup);
       } else {
         window.posmarker.setLatLng(e.latlng);
       }
@@ -346,7 +347,7 @@ const urlParams = new URLSearchParams(window.location.search);
     redrawFlight();
     constructAnalysersOptions();
     let s = duration;
-    if (duration <= 0) duration = (fi.pts[fi.pts.length-1].time.getTime() - fi.pts[0].time.getTime()) / 1000;
+    if (s <= 0) s = (fi.pts[fi.pts.length-1].time.getTime() - fi.pts[0].time.getTime()) / 1000;
     let t = new Date(Date.UTC(1970, 0, 1));
     t.setUTCSeconds(s);
     flstats['durée'] = `${dateToTime(t)}`;
@@ -710,11 +711,7 @@ const urlParams = new URLSearchParams(window.location.search);
       outlineColor: '#000000',
       outlineWidth: 0.5
     });
-    let tmppoints = points;
-    if (duration>0) {
-      tmppoints = points.slice(0, duration/ptinterval);
-    }
-    graph.setData(tmppoints);
+    graph.setData(points);
     hotlineLayer.addTo(map);
   }
   function updateTraceInfos() {
@@ -776,6 +773,10 @@ const urlParams = new URLSearchParams(window.location.search);
     try {
       ptinterval = (points[1].time.getTime()-points[0].time.getTime())/1000;
     } catch (e) {}
+    if (duration>0) {
+      //points = points.slice(0, duration/ptinterval);
+      points.splice(1+duration/ptinterval);
+    }
     let ptalts = points.reduce((acc, cur) => {
       acc.push(cur.lat, cur.lon);
       return acc;
