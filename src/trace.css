@@ -1,0 +1,123 @@
+body {
+  padding: 0;
+  margin: 0;
+}
+html, body {
+  height: 100%;
+  width: 100%;
+  font-family: sans-serif;
+}
+p {
+  margin: 0;
+}
+#formcont {
+  position:fixed;
+  left:0;top:0;right:0;bottom:0;
+  background-color:white;
+  display: none;
+}
+#map_elem {
+  position: fixed;
+  top: 0;
+  bottom: 100px;
+  left: 0;
+  right: 0;
+  overflow: hidden;
+}
+.vz {
+  position:absolute;
+  right:0;
+  top:0;
+  bottom:100px;
+  width:10px;
+  z-index : 20;
+}
+#graphelm {
+  position:fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 100px;
+}
+.gras {
+  font-weight: bolder;
+}
+.centre {
+  text-align: center;
+}
+.souligne {
+  text-decoration: underline;
+}
+.clickable {
+  cursor: pointer;
+}
+#iinfos {
+  display: none;
+  margin : 5px;
+  font-weight: bolder;
+  font-size : 15pt;
+}
+#popupPolaire {
+  display: none;
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  border: solid 1px #afafaf;
+  background-color: #dfdfdf;
+  border-radius: 15px;
+  padding: 10px;
+}
+#btnClose {
+  position: absolute;
+  top: 0;
+  right: 0;
+  z-index: 20;
+  margin: 10px;
+  padding: 0px;
+  width: 22px;
+  height: 20px;
+  cursor: pointer;
+  border: solid 1px black;
+  background-color: #efefef;
+  border-radius: 5px;
+  text-align: center;
+  vertical-align: middle;
+  padding-top: 2px;
+}
+#ctinfos {
+  max-width: 150px;
+}
+#ctinfos a {
+  text-decoration: none;
+  background: transparent;
+}
+#ctinfos a:hover {
+  background: #447adb;
+}
+#dispmodes>#dispmodes_closed {
+  display:none;
+}
+#dispmodes.replie>#dispmodes_closed {
+  display:initial;
+}
+#dispmodes>#dispmodes_open {
+  display:initial;
+}
+#dispmodes.replie>#dispmodes_open {
+  display:none;
+}
+#dispmodes_closed {
+  font-weight: bolder;
+  font-size: 15pt;
+}
+#dispmodes_closed p {
+  width: 30px;
+}
+#loading {
+  position: absolute;
+  top: 0px;bottom: 0px;right: 0px;left: 0px;
+  border: solid 1px #afafaf;
+  background-color: #dfdfdf;
+  padding: 10px;
+  z-index:10;
+}
